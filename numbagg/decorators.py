@@ -79,9 +79,11 @@ class NumbaNDReduce(object):
             # axis = range(arr.ndim)
             # use @jit instead since numba accelerates it better
             f = self._get_jit_func()
+        elif np.isscalar(axis):
+            axis = _validate_axis(axis, arr.ndim)
+            arr = arr.swapaxes(axis, -1)
+            f = self._get_gufunc(1)
         else:
-            if np.isscalar(axis):
-                axis = [axis]
             axis = [_validate_axis(a, arr.ndim) for a in axis]
             all_axes = [n for n in range(arr.ndim)
                         if n not in axis] + list(axis)
@@ -124,7 +126,7 @@ class NumbaNDMoving(object):
         # TODO: test this validation
         if (window < 1).any() or (window > arr.shape[axis]).any():
             raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[axis], window))
-        arr = arr.swapaxes(0, axis)
+        arr = arr.swapaxes(axis, -1)
         return self.gufunc(arr, window)
 
 
