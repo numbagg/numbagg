@@ -109,9 +109,10 @@ def _mangle_gufunc_source(func):
                     r'def __mangled_gufunc(\1, __out):',
                     orig_source, flags=re.DOTALL)
     source = re.sub(r'return\s+(.*)', r'__out[0] = \1', source)
-    exec(source, globals(), locals())
+    scope = {}
+    exec(source, globals(), scope)
     try:
-        return __mangled_gufunc
-    except NameError:
-        raise ValueError('failed to rewrite function definition:\n%s'
-                         % orig_source)
+        return scope['__mangled_gufunc']
+    except KeyError:
+        raise TypeError('failed to rewrite function definition:\n%s'
+                        % orig_source)
