@@ -36,8 +36,6 @@ For example, here is how we wrote ``nansum``::
                 asum += ai
         return asum
 
-Not bad, huh?
-
 Benchmarks
 ----------
 
@@ -76,6 +74,25 @@ Numba, as Numba's handling of the ``.flat`` iterator was sped up considerably
 in `a recent PR`__.
 
 __ https://github.com/numba/numba/pull/817
+
+Philosophy
+----------
+
+Numbagg includes somewhat awkward workarounds for features missing from
+NumPy/Numba:
+
+* It implements its own cache for functions wrapped by Numba's ``guvectorize``,
+  because that decorator is rather slow.
+* It does its `own handling of array transposes <https://github.com/shoyer/numbagg/blob/master/numbagg/decorators.py#L69>`_ to handle the ``axis`` argument,
+  which we hope will `eventually be directly supported <https://github.com/numpy/numpy/issues/5197>`_
+  by all NumPy gufuncs.
+* It uses some `terrible hacks <https://github.com/shoyer/numbagg/blob/master/numbagg/transform.py>`_
+  to hide the out-of-bound memory access necessary to write
+  `gufuncs that handle scalar values <https://github.com/numba/numba/blob/master/numba/tests/test_guvectorize_scalar.py>`_ with Numba.
+
+I hope that the need for most of these will eventually go away. In the
+meantime, expect Numbagg to be tightly coupled to Numba and NumPy release
+cycles. It's certanly *not* ready for production.
 
 License
 -------
