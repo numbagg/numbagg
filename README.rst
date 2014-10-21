@@ -40,4 +40,10 @@ Initial benchmarks are quite encouraging::
     In [9]: %timeit bottleneck.nanmean(x, axis=1)
     100 loops, best of 3: 2.3 ms per loop
 
+To see these performance numbers, you'll need to install the dev version of
+Numba, as Numba's handling of the ``.flat`` iterator was sped up considerably
+in `a recent PR`__.
+
+__ https://github.com/numba/numba/pull/817
+
 License: MIT
