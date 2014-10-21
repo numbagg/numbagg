@@ -11,10 +11,38 @@ NumPy's `generalized ufuncs`_.
 .. _Numba: https://github.com/numba/numba
 .. _generalized ufuncs: http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 
-Accelerated functions: ``nansum``, ``nanmean``, ``nanmin``, ``count``,
-``move_nanmean``.
+Currently accelerated functions: ``nansum``, ``nanmean``, ``nanmin``,
+``count``, ``move_nanmean``.
 
-Initial benchmarks are quite encouraging::
+Easy to extend
+--------------
+
+Numbagg makes it easy to write, in pure Python/NumPy, flexible aggregation
+functions accelerated by Numba. These aggregation functions work on arrays with
+any number of dimensions and support an ``axis`` argument that handles
+``None``, integers and tuples of integers. All the hard work is done by Numba's
+JIT compiler and NumPy's gufunc machinery (as wrapped by Numba).
+
+For example, here is how we wrote ``nansum``::
+
+    import numpy as np
+    from numbagg.decorators import ndreduce
+
+    @ndreduce
+    def nansum(a):
+        asum = 0.0
+        for ai in a.flat:
+            if np.nansum(ai):
+                asum += ai
+        return asum
+
+Not bad, huh?
+
+Benchmarks
+----------
+
+Initial benchmarks are quite encouraging. In many cases, Numbagg/Numba has
+competitive performance with Bottleneck/Cython::
 
     import numbagg
     import numpy as np
@@ -49,5 +77,8 @@ in `a recent PR`__.
 
 __ https://github.com/numba/numba/pull/817
 
-License: MIT. Includes portions of Bottleneck, which is distributed under a
+License
+-------
+
+MIT. Includes portions of Bottleneck, which is distributed under a
 Simplified BSD license.
