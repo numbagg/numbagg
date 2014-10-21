@@ -90,6 +90,9 @@ class NumbaNDReduce(object):
         return f(arr)
 
 
+MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
+
+
 class NumbaNDMoving(object):
     def __init__(self, func, dtype_map=['float64,int64,float64']):
         self.func = func
@@ -117,6 +120,10 @@ class NumbaNDMoving(object):
 
     def __call__(self, arr, window, axis=-1):
         axis = _validate_axis(axis, arr.ndim)
+        window = np.asarray(window)
+        # TODO: test this validation
+        if (window < 1).any() or (window > arr.shape[axis]).any():
+            raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[axis], window))
         arr = arr.swapaxes(0, axis)
         return self.gufunc(arr, window)
 
