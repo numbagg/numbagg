@@ -1,3 +1,4 @@
+import collections
 import inspect
 import re
 
@@ -36,19 +37,46 @@ def _validate_axis(axis, ndim):
     return axis
 
 
+class FunctionCache(dict):
+    """A simple dict-subclass for caching the return values of a function.
+    """
+    def __init__(self, func):
+        self.func = func
+
+    def __missing__(self, key):
+        value = self[key] = self.func(key)
+        return value
+
+
+class cached_property(object):
+    """A property that is only computed once per instance and then replaces
+    itself with an ordinary attribute. Deleting the attribute resets the
+    property.
+
+    Source:
+    https://github.com/pydanny/cached-property
+    https://github.com/bottlepy/bottle/commit/fa7733e075da0d790d809aa3d2f53071897e6f76
+    """
+    def __init__(self, func):
+        self.__doc__ = getattr(func, '__doc__')
+        self.func = func
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        value = obj.__dict__[self.func.__name__] = self.func(obj)
+        return value
+
+
 class NumbaNDReduce(object):
     def __init__(self, func, dtype_map=['float64,float64']):
         self.func = func
         self.dtype_map = dtype_map
-        self._transformed_func = None
-        self._gufunc_cache = {}
-        self._jit_func = None
+        self._gufunc_cache = FunctionCache(self._create_gufunc)
 
-    @property
+    @cached_property
     def transformed_func(self):
-        if self._transformed_func is None:
-            self._transformed_func = _transform_agg_gufunc_source(self.func)
-        return self._transformed_func
+        return _transform_agg_gufunc_source(self.func)
 
     def _create_gufunc(self, ndim):
         # creating compiling gufunc has some significant overhead (~130ms per
@@ -64,31 +92,25 @@ class NumbaNDReduce(object):
         vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
         return vectorize(self.transformed_func)
 
-    def _get_gufunc(self, ndim):
-        if ndim not in self._gufunc_cache:
-            self._gufunc_cache[ndim] = self._create_gufunc(ndim)
-        return self._gufunc_cache[ndim]
-
-    def _get_jit_func(self):
-        if self._jit_func is None:
-            self._jit_func = numba.jit(self.func, nopython=True)
-        return self._jit_func
+    @cached_property
+    def _jit_func(self):
+        return numba.jit(self.func, nopython=True)
 
     def __call__(self, arr, axis=None):
         if axis is None:
             # axis = range(arr.ndim)
             # use @jit instead since numba accelerates it better
-            f = self._get_jit_func()
+            f = self._jit_func
         elif np.isscalar(axis):
             axis = _validate_axis(axis, arr.ndim)
             arr = arr.swapaxes(axis, -1)
-            f = self._get_gufunc(1)
+            f = self._gufunc_cache[1]
         else:
             axis = [_validate_axis(a, arr.ndim) for a in axis]
             all_axes = [n for n in range(arr.ndim)
                         if n not in axis] + list(axis)
             arr = arr.transpose(all_axes)
-            f = self._get_gufunc(len(axis))
+            f = self._gufunc_cache[len(axis)]
         return f(arr)
 
 
@@ -99,26 +121,20 @@ class NumbaNDMoving(object):
     def __init__(self, func, dtype_map=['float64,int64,float64']):
         self.func = func
         self.dtype_map = dtype_map
-        self._transformed_func = None
-        self._gufunc = None
 
-    @property
+    @cached_property
     def transformed_func(self):
-        if self._transformed_func is None:
-            self._transformed_func = _transform_moving_gufunc_source(self.func)
-        return self._transformed_func
+        return _transform_moving_gufunc_source(self.func)
 
-    @property
+    @cached_property
     def gufunc(self):
-        if self._gufunc is None:
-            extra_args = len(inspect.getargspec(self.func).args) - 2
-            dtype_str = ['void(%s)' % ','.join('%s[:]' % e
-                                               for e in d.split(','))
-                         for d in self.dtype_map]
-            sig = '(n)%s->(n)' % ''.join(',()' for _ in range(extra_args))
-            vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
-            self._gufunc = vectorize(self.transformed_func)
-        return self._gufunc
+        extra_args = len(inspect.getargspec(self.func).args) - 2
+        dtype_str = ['void(%s)' % ','.join('%s[:]' % e
+                                           for e in d.split(','))
+                     for d in self.dtype_map]
+        sig = '(n)%s->(n)' % ''.join(',()' for _ in range(extra_args))
+        vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
+        return vectorize(self.transformed_func)
 
     def __call__(self, arr, window, axis=-1):
         axis = _validate_axis(axis, arr.ndim)
