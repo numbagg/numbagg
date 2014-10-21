@@ -32,7 +32,7 @@ For example, here is how we wrote ``nansum``::
     def nansum(a):
         asum = 0.0
         for ai in a.flat:
-            if np.nansum(ai):
+            if not np.isnan(ai):
                 asum += ai
         return asum
 
