@@ -1,13 +1,13 @@
-numbagg: Fast N-dimensional aggregation functions with Numba
+Numbagg: Fast N-dimensional aggregation functions with Numba
 ============================================================
 
 .. image:: https://travis-ci.org/shoyer/numbagg.svg?branch=master
     :target: https://travis-ci.org/shoyer/numbagg
 
-Re-implementations of (some) functions found in bottleneck_ with Numba_ and
+Re-implementations of (a few) functions found in Bottleneck_ with Numba_ and
 NumPy's `generalized ufuncs`_.
 
-.. _bottleneck: https://github.com/kwgoodman/bottleneck
+.. _Bottleneck: https://github.com/kwgoodman/bottleneck
 .. _Numba: https://github.com/numba/numba
 .. _generalized ufuncs: http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 
@@ -46,4 +46,5 @@ in `a recent PR`__.
 
 __ https://github.com/numba/numba/pull/817
 
-License: MIT
+License: MIT. Includes portions of Bottleneck, which is distributed under a
+Simplified BSD license.
