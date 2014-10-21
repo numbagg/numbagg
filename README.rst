@@ -1,6 +1,9 @@
 numbagg: Fast N-dimensional aggregation functions with Numba
 ============================================================
 
+.. image:: https://travis-ci.org/shoyer/numbagg.svg?branch=master
+    :target: https://travis-ci.org/shoyer/numbagg
+
 Re-implementations of (some) functions found in bottleneck_ with Numba_ and
 NumPy's `generalized ufuncs`_.
 
