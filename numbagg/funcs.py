@@ -39,7 +39,7 @@ def nanmin(a):
     return amin
 
 
-@ndreduce(['float32->int64', 'float64->int64'])
+@ndreduce(['float32,int64', 'float64,int64'])
 def count(a):
     non_missing = 0
     for ai in a.flat:

@@ -11,6 +11,9 @@ NumPy's `generalized ufuncs`_.
 .. _Numba: https://github.com/numba/numba
 .. _generalized ufuncs: http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 
+Accelerated functions: ``nansum``, ``nanmean``, ``nanmin``, ``count``,
+``move_nanmean``.
+
 Initial benchmarks are quite encouraging::
 
     import numbagg
