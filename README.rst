@@ -4,7 +4,7 @@ Numbagg: Fast N-dimensional aggregation functions with Numba
 .. image:: https://travis-ci.org/shoyer/numbagg.svg?branch=master
     :target: https://travis-ci.org/shoyer/numbagg
 
-Re-implementations of (a few) functions found in Bottleneck_ with Numba_ and
+Re-implementations of (some) functions found in Bottleneck_ with Numba_ and
 NumPy's `generalized ufuncs`_.
 
 .. _Bottleneck: https://github.com/kwgoodman/bottleneck
@@ -12,7 +12,8 @@ NumPy's `generalized ufuncs`_.
 .. _generalized ufuncs: http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 
 Currently accelerated functions: ``nansum``, ``nanmean``, ``nanmin``,
-``count``, ``move_nanmean``.
+``count``, ``move_nanmean``. Interested in something else? File an issue or,
+better yet, a pull request!
 
 Easy to extend
 --------------
@@ -34,9 +35,15 @@ For example, here is how we wrote ``nansum``::
                 asum += ai
         return asum
 
-These functions automatically work on arrays with any number of dimensions and
-support an ``axis`` argument that handles ``None``, integers and tuples of
-integers.
+Advantages over Bottleneck
+--------------------------
+
+* Way less code. Easier to add new functions. No ad-hoc templating system.
+  No Cython!
+* Fast functions still work for >3 dimensions.
+* ``axis`` argument handles tuples of integers.
+* ufunc broadcasting lets us supply an array for the ``window`` in moving
+  window functions.
 
 Benchmarks
 ----------
