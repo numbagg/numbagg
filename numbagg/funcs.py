@@ -23,6 +23,28 @@ def anynan(a):
     return f
 
 
+@ndreduce(['float32,int64', 'float64,int64'])
+def nanargmax(a):
+    amax = -np.infty
+    idx = 0
+    for i, ai in enumerate(a.flat):
+        if ai > amax:
+            amax = ai
+            idx = i
+    return idx
+
+
+@ndreduce(['float32,int64', 'float64,int64'])
+def nanargmin(a):
+    amin = np.infty
+    idx = 0
+    for i, ai in enumerate(a.flat):
+        if ai < amin:
+            amin = ai
+            idx = i
+    return idx
+
+
 @ndreduce
 def nansum(a):
     asum = 0.0

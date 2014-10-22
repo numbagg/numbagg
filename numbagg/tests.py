@@ -22,6 +22,11 @@ funcs_reference_funcs = {
     numbagg.count: lambda x, **kwargs: np.sum(~np.isnan(x), **kwargs),
 }
 
+argmax_reference_funcs = {
+    numbagg.nanargmax: np.nanargmax,
+    numbagg.nanargmin: np.nanargmin,
+}
+
 moving_references_funcs = {
     numbagg.move_nanmean: wrap_pure_python(numbagg.move_nanmean.func),
 }
@@ -45,6 +50,10 @@ def test_funcs():
 
     for numbagg_func, ref_func in funcs_reference_funcs.items():
         for axis in [None, 0, -1, (0, 1)]:
+            yield check_func, numbagg_func, ref_func, x, axis
+
+    for numbagg_func, ref_func in argmax_reference_funcs.items():
+        for axis in [None, 0, -1]:
             yield check_func, numbagg_func, ref_func, x, axis
 
 
