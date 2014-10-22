@@ -24,25 +24,12 @@ def anynan(a):
 
 
 @ndreduce(['float32,int64', 'float64,int64'])
-def nanargmax(a):
-    amax = -np.infty
-    idx = 0
-    for i, ai in enumerate(a.flat):
-        if ai > amax:
-            amax = ai
-            idx = i
-    return idx
-
-
-@ndreduce(['float32,int64', 'float64,int64'])
-def nanargmin(a):
-    amin = np.infty
-    idx = 0
-    for i, ai in enumerate(a.flat):
-        if ai < amin:
-            amin = ai
-            idx = i
-    return idx
+def count(a):
+    non_missing = 0
+    for ai in a.flat:
+        if not np.isnan(ai):
+            non_missing += 1
+    return non_missing
 
 
 @ndreduce
@@ -66,6 +53,28 @@ def nanmean(a):
         return asum / count
     else:
         return np.nan
+
+
+@ndreduce(['float32,int64', 'float64,int64'])
+def nanargmax(a):
+    amax = -np.infty
+    idx = 0
+    for i, ai in enumerate(a.flat):
+        if ai > amax:
+            amax = ai
+            idx = i
+    return idx
+
+
+@ndreduce(['float32,int64', 'float64,int64'])
+def nanargmin(a):
+    amin = np.infty
+    idx = 0
+    for i, ai in enumerate(a.flat):
+        if ai < amin:
+            amin = ai
+            idx = i
+    return idx
 
 
 @ndreduce
@@ -92,12 +101,3 @@ def nanmin(a):
     if allnan:
         amin = np.nan
     return amin
-
-
-@ndreduce(['float32,int64', 'float64,int64'])
-def count(a):
-    non_missing = 0
-    for ai in a.flat:
-        if not np.isnan(ai):
-            non_missing += 1
-    return non_missing
