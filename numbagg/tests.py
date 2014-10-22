@@ -14,6 +14,7 @@ def wrap_pure_python(func):
 
 funcs_reference_funcs = {
     numbagg.allnan: lambda x, **kwargs: np.all(np.isnan(x), **kwargs),
+    numbagg.anynan: lambda x, **kwargs: np.any(np.isnan(x), **kwargs),
     numbagg.nansum: np.nansum,
     numbagg.nanmean: np.nanmean,
     numbagg.nanmin: np.nanmin,

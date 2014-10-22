@@ -13,6 +13,16 @@ def allnan(a):
     return f
 
 
+@ndreduce(['float32,bool_', 'float64,bool_'])
+def anynan(a):
+    f = 0
+    for ai in a.flat:
+        if np.isnan(ai):
+            f = 1
+            break
+    return f
+
+
 @ndreduce
 def nansum(a):
     asum = 0.0
