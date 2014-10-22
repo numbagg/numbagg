@@ -3,6 +3,16 @@ import numpy as np
 from .decorators import ndreduce
 
 
+@ndreduce(['float32,bool_', 'float64,bool_'])
+def allnan(a):
+    f = 1
+    for ai in a.flat:
+        if not np.isnan(ai):
+            f = 0
+            break
+    return f
+
+
 @ndreduce
 def nansum(a):
     asum = 0.0
