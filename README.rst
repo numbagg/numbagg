@@ -47,7 +47,7 @@ Advantages over Bottleneck
   window functions.
 
 The functions in Numbagg are adapted from (and soon to be tested against)
-Bottleneck's battle-hardened tCython. Still, Numbagg is experimental, and
+Bottleneck's battle-hardened Cython. Still, Numbagg is experimental, and
 probably not yet ready for production.
 
 Benchmarks
