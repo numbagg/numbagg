@@ -17,6 +17,7 @@ funcs_reference_funcs = {
     numbagg.anynan: lambda x, **kwargs: np.any(np.isnan(x), **kwargs),
     numbagg.nansum: np.nansum,
     numbagg.nanmean: np.nanmean,
+    numbagg.nanmax: np.nanmax,
     numbagg.nanmin: np.nanmin,
     numbagg.count: lambda x, **kwargs: np.sum(~np.isnan(x), **kwargs),
 }

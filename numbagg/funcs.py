@@ -47,6 +47,19 @@ def nanmean(a):
 
 
 @ndreduce
+def nanmax(a):
+    amax = -np.infty
+    allnan = 1
+    for ai in a.flat:
+        if ai >= amax:
+            amax = ai
+            allnan = 0
+    if allnan:
+        amax = np.nan
+    return amax
+
+
+@ndreduce
 def nanmin(a):
     amin = np.infty
     allnan = 1
