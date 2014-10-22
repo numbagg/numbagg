@@ -18,9 +18,7 @@ Easy to extend
 --------------
 
 Numbagg makes it easy to write, in pure Python/NumPy, flexible aggregation
-functions accelerated by Numba. These aggregation functions work on arrays with
-any number of dimensions and support an ``axis`` argument that handles
-``None``, integers and tuples of integers. All the hard work is done by Numba's
+functions accelerated by Numba. All the hard work is done by Numba's
 JIT compiler and NumPy's gufunc machinery (as wrapped by Numba).
 
 For example, here is how we wrote ``nansum``::
@@ -35,6 +33,10 @@ For example, here is how we wrote ``nansum``::
             if not np.isnan(ai):
                 asum += ai
         return asum
+
+These functions automatically work on arrays with any number of dimensions and
+support an ``axis`` argument that handles ``None``, integers and tuples of
+integers.
 
 Benchmarks
 ----------
