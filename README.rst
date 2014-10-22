@@ -45,6 +45,10 @@ Advantages over Bottleneck
 * ufunc broadcasting lets us supply an array for the ``window`` in moving
   window functions.
 
+The functions in Numbagg are adapted from (and soon to be tested against)
+Bottleneck's battle-hardened Cython. Still, Numbagg is experimental, and
+probably not yet ready for production.
+
 Benchmarks
 ----------
 
@@ -101,7 +105,7 @@ NumPy/Numba:
 
 I hope that the need for most of these will eventually go away. In the
 meantime, expect Numbagg to be tightly coupled to Numba and NumPy release
-cycles. It's certanly *not* ready for production.
+cycles.
 
 License
 -------
