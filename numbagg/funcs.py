@@ -55,6 +55,50 @@ def nanmean(a):
         return np.nan
 
 
+@ndreduce
+def nanstd(a):
+    # for now, fix ddof=0
+    ddof = 0
+    asum = 0
+    count = 0
+    for ai in a.flat:
+        if not np.isnan(ai):
+            asum += ai
+            count += 1
+    if count > ddof:
+        amean = asum / count
+        asum = 0
+        for ai in a.flat:
+            if not np.isnan(ai):
+                ai -= amean
+                asum += (ai * ai)
+        return np.sqrt(asum / (count - ddof))
+    else:
+        return np.nan
+
+
+@ndreduce
+def nanvar(a):
+    # for now, fix ddof=0
+    ddof = 0
+    asum = 0
+    count = 0
+    for ai in a.flat:
+        if not np.isnan(ai):
+            asum += ai
+            count += 1
+    if count > ddof:
+        amean = asum / count
+        asum = 0
+        for ai in a.flat:
+            if not np.isnan(ai):
+                ai -= amean
+                asum += (ai * ai)
+        return asum / (count - ddof)
+    else:
+        return np.nan
+
+
 @ndreduce(['float32,int64', 'float64,int64'])
 def nanargmax(a):
     amax = -np.infty
