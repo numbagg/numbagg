@@ -57,13 +57,13 @@ def unit_maker(func, func0, decimal=np.inf, nans=True):
                 try:
                     actual = func(arr.copy(), axis=axis)
                 except Exception as err:
-                    actual = err.message
+                    actual = str(err)
                     actualraised = True
                 desiredraised = False
                 try:
                     desired = func0(arr.copy(), axis=axis)
                 except Exception as err:
-                    desired = err.message
+                    desired = str(err)
                     desiredraised = True
             if actualraised and desiredraised:
                 pass
