@@ -1,5 +1,6 @@
 import numbagg
 
+import bottleneck as bn
 import numpy as np
 
 
@@ -30,7 +31,7 @@ argmax_reference_funcs = {
 }
 
 moving_references_funcs = {
-    numbagg.move_nanmean: wrap_pure_python(numbagg.move_nanmean.func),
+    numbagg.move_nanmean: bn.move_nanmean,
 }
 
 
