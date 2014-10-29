@@ -50,6 +50,13 @@ The functions in Numbagg are adapted from (and soon to be tested against)
 Bottleneck's battle-hardened Cython. Still, Numbagg is experimental, and
 probably not yet ready for production.
 
+.. Differences
+.. -----------
+
+.. * ``nanargmax`` and ``nanargmin`` currently return ``-1`` when they encounter
+..   an array of all ``NaN`` instead of raising an exception like numpy. This due
+..   to a limitation of numba, but it's also arguably more useful.
+
 Benchmarks
 ----------
 

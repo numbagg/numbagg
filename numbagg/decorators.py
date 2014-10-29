@@ -39,10 +39,17 @@ def _validate_axis(axis, ndim):
 
 
 class NumbaNDReduce(object):
-    def __init__(self, func, dtype_map=['float64,float64']):
+    def __init__(self, func, dtype_map=['float32,float32', 'float64,float64']):
         self.func = func
         self.dtype_map = dtype_map
         self._gufunc_cache = FunctionCache(self._create_gufunc)
+
+    @property
+    def __name__(self):
+        return self.func.__name__
+
+    def __repr__(self):
+        return '<numbagg.decorators.NumbaNDReduce %s>' % self.__name__
 
     @cached_property
     def transformed_func(self):
@@ -62,18 +69,15 @@ class NumbaNDReduce(object):
         vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
         return vectorize(self.transformed_func)
 
-    @cached_property
-    def _jit_func(self):
-        return numba.jit(self.func, nopython=True)
-
     def __call__(self, arr, axis=None):
         if axis is None:
-            # axis = range(arr.ndim)
-            # use @jit instead since numba accelerates it better
-            f = self._jit_func
+            # numba accelerates @jit better, but it doesn't handle dtypes
+            # properly
+            f = self._gufunc_cache[arr.ndim]
         elif np.isscalar(axis):
             axis = _validate_axis(axis, arr.ndim)
-            arr = arr.swapaxes(axis, -1)
+            all_axes = [n for n in range(arr.ndim) if n != axis] + [axis]
+            arr = arr.transpose(all_axes)
             f = self._gufunc_cache[1]
         else:
             axis = [_validate_axis(a, arr.ndim) for a in axis]

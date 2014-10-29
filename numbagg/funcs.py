@@ -5,20 +5,20 @@ from .decorators import ndreduce
 
 @ndreduce(['float32,bool_', 'float64,bool_'])
 def allnan(a):
-    f = 1
+    f = True
     for ai in a.flat:
         if not np.isnan(ai):
-            f = 0
+            f = False
             break
     return f
 
 
 @ndreduce(['float32,bool_', 'float64,bool_'])
 def anynan(a):
-    f = 0
+    f = False
     for ai in a.flat:
         if np.isnan(ai):
-            f = 1
+            f = True
             break
     return f
 
@@ -102,22 +102,36 @@ def nanvar(a):
 @ndreduce(['float32,int64', 'float64,int64'])
 def nanargmax(a):
     amax = -np.infty
-    idx = 0
+    # we can't raise in numba's nopython mode, so use -1 as a sentinel value
+    # for "not found" (pandas uses the same convention)
+    idx = -1
     for i, ai in enumerate(a.flat):
         if ai > amax:
             amax = ai
             idx = i
+    if idx == -1:
+        # take another pass to look for -infty
+        for i, ai in enumerate(a.flat):
+            if ai == amax:
+                idx = i
+                break
     return idx
 
 
 @ndreduce(['float32,int64', 'float64,int64'])
 def nanargmin(a):
     amin = np.infty
-    idx = 0
+    idx = -1
     for i, ai in enumerate(a.flat):
         if ai < amin:
             amin = ai
             idx = i
+    if idx == -1:
+        # take another pass to look for +infty
+        for i, ai in enumerate(a.flat):
+            if ai == amin:
+                idx = i
+                break
     return idx
 
 
