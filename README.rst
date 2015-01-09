@@ -13,8 +13,7 @@ NumPy's `generalized ufuncs`_.
 
 Currently accelerated functions: ``allnan``, ``anynan``, ``count``,
 ``nanargmax``, ``nanargmin``, ``nansum``, ``nanmean``, ``nanstd``, ``nanvar``,
-``nanmax``, ``nanmin``, ``move_nanmean``. Interested in something else? File
-an issue or, better yet, a pull request!
+``nanmax``, ``nanmin``, ``move_nanmean``.
 
 Easy to extend
 --------------
