@@ -1,9 +1,6 @@
 import inspect
 import re
 
-# we need to import numpy because this module re-executes the functions
-import numpy as np
-
 
 def _apply_source_transform(func, transform_source):
     """A horrible hack to make the syntax for writing aggregators more
@@ -14,7 +11,7 @@ def _apply_source_transform(func, transform_source):
     orig_source = inspect.getsource(func)
     source = transform_source(orig_source)
     scope = {}
-    exec(source, globals(), scope)
+    exec(source, func.func_globals, scope)
     try:
         return scope['__transformed_func']
     except KeyError:
