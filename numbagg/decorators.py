@@ -1,4 +1,5 @@
 import inspect
+import re
 
 import numba
 import numpy as np
@@ -7,11 +8,11 @@ from .cache import cached_property, FunctionCache
 from .transform import _transform_agg_source, _transform_moving_source
 
 
-def _nd_func_maker(cls, arg, *args, **kwargs):
-    if callable(arg) and not args and not kwargs:
+def _nd_func_maker(cls, arg, **kwargs):
+    if callable(arg) and not kwargs:
         return cls(arg)
     else:
-        return lambda func: cls(func, arg, *args, **kwargs)
+        return lambda func: cls(func, signature=arg, **kwargs)
 
 
 def ndreduce(*args, **kwargs):
@@ -39,9 +40,10 @@ def _validate_axis(axis, ndim):
 
 
 class NumbaNDReduce(object):
-    def __init__(self, func, dtype_map=['float32,float32', 'float64,float64']):
+    def __init__(self, func, signature=('float32(float32)',
+                                        'float64(float64)')):
         self.func = func
-        self.dtype_map = dtype_map
+        self.signature = signature
         self._gufunc_cache = FunctionCache(self._create_gufunc)
 
     @property
@@ -55,24 +57,36 @@ class NumbaNDReduce(object):
     def transformed_func(self):
         return _transform_agg_source(self.func)
 
-    def _create_gufunc(self, ndim):
+    @cached_property
+    def _jit_func(self):
+        vectorize = numba.jit(self.signature, nopython=True)
+        return vectorize(self.func)
+
+    def _create_gufunc(self, core_ndim):
         # creating compiling gufunc has some significant overhead (~130ms per
         # function and number of dimensions to aggregate), so do this in a
         # lazy fashion
-        colons = ','.join(':' for _ in range(ndim))
-        dtype_str = []
-        for d in self.dtype_map:
-            k, v = d.split(',')
-            dtype_str.append('void(%s[%s], %s[:])' % (k, colons, v))
+        colons = ','.join(':' for _ in range(core_ndim))
 
-        sig = '(%s)->()' % ','.join(list('abcdefgijk')[:ndim])
-        vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
+        numba_sig = []
+        for signature in self.signature:
+            match = re.match('^(\w+)\((\w+)\)$', signature)
+            if not match:
+                raise ValueError('invalid signature')
+            out_dtype, in_dtype = match.groups()
+            numba_sig.append('void(%s[%s], %s[:])'
+                             % (in_dtype, colons, out_dtype))
+
+        gufunc_sig = '(%s)->()' % ','.join(list('abcdefgijk')[:core_ndim])
+        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
     def __call__(self, arr, axis=None):
         if axis is None:
-            # numba accelerates @jit better, but it doesn't handle dtypes
-            # properly
+            # TODO: switch to using jit_func (it's faster), once numba reliably
+            # returns the right dtype
+            # see: https://github.com/numba/numba/issues/1087
+            # f = self._jit_func
             f = self._gufunc_cache[arr.ndim]
         elif np.isscalar(axis):
             axis = _validate_axis(axis, arr.ndim)
@@ -92,9 +106,9 @@ MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
 
 
 class NumbaNDMoving(object):
-    def __init__(self, func, dtype_map=['float64,int64,float64']):
+    def __init__(self, func, signature=['float64,int64,float64']):
         self.func = func
-        self.dtype_map = dtype_map
+        self.signature = signature
 
     @cached_property
     def transformed_func(self):
@@ -105,7 +119,7 @@ class NumbaNDMoving(object):
         extra_args = len(inspect.getargspec(self.func).args) - 2
         dtype_str = ['void(%s)' % ','.join('%s[:]' % e
                                            for e in d.split(','))
-                     for d in self.dtype_map]
+                     for d in self.signature]
         sig = '(n)%s->(n)' % ''.join(',()' for _ in range(extra_args))
         vectorize = numba.guvectorize(dtype_str, sig, nopython=True)
         return vectorize(self.transformed_func)

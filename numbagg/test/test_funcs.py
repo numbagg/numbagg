@@ -53,18 +53,20 @@ def unit_maker(func, func0, decimal=np.inf, nans=True):
     for i, arr in enumerate(arrays(nans=nans)):
         for axis in list(range(-arr.ndim, arr.ndim)) + [None]:
             with np.errstate(invalid='ignore'):
-                actualraised = False
-                try:
-                    actual = func(arr.copy(), axis=axis)
-                except Exception as err:
-                    actual = str(err)
-                    actualraised = True
                 desiredraised = False
                 try:
                     desired = func0(arr.copy(), axis=axis)
                 except Exception as err:
                     desired = str(err)
                     desiredraised = True
+                actualraised = False
+                try:
+                    actual = func(arr.copy(), axis=axis)
+                except Exception as err:
+                    if not desiredraised:
+                        raise
+                    actual = str(err)
+                    actualraised = True
             if actualraised and desiredraised:
                 pass
             else:

@@ -25,10 +25,8 @@ before_install:
   - conda info -a
 
 install:
-  # note: for now, install numba from source so we get fixes on master
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numpy llvmpy
+  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numba
   - source activate test_env
-  - pip install https://github.com/numba/numba/archive/master.zip
   - conda install -c pandas bottleneck
   - python setup.py install
 

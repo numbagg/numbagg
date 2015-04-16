@@ -3,7 +3,7 @@ import numpy as np
 from .decorators import ndreduce
 
 
-@ndreduce(['float32,bool_', 'float64,bool_'])
+@ndreduce(['bool_(float32)', 'bool_(float64)'])
 def allnan(a):
     f = True
     for ai in a.flat:
@@ -13,7 +13,7 @@ def allnan(a):
     return f
 
 
-@ndreduce(['float32,bool_', 'float64,bool_'])
+@ndreduce(['bool_(float32)', 'bool_(float64)'])
 def anynan(a):
     f = False
     for ai in a.flat:
@@ -23,7 +23,7 @@ def anynan(a):
     return f
 
 
-@ndreduce(['float32,int64', 'float64,int64'])
+@ndreduce(['int64(float32)', 'int64(float64)'])
 def count(a):
     non_missing = 0
     for ai in a.flat:
@@ -99,7 +99,7 @@ def nanvar(a):
         return np.nan
 
 
-@ndreduce(['float32,int64', 'float64,int64'])
+@ndreduce(['int64(float32)', 'int64(float64)'])
 def nanargmax(a):
     amax = -np.infty
     # we can't raise in numba's nopython mode, so use -1 as a sentinel value
@@ -118,7 +118,7 @@ def nanargmax(a):
     return idx
 
 
-@ndreduce(['float32,int64', 'float64,int64'])
+@ndreduce(['int64(float32)', 'int64(float64)'])
 def nanargmin(a):
     amin = np.infty
     idx = -1
@@ -138,12 +138,12 @@ def nanargmin(a):
 @ndreduce
 def nanmax(a):
     amax = -np.infty
-    allnan = 1
+    all_missing = 1
     for ai in a.flat:
         if ai >= amax:
             amax = ai
-            allnan = 0
-    if allnan:
+            all_missing = 0
+    if all_missing:
         amax = np.nan
     return amax
 
@@ -151,11 +151,11 @@ def nanmax(a):
 @ndreduce
 def nanmin(a):
     amin = np.infty
-    allnan = 1
+    all_missing = 1
     for ai in a.flat:
         if ai <= amin:
             amin = ai
-            allnan = 0
-    if allnan:
+            all_missing = 0
+    if all_missing:
         amin = np.nan
     return amin
