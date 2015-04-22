@@ -2,6 +2,11 @@ import inspect
 import re
 
 
+def _get_globals(f):
+    # fall back to Python 2 attribute
+    return getattr(f, '__globals__', f.func_globals)
+
+
 def _apply_source_transform(func, transform_source):
     """A horrible hack to make the syntax for writing aggregators more
     Pythonic.
@@ -11,7 +16,7 @@ def _apply_source_transform(func, transform_source):
     orig_source = inspect.getsource(func)
     source = transform_source(orig_source)
     scope = {}
-    exec(source, func.func_globals, scope)
+    exec(source, _get_globals(func), scope)
     try:
         return scope['__transformed_func']
     except KeyError:
