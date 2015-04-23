@@ -1,10 +1,12 @@
 import inspect
 import re
+import sys
+
+PY2 = sys.version_info[0] < 3
 
 
-def _get_globals(f):
-    # fall back to Python 2 attribute
-    return getattr(f, '__globals__', f.func_globals)
+def _func_globals(f):
+    return f.func_globals if PY2 else f.__globals__
 
 
 def _apply_source_transform(func, transform_source):
@@ -16,7 +18,7 @@ def _apply_source_transform(func, transform_source):
     orig_source = inspect.getsource(func)
     source = transform_source(orig_source)
     scope = {}
-    exec(source, _get_globals(func), scope)
+    exec(source, _func_globals(func), scope)
     try:
         return scope['__transformed_func']
     except KeyError:
