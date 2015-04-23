@@ -106,15 +106,9 @@ def nanargmax(a):
     # for "not found" (pandas uses the same convention)
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai > amax:
+        if ai > amax or (idx == -1 and not np.isnan(ai)):
             amax = ai
             idx = i
-    if idx == -1:
-        # take another pass to look for -infty
-        for i, ai in enumerate(a.flat):
-            if ai == amax:
-                idx = i
-                break
     return idx
 
 
@@ -123,15 +117,9 @@ def nanargmin(a):
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai < amin:
+        if ai < amin or (idx == -1 and not np.isnan(ai)):
             amin = ai
             idx = i
-    if idx == -1:
-        # take another pass to look for +infty
-        for i, ai in enumerate(a.flat):
-            if ai == amin:
-                idx = i
-                break
     return idx
 
 
