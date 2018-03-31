@@ -6,7 +6,7 @@ from .decorators import ndmoving
 
 @guvectorize(
     [(float64[:], float64, float64[:])],
-    '(n),()->(n)',
+    signature='(n),()->(n)',
     nopython=True,
     target='parallel',
 )
