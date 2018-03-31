@@ -4,7 +4,12 @@ from numba import guvectorize, float64
 from .decorators import ndmoving
 
 
-@guvectorize([(float64[:], float64, float64[:])], '(n),()->(n)', nopython=True)
+@guvectorize(
+    [(float64[:], float64, float64[:])],
+    '(n),()->(n)',
+    nopython=True,
+    target='parallel',
+)
 def ewm_nanmean(a, com, out):
 
     N = len(a)
