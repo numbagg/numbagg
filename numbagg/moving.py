@@ -1,9 +1,12 @@
 import numpy as np
+from numba import float64, int64
 
 from .decorators import ndmoving
 
 
-@ndmoving
+@ndmoving([
+    (float64[:], int64, float64[:]),
+])
 def move_nanmean(a, window, out):
     asum = 0.0
     count = 0
