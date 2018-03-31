@@ -6,7 +6,6 @@ import pytest
 from numbagg.moving import ewm_nanmean
 
 
-
 def test_ewma():
 
     array = np.random.rand(2000)
@@ -18,7 +17,7 @@ def test_ewma():
 
 def test_ewma_nd():
 
-    array = np.random.rand(2000, 4)
+    array = np.random.rand(4, 2000)
     result = np.empty(array.shape)
     ewm_nanmean(array, 3)
 
