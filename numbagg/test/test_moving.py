@@ -11,15 +11,14 @@ def test_ewma():
 
     array = np.random.rand(2000)
     expected = pd.Series(array).ewm(com=3).mean()
-    result = np.empty(array.shape)
-    ewm_nanmean(array, 3, result)
+    result = ewm_nanmean(array, 3)
 
     assert_almost_equal(expected, result)
 
 
 def test_ewma_nd():
 
-    array = np.random.rand(4, 2000)
+    array = np.random.rand(2000, 4)
     result = np.empty(array.shape)
-    ewm_nanmean(array, 3, result)
+    ewm_nanmean(array, 3)
 
