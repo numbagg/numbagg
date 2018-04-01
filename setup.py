@@ -8,5 +8,5 @@ setup(name='numbagg',
       install_requires=['numpy', 'numba'],
       tests_require=['nose', 'bottleneck', 'pandas'],
       url='https://github.com/shoyer/numbagg',
-      test_suite='nose.collector',
+      test_suite='pytest',
       packages=find_packages())
