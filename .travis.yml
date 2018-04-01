@@ -26,9 +26,9 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env -c conda-forge python=$TRAVIS_PYTHON_VERSION pip nose python numba pandas bottleneck
+  - conda create --yes -n test_env -c conda-forge python=$TRAVIS_PYTHON_VERSION pip pytest python numba pandas bottleneck
   - source activate test_env
-  - python setup.py install
+  - pip install -e .
 
 script:
   - pytest 
