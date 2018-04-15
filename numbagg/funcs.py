@@ -1,9 +1,13 @@
 import numpy as np
+from numba import bool_, float32, float64, int64
 
 from .decorators import ndreduce
 
 
-@ndreduce(['bool_(float32)', 'bool_(float64)'])
+@ndreduce([
+    bool_(float32),
+    bool_(float64)
+])
 def allnan(a):
     f = True
     for ai in a.flat:
@@ -13,7 +17,10 @@ def allnan(a):
     return f
 
 
-@ndreduce(['bool_(float32)', 'bool_(float64)'])
+@ndreduce([
+    bool_(float32),
+    bool_(float64)
+])
 def anynan(a):
     f = False
     for ai in a.flat:
@@ -23,7 +30,10 @@ def anynan(a):
     return f
 
 
-@ndreduce(['int64(float32)', 'int64(float64)'])
+@ndreduce([
+    int64(float32),
+    int64(float64)
+])
 def count(a):
     non_missing = 0
     for ai in a.flat:
@@ -32,7 +42,10 @@ def count(a):
     return non_missing
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nansum(a):
     asum = 0.0
     for ai in a.flat:
@@ -41,7 +54,10 @@ def nansum(a):
     return asum
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nanmean(a):
     asum = 0.0
     count = 0
@@ -55,7 +71,10 @@ def nanmean(a):
         return np.nan
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nanstd(a):
     # for now, fix ddof=0
     ddof = 0
@@ -77,7 +96,10 @@ def nanstd(a):
         return np.nan
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nanvar(a):
     # for now, fix ddof=0
     ddof = 0
@@ -99,7 +121,10 @@ def nanvar(a):
         return np.nan
 
 
-@ndreduce(['int64(float32)', 'int64(float64)'])
+@ndreduce([
+    int64(float32),
+    int64(float64)
+])
 def nanargmax(a):
     amax = -np.infty
     # we can't raise in numba's nopython mode, so use -1 as a sentinel value
@@ -112,7 +137,10 @@ def nanargmax(a):
     return idx
 
 
-@ndreduce(['int64(float32)', 'int64(float64)'])
+@ndreduce([
+    int64(float32),
+    int64(float64)
+])
 def nanargmin(a):
     amin = np.infty
     idx = -1
@@ -123,7 +151,10 @@ def nanargmin(a):
     return idx
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nanmax(a):
     amax = -np.infty
     all_missing = 1
@@ -136,7 +167,10 @@ def nanmax(a):
     return amax
 
 
-@ndreduce
+@ndreduce([
+    float32(float32),
+    float64(float64)
+])
 def nanmin(a):
     amin = np.infty
     all_missing = 1

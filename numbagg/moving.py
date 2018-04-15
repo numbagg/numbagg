@@ -1,5 +1,5 @@
 import numpy as np
-from numba import guvectorize, float64
+from numba import float64, guvectorize, int64
 
 from .decorators import ndmoving
 
@@ -14,7 +14,7 @@ def ewm_nanmean(a, com, out):
 
     N = len(a)
     if N == 0:
-        return 
+        return
 
     alpha = 1. / (1. + com)
     old_wt_factor = 1. - alpha
@@ -23,10 +23,10 @@ def ewm_nanmean(a, com, out):
     weighted_avg = a[0]
     is_observation = (weighted_avg == weighted_avg)
     nobs = int(is_observation)
-    out[0] = weighted_avg 
+    out[0] = weighted_avg
     old_wt = 1.
 
-    for i in range(1, N): 
+    for i in range(1, N):
         cur = a[i]
         is_observation = (cur == cur)
         nobs += int(is_observation)
@@ -42,10 +42,12 @@ def ewm_nanmean(a, com, out):
         elif is_observation:
             weighted_avg = cur
 
-        out[i] = weighted_avg 
+        out[i] = weighted_avg
 
 
-@ndmoving
+@ndmoving([
+    (float64[:], int64, float64[:]),
+])
 def move_nanmean(a, window, out):
     asum = 0.0
     count = 0
@@ -77,4 +79,3 @@ def move_nanmean(a, window, out):
             out[i] = asum / count
         else:
             out[i] = np.nan
-
