@@ -14,13 +14,54 @@ def _nd_func_maker(cls, arg, **kwargs):
 
 
 def ndreduce(*args, **kwargs):
-    """Create an N-dimensional aggregation function."""
+    """Create an N-dimensional aggregation function.
+
+    Functions should have signatures of the form output_type(input_type), where
+    input_type and output_type are numba dtypes. This decorator rewrites them
+    to accept input arrays of arbitrary dimensionality, with an additional
+    optional `axis`, which accepts integers or tuples of integers (defaulting
+    to `axis=None` for all axes).
+
+    For example, to write a simplified version of `np.sum(arr, axis=None)`::
+
+        from numba import float64
+
+        @ndreduce([
+            float64(float64)
+        ])
+        def sum(a):
+            asum = 0.0
+            for ai in a.flat:
+                asum += ai
+            return asum
+    """
     return _nd_func_maker(NumbaNDReduce, *args, **kwargs)
 
 
 def ndmoving(*args, **kwargs):
-    """Create an N-dimensional moving window function along one dimension."""
+    """Create an N-dimensional moving window function along one dimension.
+
+    Functions should accept arguments for the input array, an integer window
+    size and the output array.
+
+    For example, to write a simplified (and naively implemented) moving window
+    sum::
+
+        @ndmoving([
+            (float64[:], int64, float64[:]),
+        ])
+        def move_sum(a, window, out):
+            for i in range(a.size):
+                for j in range(window):
+                    if i - j > 0:
+                        out[i] += a[i - j]
+    """
     return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
+
+
+def groupndreduce(*args, **kwargs):
+    """Create an N-dimensional grouped aggregation function."""
+    return _nd_func_maker(NumbaGroupNDReduce, *args, **kwargs)
 
 
 def _validate_axis(axis, ndim):
@@ -149,14 +190,6 @@ class NumbaNDMoving(object):
             if not isinstance(sig, tuple):
                 raise TypeError('signatures for ndmoving must be tuples: {}'
                                 .format(signature))
-            if not (ndim(sig[0]) == 1
-                    and all(ndim(s) == 0 for s in sig[1:-1])
-                    and ndim(sig[-1]) == 1):
-                raise ValueError('invalid signature for ndmoving: {}'
-                                 .format(signature))
-            if ndims != tuple(ndim(arg) for arg in sig):
-                raise ValueError('inconsistent signatures for ndmoving: {}'
-                                 .format(signature))
         self.signature = signature
 
     @property
@@ -182,3 +215,80 @@ class NumbaNDMoving(object):
         arr = np.moveaxis(arr, axis, -1)
         result = self.gufunc(arr, window)
         return np.moveaxis(result, -1, axis)
+
+
+class NumbaGroupNDReduce(object):
+    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE):
+        self.func = func
+
+        for sig in signature:
+            if not isinstance(sig, tuple):
+                raise TypeError('signatures for ndmoving must be tuples: {}'
+                                .format(signature))
+            if len(sig) != 3:
+                raise TypeError('signature has wrong number of argument != 3: '
+                                '{}'.format(signature))
+            if any(ndim(arg) != 0 for arg in sig):
+                raise ValueError(
+                    'all arguments in signature for ndreduce must be scalars: '
+                    ' {}'.format(signature))
+        self.signature = signature
+        self._gufunc_cache = FunctionCache(self._create_gufunc)
+
+    @property
+    def __name__(self):
+        return self.func.__name__
+
+    def __repr__(self):
+        return '<numbagg.decorators.NumbaGroupNDReduce %s>' % self.__name__
+
+    def _create_gufunc(self, core_ndim):
+        # ompiling gufuncs has some significant overhead (~130ms per function
+        # and number of dimensions to aggregate), so do this in a lazy fashion
+        numba_sig = []
+        slices = (slice(None),) * core_ndim
+        for input_sig in self.signature:
+            values, labels, out = input_sig
+            new_sig = (values[slices], labels[slices], out[:])
+            numba_sig.append(new_sig)
+
+        first_sig = numba_sig[0]
+        gufunc_sig = ','.join(2 * [_gufunc_arg_str(first_sig[0])]) + ',(z)'
+        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
+        return vectorize(self.func)
+
+    def __call__(self, values, labels, axis=None, num_labels=None):
+        values = np.asarray(values)
+        labels = np.asarray(labels)
+
+        if num_labels is None:
+            num_labels = np.max(labels) + 1
+
+        if axis is None:
+            if values.shape != labels.shape:
+                raise ValueError(
+                    'axis required if values and labels have different '
+                    'shapes: {} vs {}'.format(values.shape, labels.shape))
+            gufunc = self._gufunc_cache[values.ndim]
+        elif isinstance(axis, numbers.Number):
+            if labels.shape != (values.shape[axis],):
+                raise ValueError(
+                    'values must have same shape along axis as labels: '
+                    '{} vs {}'.format((values.shape[axis],), labels.shape))
+            values = np.moveaxis(values, axis, -1)
+            gufunc = self._gufunc_cache[1]
+        else:
+            values_shape = tuple(values.shape[ax] for ax in axis)
+            if labels.shape != values_shape:
+                raise ValueError(
+                    'values must have same shape along axis as labels: '
+                    '{} vs {}'.format(values_shape, labels.shape))
+            values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
+            gufunc = self._gufunc_cache[len(axis)]
+
+        broadcast_ndim = values.ndim - labels.ndim
+        broadcast_shape = values.shape[:broadcast_ndim]
+        result = np.zeros(broadcast_shape + (num_labels,), values.dtype)
+        gufunc(values, labels, result)
+        # assert False
+        return result
