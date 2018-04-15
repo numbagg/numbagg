@@ -117,5 +117,5 @@ cycles.
 License
 -------
 
-MIT. Includes portions of Bottleneck, which is distributed under a
+3-clause BSD. Includes portions of Bottleneck, which is distributed under a
 Simplified BSD license.
