@@ -1,3 +1,4 @@
+import pytest
 import numbagg
 
 import bottleneck as bn
@@ -46,7 +47,23 @@ def arrays(dtypes=numbagg.dtypes, nans=True):
         yield a.reshape(1, 2, 4)
 
 
-def unit_maker(func, func0, decimal=np.inf, nans=True):
+def functions():
+    # TODO: test tuple axes
+    yield numbagg.nansum, np.nansum, np.inf
+    yield numbagg.nanmax, np.nanmax, np.inf
+    yield numbagg.nanargmin, np.nanargmin, np.inf
+    yield numbagg.nanargmax, np.nanargmax, np.inf
+    yield numbagg.nanmin, np.nanmin, np.inf
+    yield numbagg.nanmean, np.nanmean, 5
+    yield numbagg.nanstd, np.nanstd, 5
+    yield numbagg.nanvar, np.nanvar, 5
+    yield numbagg.anynan, bn.anynan, np.inf
+    yield numbagg.allnan, bn.allnan, np.inf
+    yield numbagg.count, slow_count, np.inf
+
+
+@pytest.mark.parametrize('func,func0,decimal', functions())
+def test_numerical_results_identical(func, func0, decimal, nans=True):
     "Test that bn.xxx gives the same output as bn.slow.xxx."
     msg = '\nfunc %s | input %s (%s) | shape %s | axis %s\n'
     msg += '\nInput array:\n%s\n'
@@ -104,18 +121,3 @@ def unit_maker(func, func0, decimal=np.inf, nans=True):
 
 def slow_count(x, axis=None):
     return np.sum(~np.isnan(x), axis=axis)
-
-
-def test_all():
-    # TODO: test tuple axes
-    yield unit_maker, numbagg.nansum, np.nansum
-    yield unit_maker, numbagg.nanmax, np.nanmax
-    yield unit_maker, numbagg.nanargmin, np.nanargmin
-    yield unit_maker, numbagg.nanargmax, np.nanargmax
-    yield unit_maker, numbagg.nanmin, np.nanmin
-    yield unit_maker, numbagg.nanmean, np.nanmean, 5
-    yield unit_maker, numbagg.nanstd, np.nanstd, 5
-    yield unit_maker, numbagg.nanvar, np.nanvar, 5
-    yield unit_maker, numbagg.anynan, bn.anynan
-    yield unit_maker, numbagg.allnan, bn.allnan
-    yield unit_maker, numbagg.count, slow_count
