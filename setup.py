@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='numbagg',
       version='0.1-dev',
-      license='MIT',
+      license='BSD',
       author='Stephan Hoyer',
       author_email='shoyer@gmail.com',
       install_requires=['numpy', 'numba'],
