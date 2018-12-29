@@ -1,8 +1,10 @@
 import numbers
+
 import numba
 import numpy as np
+import pandas as pd
 
-from .cache import cached_property, FunctionCache
+from .cache import FunctionCache, cached_property
 from .transform import rewrite_ndreduce
 
 
@@ -258,11 +260,23 @@ class NumbaGroupNDReduce(object):
         return vectorize(self.func)
 
     def __call__(self, values, labels, axis=None, num_labels=None):
+
         values = np.asarray(values)
         labels = np.asarray(labels)
 
+        # passing num_lables avoids checking for factorized labels
         if num_labels is None:
-            num_labels = np.max(labels) + 1
+            if is_factorized(labels):
+                num_labels = np.max(labels) + 1
+                uniques = np.arange(num_labels)
+            else:
+                labels_factorized, uniques = pd.factorize(labels.ravel())
+                labels_factorized = labels_factorized.reshape(labels.shape)
+                num_labels = uniques.size
+                # overwrite with the factorized verison
+                labels = labels_factorized
+        else:
+            uniques = np.arange(num_labels)
 
         if axis is None:
             if values.shape != labels.shape:
@@ -290,5 +304,15 @@ class NumbaGroupNDReduce(object):
         broadcast_shape = values.shape[:broadcast_ndim]
         result = np.zeros(broadcast_shape + (num_labels,), values.dtype)
         gufunc(values, labels, result)
-        # assert False
-        return result
+        return result, uniques
+
+
+def is_factorized(labels):
+    if not np.issubdtype(labels.dtype, int):
+        return False
+    # exclude labels below zero
+    # we could force the caller to do this?
+    included_labels = labels[np.where(labels >= 0)]
+    if np.unique(included_labels).size != np.max(included_labels) + 1:
+        return False
+    return True
