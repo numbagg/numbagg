@@ -270,7 +270,8 @@ class NumbaGroupNDReduce(object):
                 num_labels = np.max(labels) + 1
                 uniques = np.arange(num_labels)
             else:
-                labels_factorized, uniques = pd.factorize(labels.ravel())
+                labels_factorized, uniques = pd.factorize(
+                    labels.ravel(), sort=True)
                 labels_factorized = labels_factorized.reshape(labels.shape)
                 num_labels = uniques.size
                 # overwrite with the factorized verison
@@ -308,7 +309,7 @@ class NumbaGroupNDReduce(object):
 
 
 def is_factorized(labels):
-    if not np.issubdtype(labels.dtype, int):
+    if not np.issubdtype(labels.dtype, np.int_):
         return False
     # exclude labels below zero
     # we could force the caller to do this?
