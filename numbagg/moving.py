@@ -4,12 +4,9 @@ from numba import float64, guvectorize, int64
 from .decorators import ndmoving
 
 
-@guvectorize(
-    [(float64[:], float64, float64[:])],
-    signature='(n),()->(n)',
-    nopython=True,
-    target='parallel',
-)
+@ndmoving([
+    (float64[:], float64, float64[:]),
+])
 def ewm_nanmean(a, com, out):
 
     N = len(a)
@@ -49,6 +46,7 @@ def ewm_nanmean(a, com, out):
     (float64[:], int64, float64[:]),
 ])
 def move_nanmean(a, window, out):
+
     asum = 0.0
     count = 0
     for i in range(window - 1):

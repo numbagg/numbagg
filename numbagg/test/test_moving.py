@@ -3,21 +3,41 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 import pytest
 
-from numbagg.moving import ewm_nanmean
+from numbagg.moving import ewm_nanmean, move_nanmean
 
 
-def test_ewma():
+@pytest.fixture
+def array():
+    return np.random.rand(2000).reshape(200, -1)
 
-    array = np.random.rand(2000)
+
+def test_ewma(array):
+
+    array = array[0]
     expected = pd.Series(array).ewm(com=3).mean()
     result = ewm_nanmean(array, 3)
 
     assert_almost_equal(expected, result)
 
 
-def test_ewma_nd():
+def test_ewma_2d(array):
 
-    array = np.random.rand(4, 2000)
-    result = np.empty(array.shape)
-    ewm_nanmean(array, 3)
+    expected = pd.DataFrame(array).T.ewm(com=3).mean().T
+    result = ewm_nanmean(array, 3)
 
+    assert_almost_equal(expected, result)
+
+
+def test_movemean(array):
+
+    array = array[0]
+    expected = pd.Series(array).rolling(window=10).mean()
+    result = move_nanmean(array, 10)
+
+    assert_almost_equal(expected, result)
+
+
+def test_movemean_window(array):
+
+    with pytest.raises(ValueError):
+        move_nanmean(array, window=0.5)
