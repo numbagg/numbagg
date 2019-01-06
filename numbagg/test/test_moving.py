@@ -11,11 +11,12 @@ def array():
     return np.random.rand(2000).reshape(200, -1)
 
 
-def test_ewma(array):
+@pytest.mark.parametrize('com', [0.5, 3])
+def test_ewma(array, com):
 
     array = array[0]
-    expected = pd.Series(array).ewm(com=3).mean()
-    result = ewm_nanmean(array, 3)
+    expected = pd.Series(array).ewm(com=com).mean()
+    result = ewm_nanmean(array, com)
 
     assert_almost_equal(expected, result)
 

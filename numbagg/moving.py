@@ -4,9 +4,16 @@ from numba import float64, guvectorize, int64
 from .decorators import ndmoving
 
 
+def ewm_window_check(arr, window):
+    if (window < 0):
+        raise ValueError("Com must be positive; currently {}".format(window))
+
+
 @ndmoving([
     (float64[:], float64, float64[:]),
-])
+],
+    window_check=ewm_window_check
+)
 def ewm_nanmean(a, com, out):
 
     N = len(a)
