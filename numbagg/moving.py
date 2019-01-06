@@ -1,5 +1,5 @@
 import numpy as np
-from numba import float64, guvectorize, int64
+from numba import float64, int64
 
 from .decorators import ndmoving
 

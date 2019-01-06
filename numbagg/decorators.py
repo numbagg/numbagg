@@ -187,11 +187,11 @@ DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 
 
 class NumbaNDMoving(object):
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE, window_check=rolling_check):
+    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE,
+                 window_check=rolling_check):
         self.func = func
         self.window_check = window_check
 
-        ndims = tuple(ndim(arg) for arg in signature[0])
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError('signatures for ndmoving must be tuples: {}'
