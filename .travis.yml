@@ -31,6 +31,7 @@ install:
 
 script:
   - if [[ "$TASK" == "lint" ]]; then
-      pip install black && black .
+      pip install black && black . ;
     else
-      pytest
+      pytest ;
+    fi
