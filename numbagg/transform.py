@@ -31,8 +31,8 @@ def _func_globals(f):
     return f.func_globals if PY2 else f.__globals__
 
 
-_OUT_NAME = '__numbagg_out'
-_TRANFORMED_FUNC_NAME = '__numbagg_transformed_func'
+_OUT_NAME = "__numbagg_out"
+_TRANFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
 
 def _apply_ast_rewrite(func, node_transformer):
@@ -45,15 +45,14 @@ def _apply_ast_rewrite(func, node_transformer):
     tree = ast.parse(orig_source)
     tree = node_transformer.visit(tree)
     ast.fix_missing_locations(tree)
-    source = compile(tree, filename='<ast>', mode='exec')
+    source = compile(tree, filename="<ast>", mode="exec")
 
     scope = {}
     exec(source, _func_globals(func), scope)
     try:
         return scope[_TRANFORMED_FUNC_NAME]
     except KeyError:
-        raise TypeError('failed to rewrite function definition:\n%s'
-                        % orig_source)
+        raise TypeError("failed to rewrite function definition:\n%s" % orig_source)
 
 
 def _ast_arg(name):
@@ -64,23 +63,29 @@ def _ast_arg(name):
 
 
 class _NDReduceTransformer(ast.NodeTransformer):
-
     def visit_FunctionDef(self, node):
         args = node.args.args + [_ast_arg(_OUT_NAME)]
         arguments = ast.arguments(
-            args=args, vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None,
-            defaults=[])
+            args=args,
+            vararg=None,
+            kwonlyargs=[],
+            kw_defaults=[],
+            kwarg=None,
+            defaults=[],
+        )
         function_def = ast.FunctionDef(
             name=_TRANFORMED_FUNC_NAME,
             args=arguments,
             body=node.body,
-            decorator_list=[])
+            decorator_list=[],
+        )
         return self.generic_visit(function_def)
 
     def visit_Return(self, node):
         subscript = ast.Subscript(
             value=ast.Name(id=_OUT_NAME, ctx=ast.Load()),
             slice=ast.Index(value=ast.Num(n=0)),
-            ctx=ast.Store())
+            ctx=ast.Store(),
+        )
         assign = ast.Assign(targets=[subscript], value=node.value)
         return assign

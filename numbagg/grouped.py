@@ -5,12 +5,14 @@ import numpy as np
 from .decorators import groupndreduce
 
 
-@groupndreduce([
-    (float64, int64, float64),
-    (float64, int32, float64),
-    (float32, int64, float32),
-    (float32, int32, float32),
-])
+@groupndreduce(
+    [
+        (float64, int64, float64),
+        (float64, int32, float64),
+        (float32, int64, float32),
+        (float32, int32, float32),
+    ]
+)
 def group_nanmean(values, labels, out):
     counts = np.zeros(out.shape, dtype=labels.dtype)
 
