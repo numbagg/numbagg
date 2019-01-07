@@ -199,8 +199,12 @@ DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 
 
 class NumbaNDMoving(object):
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE,
-                 window_validator=rolling_validator):
+    def __init__(
+        self,
+        func,
+        signature=DEFAULT_MOVING_SIGNATURE,
+        window_validator=rolling_validator,
+    ):
         self.func = func
         self.window_validator = window_validator
 
@@ -221,8 +225,7 @@ class NumbaNDMoving(object):
     @cached_property
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
-            self.signature, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
         return vectorize(self.func)
 
     def __call__(self, arr, window, axis=-1):

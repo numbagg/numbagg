@@ -5,15 +5,11 @@ from .decorators import ndmoving
 
 
 def ewm_window_validator(arr, window):
-    if (window < 0):
+    if window < 0:
         raise ValueError("Com must be positive; currently {}".format(window))
 
 
-@ndmoving([
-    (float64[:], float64, float64[:]),
-],
-    window_validator=ewm_window_validator
-)
+@ndmoving([(float64[:], float64, float64[:])], window_validator=ewm_window_validator)
 def ewm_nanmean(a, com, out):
 
     N = len(a)
