@@ -11,7 +11,7 @@ def array():
     return np.random.rand(2000).reshape(200, -1)
 
 
-@pytest.mark.parametrize('com', [0.5, 3])
+@pytest.mark.parametrize("com", [0.5, 3])
 def test_ewma(array, com):
 
     array = array[0]

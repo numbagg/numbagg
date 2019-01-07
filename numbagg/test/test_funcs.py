@@ -4,21 +4,20 @@ import numbagg
 import bottleneck as bn
 import numpy as np
 
-from numpy.testing import (assert_array_almost_equal, assert_array_equal,
-                           assert_equal)
+from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
 
 
 def arrays(dtypes=numbagg.dtypes, nans=True):
     "Iterator that yields arrays to use for unit testing."
     ss = {}
-    ss[0] = {'size':  0, 'shapes': [(0,), (0, 0), (2, 0), (2, 0, 1)]}
-    ss[1] = {'size':  4, 'shapes': [(4,)]}
-    ss[2] = {'size':  6, 'shapes': [(1, 6), (2, 3)]}
-    ss[3] = {'size':  6, 'shapes': [(1, 2, 3)]}
-    ss[4] = {'size': 24, 'shapes': [(1, 2, 3, 4)]}  # Unaccelerated
+    ss[0] = {"size": 0, "shapes": [(0,), (0, 0), (2, 0), (2, 0, 1)]}
+    ss[1] = {"size": 4, "shapes": [(4,)]}
+    ss[2] = {"size": 6, "shapes": [(1, 6), (2, 3)]}
+    ss[3] = {"size": 6, "shapes": [(1, 2, 3)]}
+    ss[4] = {"size": 24, "shapes": [(1, 2, 3, 4)]}  # Unaccelerated
     for ndim in ss:
-        size = ss[ndim]['size']
-        shapes = ss[ndim]['shapes']
+        size = ss[ndim]["size"]
+        shapes = ss[ndim]["shapes"]
         for dtype in dtypes:
             a = np.arange(size, dtype=dtype)
             for shape in shapes:
@@ -61,14 +60,14 @@ def functions():
     yield numbagg.count, slow_count, np.inf
 
 
-@pytest.mark.parametrize('func,func0,decimal', functions())
+@pytest.mark.parametrize("func,func0,decimal", functions())
 def test_numerical_results_identical(func, func0, decimal, nans=True):
     "Test that bn.xxx gives the same output as bn.slow.xxx."
-    msg = '\nfunc %s | input %s (%s) | shape %s | axis %s\n'
-    msg += '\nInput array:\n%s\n'
+    msg = "\nfunc %s | input %s (%s) | shape %s | axis %s\n"
+    msg += "\nInput array:\n%s\n"
     for i, arr in enumerate(arrays(nans=nans)):
         for axis in list(range(-arr.ndim, arr.ndim)) + [None]:
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 desiredraised = False
                 try:
                     desired = func0(arr.copy(), axis=axis)
@@ -103,16 +102,21 @@ def test_numerical_results_identical(func, func0, decimal, nans=True):
                     # correctly
                     desired[~all_missing] = actual[~all_missing]
 
-                tup = (func.__name__, 'a' + str(i), str(arr.dtype),
-                       str(arr.shape), str(axis), arr)
+                tup = (
+                    func.__name__,
+                    "a" + str(i),
+                    str(arr.dtype),
+                    str(arr.shape),
+                    str(axis),
+                    arr,
+                )
                 err_msg = msg % tup
                 if (decimal < np.inf) and (np.isfinite(arr).sum() > 0):
-                    assert_array_almost_equal(actual, desired, decimal,
-                                              err_msg)
+                    assert_array_almost_equal(actual, desired, decimal, err_msg)
                 else:
                     assert_array_equal(actual, desired, err_msg)
 
-                err_msg += '\n dtype mismatch %s %s'
+                err_msg += "\n dtype mismatch %s %s"
                 da = actual.dtype
                 dd = desired.dtype
                 assert_equal(da, dd, err_msg % (da, dd))

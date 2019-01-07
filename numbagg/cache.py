@@ -1,6 +1,7 @@
 class FunctionCache(dict):
     """A simple dict-subclass for caching the return values of a function.
     """
+
     def __init__(self, func):
         self.func = func
 
@@ -18,8 +19,9 @@ class cached_property(object):
     https://github.com/pydanny/cached-property
     https://github.com/bottlepy/bottle/commit/fa7733e075da0d790d809aa3d2f53071897e6f76
     """
+
     def __init__(self, func):
-        self.__doc__ = getattr(func, '__doc__')
+        self.__doc__ = getattr(func, "__doc__")
         self.func = func
 
     def __get__(self, obj, cls):
