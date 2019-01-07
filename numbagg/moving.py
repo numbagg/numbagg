@@ -1,14 +1,18 @@
 import numpy as np
-from numba import float64, guvectorize, int64
+from numba import float64, int64
 
 from .decorators import ndmoving
 
 
-@guvectorize(
-    [(float64[:], float64, float64[:])],
-    signature='(n),()->(n)',
-    nopython=True,
-    target='parallel',
+def ewm_window_validator(arr, window):
+    if (window < 0):
+        raise ValueError("Com must be positive; currently {}".format(window))
+
+
+@ndmoving([
+    (float64[:], float64, float64[:]),
+],
+    window_validator=ewm_window_validator
 )
 def ewm_nanmean(a, com, out):
 
@@ -49,6 +53,7 @@ def ewm_nanmean(a, com, out):
     (float64[:], int64, float64[:]),
 ])
 def move_nanmean(a, window, out):
+
     asum = 0.0
     count = 0
     for i in range(window - 1):

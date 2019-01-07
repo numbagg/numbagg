@@ -12,7 +12,6 @@ def arrays(dtypes=numbagg.dtypes, nans=True):
     "Iterator that yields arrays to use for unit testing."
     ss = {}
     ss[0] = {'size':  0, 'shapes': [(0,), (0, 0), (2, 0), (2, 0, 1)]}
-    # ss[0] = {'size':  0, 'shapes': [(0,), (0, 0)]}
     ss[1] = {'size':  4, 'shapes': [(4,)]}
     ss[2] = {'size':  6, 'shapes': [(1, 6), (2, 3)]}
     ss[3] = {'size':  6, 'shapes': [(1, 2, 3)]}
@@ -104,7 +103,7 @@ def test_numerical_results_identical(func, func0, decimal, nans=True):
                     # correctly
                     desired[~all_missing] = actual[~all_missing]
 
-                tup = (func.__name__, 'a'+str(i), str(arr.dtype),
+                tup = (func.__name__, 'a' + str(i), str(arr.dtype),
                        str(arr.shape), str(axis), arr)
                 err_msg = msg % tup
                 if (decimal < np.inf) and (np.isfinite(arr).sum() > 0):
