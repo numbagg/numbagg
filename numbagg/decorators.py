@@ -41,7 +41,7 @@ def ndreduce(*args, **kwargs):
 def ndmoving(*args, **kwargs):
     """Create an N-dimensional moving window function along one dimension.
 
-    Functions should accept arguments for the input array, an integer window
+    Functions should accept arguments for the input array, a window
     size and the output array.
 
     For example, to write a simplified (and naively implemented) moving window
@@ -55,6 +55,10 @@ def ndmoving(*args, **kwargs):
                 for j in range(window):
                     if i - j > 0:
                         out[i] += a[i - j]
+
+    The default validator for the window argument is between 1 and the array 
+    length. Pass a function to ndmoving as `window_validator` for an 
+    alternative validator
     """
     return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
 
@@ -178,7 +182,7 @@ class NumbaNDReduce(object):
 MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
 
 
-def rolling_check(arr, window):
+def rolling_validator(arr, window):
     if (window < 1) or (window > arr.shape[-1]):
         raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[-1], window))
 
@@ -188,9 +192,9 @@ DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 
 class NumbaNDMoving(object):
     def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE,
-                 window_check=rolling_check):
+                 window_validator=rolling_validator):
         self.func = func
-        self.window_check = window_check
+        self.window_validator = window_validator
 
         for sig in signature:
             if not isinstance(sig, tuple):
@@ -215,7 +219,7 @@ class NumbaNDMoving(object):
     def __call__(self, arr, window, axis=-1):
         axis = _validate_axis(axis, arr.ndim)
         arr = np.moveaxis(arr, axis, -1)
-        self.window_check(arr, window)
+        self.window_validator(arr, window)
         result = self.gufunc(arr, window)
         return np.moveaxis(result, -1, axis)
 

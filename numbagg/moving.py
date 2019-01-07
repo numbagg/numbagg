@@ -4,7 +4,7 @@ from numba import float64, int64
 from .decorators import ndmoving
 
 
-def ewm_window_check(arr, window):
+def ewm_window_validator(arr, window):
     if (window < 0):
         raise ValueError("Com must be positive; currently {}".format(window))
 
@@ -12,7 +12,7 @@ def ewm_window_check(arr, window):
 @ndmoving([
     (float64[:], float64, float64[:]),
 ],
-    window_check=ewm_window_check
+    window_validator=ewm_window_validator
 )
 def ewm_nanmean(a, com, out):
 
