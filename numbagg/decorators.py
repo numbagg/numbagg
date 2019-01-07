@@ -41,7 +41,7 @@ def ndreduce(*args, **kwargs):
 def ndmoving(*args, **kwargs):
     """Create an N-dimensional moving window function along one dimension.
 
-    Functions should accept arguments for the input array, an integer window
+    Functions should accept arguments for the input array, a window
     size and the output array.
 
     For example, to write a simplified (and naively implemented) moving window
@@ -55,6 +55,10 @@ def ndmoving(*args, **kwargs):
                 for j in range(window):
                     if i - j > 0:
                         out[i] += a[i - j]
+
+    The default validator for the window argument is between 1 and the array 
+    length. Pass a function to ndmoving as `window_validator` for an 
+    alternative validator
     """
     return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
 
@@ -178,14 +182,20 @@ class NumbaNDReduce(object):
 MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
 
 
+def rolling_validator(arr, window):
+    if (window < 1) or (window > arr.shape[-1]):
+        raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[-1], window))
+
+
 DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 
 
 class NumbaNDMoving(object):
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE):
+    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE,
+                 window_validator=rolling_validator):
         self.func = func
+        self.window_validator = window_validator
 
-        ndims = tuple(ndim(arg) for arg in signature[0])
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError('signatures for ndmoving must be tuples: {}'
@@ -204,15 +214,12 @@ class NumbaNDMoving(object):
         gufunc_sig = gufunc_string_signature(self.signature[0])
         vectorize = numba.guvectorize(
             self.signature, gufunc_sig, nopython=True)
-        return vectorize(self.transformed_func)
+        return vectorize(self.func)
 
     def __call__(self, arr, window, axis=-1):
         axis = _validate_axis(axis, arr.ndim)
-        window = np.asarray(window)
-        # TODO: test this validation
-        if (window < 1).any() or (window > arr.shape[axis]).any():
-            raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[axis], window))
         arr = np.moveaxis(arr, axis, -1)
+        self.window_validator(arr, window)
         result = self.gufunc(arr, window)
         return np.moveaxis(result, -1, axis)
 
@@ -243,7 +250,7 @@ class NumbaGroupNDReduce(object):
         return '<numbagg.decorators.NumbaGroupNDReduce %s>' % self.__name__
 
     def _create_gufunc(self, core_ndim):
-        # ompiling gufuncs has some significant overhead (~130ms per function
+        # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
         numba_sig = []
         slices = (slice(None),) * core_ndim
@@ -290,5 +297,4 @@ class NumbaGroupNDReduce(object):
         broadcast_shape = values.shape[:broadcast_ndim]
         result = np.zeros(broadcast_shape + (num_labels,), values.dtype)
         gufunc(values, labels, result)
-        # assert False
         return result
