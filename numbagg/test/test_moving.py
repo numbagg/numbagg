@@ -20,4 +20,3 @@ def test_ewma_nd():
     array = np.random.rand(4, 2000)
     result = np.empty(array.shape)
     ewm_nanmean(array, 3)
-

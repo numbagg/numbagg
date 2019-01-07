@@ -6,18 +6,13 @@ notifications:
 matrix:
   fast_finish: true
   include:
-  - python: 2.7
-  - python: 3.4
   - python: 3.5
   - python: 3.6
+  - python: 3.7
 
 before_install:
   - sudo apt-get update
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda-3.16.0-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
-    fi
+  - wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
@@ -26,9 +21,10 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numba pandas bottleneck pytest
+  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numba pandas bottleneck pytest black
   - source activate test_env
   - python setup.py install
 
 script:
   - pytest
+  - black .

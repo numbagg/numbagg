@@ -71,19 +71,19 @@ def _validate_axis(axis, ndim):
     if axis < 0:
         axis += ndim
     if axis < 0 or axis >= ndim:
-        raise ValueError('invalid axis %s' % axis)
+        raise ValueError("invalid axis %s" % axis)
     return axis
 
 
 def ndim(arg):
-    return getattr(arg, 'ndim', 0)
+    return getattr(arg, "ndim", 0)
 
 
-_ALPHABET = 'abcdefghijkmnopqrstuvwxyz'
+_ALPHABET = "abcdefghijkmnopqrstuvwxyz"
 
 
 def _gufunc_arg_str(arg):
-    return '(%s)' % ','.join(_ALPHABET[:ndim(arg)])
+    return "(%s)" % ",".join(_ALPHABET[: ndim(arg)])
 
 
 def gufunc_string_signature(numba_args):
@@ -96,12 +96,14 @@ def gufunc_string_signature(numba_args):
     >>> gufunc_string_signature((float64[:], float64))
     '(a)->()'
     """
-    return (','.join(map(_gufunc_arg_str, numba_args[:-1]))
-            + '->' + _gufunc_arg_str(numba_args[-1]))
+    return (
+        ",".join(map(_gufunc_arg_str, numba_args[:-1]))
+        + "->"
+        + _gufunc_arg_str(numba_args[-1])
+    )
 
 
-DEFAULT_REDUCE_SIGNATURE = (numba.float32(numba.float32),
-                            numba.float64(numba.float64))
+DEFAULT_REDUCE_SIGNATURE = (numba.float32(numba.float32), numba.float64(numba.float64))
 
 
 class NumbaNDReduce(object):
@@ -109,18 +111,19 @@ class NumbaNDReduce(object):
         self.func = func
 
         for sig in signature:
-            if not hasattr(sig, 'return_type'):
+            if not hasattr(sig, "return_type"):
                 raise ValueError(
-                    'signatures for ndreduce must be functions: {}'
-                    .format(signature))
+                    "signatures for ndreduce must be functions: {}".format(signature)
+                )
             if any(ndim(arg) != 0 for arg in sig.args):
                 raise ValueError(
-                    'all arguments in signature for ndreduce must be scalars: '
-                    ' {}'.format(signature))
+                    "all arguments in signature for ndreduce must be scalars: "
+                    " {}".format(signature)
+                )
             if ndim(sig.return_type) != 0:
                 raise ValueError(
-                    'return type for ndreduce must be a scalar: {}'
-                    .format(signature))
+                    "return type for ndreduce must be a scalar: {}".format(signature)
+                )
         self.signature = signature
 
         self._gufunc_cache = FunctionCache(self._create_gufunc)
@@ -130,7 +133,7 @@ class NumbaNDReduce(object):
         return self.func.__name__
 
     def __repr__(self):
-        return '<numbagg.decorators.NumbaNDReduce %s>' % self.__name__
+        return "<numbagg.decorators.NumbaNDReduce %s>" % self.__name__
 
     @cached_property
     def transformed_func(self):
@@ -147,14 +150,19 @@ class NumbaNDReduce(object):
         # lazy fashion
         numba_sig = []
         for input_sig in self.signature:
-            new_sig = ((input_sig.args[0][(slice(None),) * core_ndim],)
-                       + input_sig.args[1:] + (input_sig.return_type[:],))
+            new_sig = (
+                (input_sig.args[0][(slice(None),) * core_ndim],)
+                + input_sig.args[1:]
+                + (input_sig.return_type[:],)
+            )
             numba_sig.append(new_sig)
 
         first_sig = self.signature[0]
         gufunc_sig = gufunc_string_signature(
             (first_sig.args[0][(slice(None),) * core_ndim],)
-            + first_sig.args[1:] + (first_sig.return_type,))
+            + first_sig.args[1:]
+            + (first_sig.return_type,)
+        )
 
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
@@ -188,8 +196,9 @@ class NumbaNDMoving(object):
         ndims = tuple(ndim(arg) for arg in signature[0])
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError('signatures for ndmoving must be tuples: {}'
-                                .format(signature))
+                raise TypeError(
+                    "signatures for ndmoving must be tuples: {}".format(signature)
+                )
         self.signature = signature
 
     @property
@@ -197,13 +206,12 @@ class NumbaNDMoving(object):
         return self.func.__name__
 
     def __repr__(self):
-        return '<numbagg.decorators.NumbaNDMoving %s>' % self.__name__
+        return "<numbagg.decorators.NumbaNDMoving %s>" % self.__name__
 
     @cached_property
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
-            self.signature, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
     def __call__(self, arr, window, axis=-1):
@@ -223,15 +231,19 @@ class NumbaGroupNDReduce(object):
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError('signatures for ndmoving must be tuples: {}'
-                                .format(signature))
+                raise TypeError(
+                    "signatures for ndmoving must be tuples: {}".format(signature)
+                )
             if len(sig) != 3:
-                raise TypeError('signature has wrong number of argument != 3: '
-                                '{}'.format(signature))
+                raise TypeError(
+                    "signature has wrong number of argument != 3: "
+                    "{}".format(signature)
+                )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
-                    'all arguments in signature for ndreduce must be scalars: '
-                    ' {}'.format(signature))
+                    "all arguments in signature for ndreduce must be scalars: "
+                    " {}".format(signature)
+                )
         self.signature = signature
         self._gufunc_cache = FunctionCache(self._create_gufunc)
 
@@ -240,7 +252,7 @@ class NumbaGroupNDReduce(object):
         return self.func.__name__
 
     def __repr__(self):
-        return '<numbagg.decorators.NumbaGroupNDReduce %s>' % self.__name__
+        return "<numbagg.decorators.NumbaGroupNDReduce %s>" % self.__name__
 
     def _create_gufunc(self, core_ndim):
         # ompiling gufuncs has some significant overhead (~130ms per function
@@ -253,7 +265,7 @@ class NumbaGroupNDReduce(object):
             numba_sig.append(new_sig)
 
         first_sig = numba_sig[0]
-        gufunc_sig = ','.join(2 * [_gufunc_arg_str(first_sig[0])]) + ',(z)'
+        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.func)
 
@@ -267,22 +279,25 @@ class NumbaGroupNDReduce(object):
         if axis is None:
             if values.shape != labels.shape:
                 raise ValueError(
-                    'axis required if values and labels have different '
-                    'shapes: {} vs {}'.format(values.shape, labels.shape))
+                    "axis required if values and labels have different "
+                    "shapes: {} vs {}".format(values.shape, labels.shape)
+                )
             gufunc = self._gufunc_cache[values.ndim]
         elif isinstance(axis, numbers.Number):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
-                    'values must have same shape along axis as labels: '
-                    '{} vs {}'.format((values.shape[axis],), labels.shape))
+                    "values must have same shape along axis as labels: "
+                    "{} vs {}".format((values.shape[axis],), labels.shape)
+                )
             values = np.moveaxis(values, axis, -1)
             gufunc = self._gufunc_cache[1]
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
                 raise ValueError(
-                    'values must have same shape along axis as labels: '
-                    '{} vs {}'.format(values_shape, labels.shape))
+                    "values must have same shape along axis as labels: "
+                    "{} vs {}".format(values_shape, labels.shape)
+                )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
             gufunc = self._gufunc_cache[len(axis)]
 
