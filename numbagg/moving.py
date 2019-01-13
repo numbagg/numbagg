@@ -10,7 +10,7 @@ def ewm_window_validator(arr, window):
 
 
 @ndmoving([(float64[:], float64, float64[:])], window_validator=ewm_window_validator)
-def ewm_nanmean(a, com, out):
+def rolling_exp_nanmean(a, alpha, out):
 
     N = len(a)
     if N == 0:
