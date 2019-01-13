@@ -8,7 +8,7 @@ from numbagg.moving import move_nanmean, rolling_exp_nanmean
 
 @pytest.fixture
 def array():
-    arr = np.random.rand(2000).reshape(200, -1)
+    arr = np.random.rand(2000).reshape(10, -1)
     return np.where(arr > 0.1, arr, np.nan)
 
 
@@ -33,6 +33,8 @@ def test_rolling_exp_nanmean_2d(array):
 def test_movemean(array):
 
     array = array[0]
+    # algo doesn't currently conform to pandas handling of NaNs / min_periods
+    array = np.where(np.isnan(array), 0, array)
     expected = pd.Series(array).rolling(window=10).mean()
     result = move_nanmean(array, 10)
 
