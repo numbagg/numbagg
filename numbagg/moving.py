@@ -16,30 +16,31 @@ def rolling_exp_nanmean(a, alpha, out):
     if N == 0:
         return
 
-    alpha = 1.0 / (1.0 + com)
     old_wt_factor = 1.0 - alpha
     new_wt = 1.0
+    ignore_na = False  # could add as option in the future
 
     weighted_avg = a[0]
-    is_observation = weighted_avg == weighted_avg
+    is_observation = not np.isnan(weighted_avg)
     nobs = int(is_observation)
     out[0] = weighted_avg
     old_wt = 1.0
 
     for i in range(1, N):
         cur = a[i]
-        is_observation = cur == cur
+        is_observation = not np.isnan(cur)
         nobs += int(is_observation)
-        if weighted_avg == weighted_avg:
-            if is_observation:
+        if not np.isnan(weighted_avg):
+            if is_observation or (not ignore_na):
                 old_wt *= old_wt_factor
 
-                # avoid numerical errors on constant series
-                if weighted_avg != cur:
-                    weighted_avg = ((old_wt * weighted_avg) + (new_wt * cur)) / (
-                        old_wt + new_wt
-                    )
-                old_wt += new_wt
+                if is_observation:
+                    # avoid numerical errors on constant series
+                    if weighted_avg != cur:
+                        weighted_avg = ((old_wt * weighted_avg) + (new_wt * cur)) / (
+                            old_wt + new_wt
+                        )
+                    old_wt += new_wt
         elif is_observation:
             weighted_avg = cur
 
