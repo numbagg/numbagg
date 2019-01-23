@@ -57,22 +57,30 @@ def move_mean(a, window, min_count, out):
             count += 1
         out[i] = np.nan
 
-    for i in range(min_count - 1, window - 1):
+    for i in range(min_count - 1, window):
         ai = a[i]
         if not np.isnan(ai):
             asum += ai
             count += 1
         out[i] = asum / count if count >= min_count else np.nan
 
-    for i in range(window - 1, len(a)):
+    count_inv = 1 / count if count >= min_count else np.nan
+    for i in range(window, len(a)):
         ai = a[i]
-        if not np.isnan(ai):
+        aold = a[i - window]
+
+        ai_valid = not np.isnan(ai)
+        aold_valid = not np.isnan(aold)
+
+        if ai_valid and aold_valid:
+            asum += ai - aold
+        elif ai_valid:
             asum += ai
             count += 1
-
-        aold = a[i - window]
-        if not np.isnan(aold):
+            count_inv = 1 / count if count >= min_count else np.nan
+        elif aold_valid:
             asum -= aold
             count -= 1
+            count_inv = 1 / count if count >= min_count else np.nan
 
-        out[i] = asum / count if count >= min_count else np.nan
+        out[i] = asum * count_inv
