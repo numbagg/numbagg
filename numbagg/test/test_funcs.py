@@ -37,12 +37,8 @@ def test_numerical_results_identical(func, func0, decimal):
                 desiredraised = False
                 desired_arr = arr.copy()
                 if desired_arr.dtype == np.float16:
+                    # don't use float16 for computation
                     desired_arr = desired_arr.astype(np.float32)
-                # if desired_arr.dtype in [np.int32, np.int64] and func in [
-                #     numbagg.nanmin,
-                #     numbagg.nanmax,
-                # ]:
-                #     desired_arr = desired_arr.astype(np.float64)
                 try:
                     desired = func0(desired_arr, axis=axis)
                 except Exception as err:
