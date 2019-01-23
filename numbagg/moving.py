@@ -1,16 +1,19 @@
 import numpy as np
-from numba import float64, int64
+from numba import float32, float64, int64, int32
 
 from .decorators import ndmoving
 
 
-def ewm_window_validator(arr, window):
+def exp_window_validator(arr, window):
     if window < 0:
         raise ValueError("Com must be positive; currently {}".format(window))
 
 
-@ndmoving([(float64[:], float64, float64[:])], window_validator=ewm_window_validator)
-def rolling_exp_nanmean(a, alpha, out):
+@ndmoving(
+    [(float64[:], float64, float64[:]), (float32[:], float32, float32[:])],
+    window_validator=exp_window_validator,
+)
+def move_exp_nanmean(a, alpha, out):
 
     N = len(a)
     if N == 0:
@@ -47,7 +50,14 @@ def rolling_exp_nanmean(a, alpha, out):
         out[i] = weighted_avg
 
 
-@ndmoving([(float64[:], int64, float64[:])])
+@ndmoving(
+    [
+        (float64[:], int64, float64[:]),
+        (float32[:], int64, float32[:]),
+        (float64[:], int32, float64[:]),
+        (float32[:], int32, float32[:]),
+    ]
+)
 def move_nanmean(a, window, out):
 
     asum = 0.0

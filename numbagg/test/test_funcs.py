@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
 
 
-def arrays(dtypes=numbagg.dtypes, nans=True):
+def arrays(dtypes=[np.float32, np.float64], nans=True):
     "Iterator that yields arrays to use for unit testing."
     ss = {}
     ss[0] = {"size": 0, "shapes": [(0,), (0, 0), (2, 0), (2, 0, 1)]}
