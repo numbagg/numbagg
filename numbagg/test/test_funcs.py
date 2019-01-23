@@ -60,6 +60,9 @@ def functions():
     yield numbagg.count, slow_count, np.inf
 
 
+@pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
+@pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
+@pytest.mark.filterwarnings("ignore:Mean of empty slice")
 @pytest.mark.parametrize("func,func0,decimal", functions())
 def test_numerical_results_identical(func, func0, decimal, nans=True):
     "Test that bn.xxx gives the same output as bn.slow.xxx."
