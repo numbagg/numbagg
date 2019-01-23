@@ -83,7 +83,7 @@ def test_numerical_results_identical(func, func0, decimal, nans=True):
                     actual = str(err)
                     actualraised = True
             if actualraised and desiredraised:
-                pass
+                assert desired == actual
             elif desiredraised and actual.size == 0:
                 # there are no array values, so don't worry about not raising
                 pass
