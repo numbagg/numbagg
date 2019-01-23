@@ -59,8 +59,8 @@ probably not yet ready for production.
 Benchmarks
 ----------
 
-Initial benchmarks are quite encouraging. In many cases, Numbagg/Numba has
-competitive performance with Bottleneck/Cython::
+Initial benchmarks are quite encouraging. Numbagg/Numba has comparable
+(slightly better) performance than Bottleneck's hand-written C::
 
     import numbagg
     import numpy as np
@@ -69,31 +69,25 @@ competitive performance with Bottleneck/Cython::
     x = np.random.RandomState(42).randn(1000, 1000)
     x[x < -1] = np.NaN
 
-    # timings with numba=0.15.1-20-gd877602 and bottleneck=0.8.0
+    # timings with numba=0.41.0 and bottleneck=1.2.1
 
-    In [4]: %timeit numbagg.nanmean(x)
-    100 loops, best of 3: 2.39 ms per loop
+    In [2]: %timeit numbagg.nanmean(x)
+    1.8 ms ± 92.3 µs per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
-    In [5]: %timeit numbagg.nanmean(x, axis=0)
-    100 loops, best of 3: 9.54 ms per loop
+    In [3]: %timeit numbagg.nanmean(x, axis=0)
+    3.63 ms ± 136 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
-    In [6]: %timeit numbagg.nanmean(x, axis=1)
-    100 loops, best of 3: 2.77 ms per loop
+    In [4]: %timeit numbagg.nanmean(x, axis=1)
+    1.81 ms ± 41 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
 
-    In [7]: %timeit bottleneck.nanmean(x)
-    100 loops, best of 3: 2.27 ms per loop
+    In [5]: %timeit bottleneck.nanmean(x)
+    2.22 ms ± 119 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
-    In [8]: %timeit bottleneck.nanmean(x, axis=0)
-    100 loops, best of 3: 9.03 ms per loop
+    In [6]: %timeit bottleneck.nanmean(x, axis=0)
+    4.45 ms ± 107 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
-    In [9]: %timeit bottleneck.nanmean(x, axis=1)
-    100 loops, best of 3: 2.3 ms per loop
-
-To see these performance numbers, you'll need to install the dev version of
-Numba, as Numba's handling of the ``.flat`` iterator was sped up considerably
-in `a recent PR`__.
-
-__ https://github.com/numba/numba/pull/817
+    In [7]: %timeit bottleneck.nanmean(x, axis=1)
+    2.19 ms ± 13.7 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
 Philosophy
 ----------
