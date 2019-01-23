@@ -84,23 +84,14 @@ def test_numerical_results_identical(func, func0, decimal, nans=True):
                     actualraised = True
             if actualraised and desiredraised:
                 pass
+            elif desiredraised and actual.size == 0:
+                # there are no array values, so don't worry about not raising
+                pass
             else:
+                assert actualraised == desiredraised
+
                 actual = np.asarray(actual)
                 desired = np.asarray(desired)
-
-                if desiredraised:
-                    # unlike bottleneck, numbagg cannot raise on invalid data,
-                    # so check for sentinel values instead
-                    if np.issubdtype(actual.dtype, np.dtype(int)):
-                        fill_value = -1
-                    else:
-                        fill_value = np.nan
-                    desired = np.empty(actual.shape, actual.dtype)
-                    all_missing = np.asarray(numbagg.allnan(arr, axis=axis))
-                    desired[all_missing] = fill_value
-                    # for now, assume the non-missing values are calculated
-                    # correctly
-                    desired[~all_missing] = actual[~all_missing]
 
                 tup = (
                     func.__name__,
