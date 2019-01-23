@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 
-from numbagg.moving import move_nanmean, rolling_exp_nanmean
+from numbagg import move_nanmean, move_exp_nanmean
 
 
 @pytest.fixture
@@ -13,19 +13,19 @@ def array():
 
 
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_rolling_exp_nanmean(array, alpha):
+def test_move_exp_nanmean(array, alpha):
 
     array = array[0]
     expected = pd.Series(array).ewm(alpha=alpha).mean()
-    result = rolling_exp_nanmean(array, alpha)
+    result = move_exp_nanmean(array, alpha)
 
     assert_almost_equal(expected, result)
 
 
-def test_rolling_exp_nanmean_2d(array):
+def test_move_exp_nanmean_2d(array):
 
     expected = pd.DataFrame(array).T.ewm(alpha=0.1).mean().T
-    result = rolling_exp_nanmean(array, 0.1)
+    result = move_exp_nanmean(array, 0.1)
 
     assert_almost_equal(expected, result)
 
