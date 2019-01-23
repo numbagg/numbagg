@@ -1,11 +1,11 @@
 import numpy as np
-from numba import float64, int64
+from numba import float32, float64, int64, int32
 
 from .decorators import ndmoving, ndmovingexp
 
 
-@ndmovingexp([(float64[:], float64, float64[:])])
-def rolling_exp_nanmean(a, alpha, out):
+@ndmovingexp([(float64[:], float64, float64[:]), (float32[:], float32, float32[:])])
+def move_exp_nanmean(a, alpha, out):
 
     N = len(a)
     if N == 0:
@@ -42,7 +42,9 @@ def rolling_exp_nanmean(a, alpha, out):
         out[i] = weighted_avg
 
 
-@ndmoving([(float64[:], int64, int64, float64[:])])
+@ndmoving(
+    [(float64[:], int64, int64, float64[:]), (float32[:], int64, int64, float32[:])]
+)
 def move_mean(a, window, min_count, out):
 
     asum = 0.0

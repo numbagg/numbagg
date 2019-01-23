@@ -12,7 +12,4 @@ from .funcs import (
     nansum,
 )
 from .grouped import group_nanmean
-from .moving import move_mean
-from .decorators import ndreduce, ndmoving
-
-dtypes = ["float32", "float64"]
+from .moving import move_exp_nanmean, move_mean
