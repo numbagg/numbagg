@@ -107,11 +107,8 @@ def gufunc_string_signature(numba_args):
     )
 
 
-DEFAULT_REDUCE_SIGNATURE = (numba.float32(numba.float32), numba.float64(numba.float64))
-
-
 class NumbaNDReduce(object):
-    def __init__(self, func, signature=DEFAULT_REDUCE_SIGNATURE):
+    def __init__(self, func, signature):
         self.func = func
 
         for sig in signature:
@@ -155,7 +152,7 @@ class NumbaNDReduce(object):
         numba_sig = []
         for input_sig in self.signature:
             new_sig = (
-                (input_sig.args[0][(slice(None),) * core_ndim],)
+                (input_sig.args[0][(slice(None),) * max(core_ndim, 1)],)
                 + input_sig.args[1:]
                 + (input_sig.return_type[:],)
             )
@@ -163,7 +160,11 @@ class NumbaNDReduce(object):
 
         first_sig = self.signature[0]
         gufunc_sig = gufunc_string_signature(
-            (first_sig.args[0][(slice(None),) * core_ndim],)
+            (
+                first_sig.args[0][(slice(None),) * core_ndim]
+                if core_ndim
+                else first_sig.args[0],
+            )
             + first_sig.args[1:]
             + (first_sig.return_type,)
         )
