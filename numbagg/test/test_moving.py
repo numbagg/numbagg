@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 
-from numbagg.moving import move_nanmean, rolling_exp_nanmean
+from numbagg.moving import move_mean, rolling_exp_nanmean
 
 
 @pytest.fixture
@@ -30,18 +30,24 @@ def test_rolling_exp_nanmean_2d(array):
     assert_almost_equal(expected, result)
 
 
-def test_movemean(array):
+def test_move_mean(array):
 
     array = array[0]
-    # algo doesn't currently conform to pandas handling of NaNs / min_periods
-    array = np.where(np.isnan(array), 0, array)
-    expected = pd.Series(array).rolling(window=10).mean()
-    result = move_nanmean(array, 10)
 
+    expected = pd.Series(array).rolling(window=10, min_periods=1).mean()
+    result = move_mean(array, 10, min_count=1)
+    assert_almost_equal(expected, result)
+
+    expected = pd.Series(array).rolling(window=3, min_periods=3).mean()
+    result = move_mean(array, 3, min_count=3)
     assert_almost_equal(expected, result)
 
 
-def test_movemean_window(array):
+def test_move_mean_window(array):
 
+    with pytest.raises(TypeError):
+        move_mean(array, window=0.5)
     with pytest.raises(ValueError):
-        move_nanmean(array, window=0.5)
+        move_mean(array, window=-1)
+    with pytest.raises(ValueError):
+        move_mean(array, window=1, min_count=-1)

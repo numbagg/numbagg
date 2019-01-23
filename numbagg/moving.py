@@ -1,15 +1,10 @@
 import numpy as np
 from numba import float64, int64
 
-from .decorators import ndmoving
+from .decorators import ndmoving, ndmovingexp
 
 
-def ewm_window_validator(arr, window):
-    if window < 0:
-        raise ValueError("Com must be positive; currently {}".format(window))
-
-
-@ndmoving([(float64[:], float64, float64[:])], window_validator=ewm_window_validator)
+@ndmovingexp([(float64[:], float64, float64[:])])
 def rolling_exp_nanmean(a, alpha, out):
 
     N = len(a)
@@ -47,36 +42,35 @@ def rolling_exp_nanmean(a, alpha, out):
         out[i] = weighted_avg
 
 
-@ndmoving([(float64[:], int64, float64[:])])
-def move_nanmean(a, window, out):
+@ndmoving([(float64[:], int64, int64, float64[:])])
+def move_mean(a, window, min_count, out):
 
     asum = 0.0
     count = 0
-    for i in range(window - 1):
+
+    for i in range(min_count - 1):
         ai = a[i]
-        if ai == ai:
+        if not np.isnan(ai):
             asum += ai
             count += 1
         out[i] = np.nan
-    i = window - 1
-    ai = a[i]
-    if ai == ai:
-        asum += ai
-        count += 1
-    if count > 0:
-        out[i] = asum / count
-    else:
-        out[i] = np.nan
-    for i in range(window, len(a)):
+
+    for i in range(min_count - 1, window - 1):
         ai = a[i]
-        if ai == ai:
+        if not np.isnan(ai):
             asum += ai
             count += 1
+        out[i] = asum / count if count >= min_count else np.nan
+
+    for i in range(window - 1, len(a)):
+        ai = a[i]
+        if not np.isnan(ai):
+            asum += ai
+            count += 1
+
         aold = a[i - window]
-        if aold == aold:
+        if not np.isnan(aold):
             asum -= aold
             count -= 1
-        if count > 0:
-            out[i] = asum / count
-        else:
-            out[i] = np.nan
+
+        out[i] = asum / count if count >= min_count else np.nan
