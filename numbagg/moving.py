@@ -4,7 +4,7 @@ from numba import float32, float64, int64, int32
 from .decorators import ndmoving, ndmovingexp
 
 
-@ndmovingexp([(float64[:], float64, float64[:]), (float32[:], float32, float32[:])])
+@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
 def move_exp_nanmean(a, alpha, out):
 
     N = len(a)
@@ -43,7 +43,7 @@ def move_exp_nanmean(a, alpha, out):
 
 
 @ndmoving(
-    [(float64[:], int64, int64, float64[:]), (float32[:], int64, int64, float32[:])]
+    [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_mean(a, window, min_count, out):
 
