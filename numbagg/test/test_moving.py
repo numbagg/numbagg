@@ -68,9 +68,6 @@ def functions():
     yield move_mean, slow_move_mean
 
 
-# @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
-# @pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
-# @pytest.mark.filterwarnings("ignore:Mean of empty slice")
 @pytest.mark.parametrize("func,func0", functions())
 def test_numerical_results_identical(func, func0):
     "Test that bn.xxx gives the same output as a reference function."
