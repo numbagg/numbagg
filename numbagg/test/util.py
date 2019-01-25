@@ -126,3 +126,15 @@ def array_generator(func_name, dtypes):
                 yield a[:, :, start::step]
                 yield a[start::step][::2]
                 yield a[start::step][::2][:, ::2]
+
+
+def array_order(a):
+    f = a.flags
+    string = []
+    if f.c_contiguous:
+        string.append("C")
+    if f.f_contiguous:
+        string.append("F")
+    if len(string) == 0:
+        string.append("N")
+    return ",".join(string)

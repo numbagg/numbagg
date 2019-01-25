@@ -12,4 +12,4 @@ from .funcs import (
     nansum,
 )
 from .grouped import group_nanmean
-from .moving import move_exp_nanmean, move_nanmean
+from .moving import move_exp_nanmean, move_mean

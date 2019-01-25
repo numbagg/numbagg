@@ -7,10 +7,10 @@ from .decorators import groupndreduce
 
 @groupndreduce(
     [
-        (float64, int64, float64),
-        (float64, int32, float64),
-        (float32, int64, float32),
         (float32, int32, float32),
+        (float32, int64, float32),
+        (float64, int32, float64),
+        (float64, int64, float64),
     ]
 )
 def group_nanmean(values, labels, out):

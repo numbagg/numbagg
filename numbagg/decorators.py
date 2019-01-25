@@ -48,19 +48,20 @@ def ndmoving(*args, **kwargs):
     sum::
 
         @ndmoving([
-            (float64[:], int64, float64[:]),
+            (float64[:], int64, int64, float64[:]),
         ])
-        def move_sum(a, window, out):
+        def move_sum(a, window, min_count, out):
             for i in range(a.size):
                 for j in range(window):
-                    if i - j > 0:
+                    if i - j > min_count:
                         out[i] += a[i - j]
-
-    The default validator for the window argument is between 1 and the array 
-    length. Pass a function to ndmoving as `window_validator` for an 
-    alternative validator
     """
     return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
+
+
+def ndmovingexp(*args, **kwargs):
+    """N-dimensional exponential moving window function."""
+    return _nd_func_maker(NumbaNDMovingExp, *args, **kwargs)
 
 
 def groupndreduce(*args, **kwargs):
@@ -221,7 +222,7 @@ class NumbaNDMoving(object):
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaNDMoving %s>" % self.__name__
+        return "<numbagg.decorators.%s %s>" % (type(self).__name__, self.__name__)
 
     @cached_property
     def gufunc(self):
@@ -229,11 +230,26 @@ class NumbaNDMoving(object):
         vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
         return vectorize(self.func)
 
-    def __call__(self, arr, window, axis=-1):
+    def __call__(self, arr, window, min_count=None, axis=-1):
+        if min_count is None:
+            min_count = window
+        if not 0 < window < arr.shape[axis]:
+            raise ValueError("window not in valid range: {}".format(window))
+        if min_count < 0:
+            raise ValueError("min_count must be positive: {}".format(min_count))
         axis = _validate_axis(axis, arr.ndim)
         arr = np.moveaxis(arr, axis, -1)
-        self.window_validator(arr, window)
-        result = self.gufunc(arr, window)
+        result = self.gufunc(arr, window, min_count)
+        return np.moveaxis(result, -1, axis)
+
+
+class NumbaNDMovingExp(NumbaNDMoving):
+    def __call__(self, arr, alpha, axis=-1):
+        if alpha < 0:
+            raise ValueError("alpha must be positive: {}".format(alpha))
+        axis = _validate_axis(axis, arr.ndim)
+        arr = np.moveaxis(arr, axis, -1)
+        result = self.gufunc(arr, alpha)
         return np.moveaxis(result, -1, axis)
 
 
