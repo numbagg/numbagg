@@ -6,11 +6,12 @@ notifications:
 matrix:
   fast_finish: true
   include:
-  - python: "3.5"
-  - python: "3.6"
-  - python: "3.7"
-  - python: "3.6"
-    env: TASK=lint
+  - env: PYTHON_VERSION="3.5"
+  - env: PYTHON_VERSION="3.6"
+  - env: PYTHON_VERSION="3.7"
+  - env:
+    - PYTHON_VERSION="3.6"
+    - TASK=lint
 
 before_install:
   - sudo apt-get update
@@ -23,7 +24,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip python numba pandas bottleneck pytest
+  - conda create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
   - source activate test_env
   - python setup.py install
 
