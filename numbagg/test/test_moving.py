@@ -71,9 +71,11 @@ def functions():
 @pytest.mark.parametrize("func,func0", functions())
 def test_numerical_results_identical(func, func0):
     "Test that bn.xxx gives the same output as a reference function."
-    fmt = ('\nfunc %s | window %d | min_count %s | input %s (%s) | shape %s | '
-           'axis %s | order %s\n')
-    fmt += '\nInput array:\n%s\n'
+    fmt = (
+        "\nfunc %s | window %d | min_count %s | input %s (%s) | shape %s | "
+        "axis %s | order %s\n"
+    )
+    fmt += "\nInput array:\n%s\n"
     func_name = func.__name__
     if func_name == "move_var":
         decimal = 3
@@ -89,12 +91,22 @@ def test_numerical_results_identical(func, func0):
                     actual = func(a, window, min_count, axis=axis)
                     desired_a = a.astype(np.float32) if a.dtype == np.float16 else a
                     desired = func0(desired_a, window, min_count, axis=axis)
-                    tup = (func_name, window, str(min_count), 'a'+str(i),
-                           str(a.dtype), str(a.shape), str(axis),
-                           array_order(a), a)
+                    tup = (
+                        func_name,
+                        window,
+                        str(min_count),
+                        "a" + str(i),
+                        str(a.dtype),
+                        str(a.shape),
+                        str(axis),
+                        array_order(a),
+                        a,
+                    )
                     err_msg = fmt % tup
-                    np.testing.assert_array_almost_equal(actual, desired, decimal, err_msg)
-                    err_msg += '\n dtype mismatch %s %s'
+                    np.testing.assert_array_almost_equal(
+                        actual, desired, decimal, err_msg
+                    )
+                    err_msg += "\n dtype mismatch %s %s"
                     da = actual.dtype
                     dd = desired.dtype
                     # don't require an exact dtype match, since we don't care
@@ -135,6 +147,7 @@ def slow_move_max(a, window, min_count=None, axis=-1):
 
 def slow_move_argmin(a, window, min_count=None, axis=-1):
     "Slow move_argmin for unaccelerated dtype"
+
     def argmin(a, axis):
         a = np.array(a, copy=False)
         flip = [slice(None)] * a.ndim
@@ -154,11 +167,13 @@ def slow_move_argmin(a, window, min_count=None, axis=-1):
                 mask = np.all(mask, axis=axis)
                 idx[mask] = np.nan
         return idx
+
     return move_func(argmin, a, window, min_count, axis=axis)
 
 
 def slow_move_argmax(a, window, min_count=None, axis=-1):
     "Slow move_argmax for unaccelerated dtype"
+
     def argmax(a, axis):
         a = np.array(a, copy=False)
         flip = [slice(None)] * a.ndim
@@ -178,6 +193,7 @@ def slow_move_argmax(a, window, min_count=None, axis=-1):
                 mask = np.all(mask, axis=axis)
                 idx[mask] = np.nan
         return idx
+
     return move_func(argmax, a, window, min_count, axis=axis)
 
 
@@ -192,6 +208,7 @@ def slow_move_rank(a, window, min_count=None, axis=-1):
 
 
 # magic utility functions ---------------------------------------------------
+
 
 def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
     "Generic moving window function implemented with a python loop."

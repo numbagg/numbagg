@@ -103,7 +103,7 @@ def nanvar(a):
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
 def nanargmax(a):
     if not a.size:
-        raise ValueError('attempt to get argmax of an empty sequence')
+        raise ValueError("attempt to get argmax of an empty sequence")
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
@@ -111,14 +111,14 @@ def nanargmax(a):
             amax = ai
             idx = i
     if idx == -1:
-        raise ValueError('All-NaN slice encountered')
+        raise ValueError("All-NaN slice encountered")
     return idx
 
 
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
 def nanargmin(a):
     if not a.size:
-        raise ValueError('attempt to get argmin of an empty sequence')
+        raise ValueError("attempt to get argmin of an empty sequence")
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
@@ -126,15 +126,16 @@ def nanargmin(a):
             amin = ai
             idx = i
     if idx == -1:
-        raise ValueError('All-NaN slice encountered')
+        raise ValueError("All-NaN slice encountered")
     return idx
 
 
 @ndreduce([int64(int32), int64(int64), float32(float32), float64(float64)])
 def nanmax(a):
     if not a.size:
-        raise ValueError('zero-size array to reduction operation fmax '
-                         'which has no identity')
+        raise ValueError(
+            "zero-size array to reduction operation fmax which has no identity"
+        )
     amax = -np.infty
     all_missing = 1
     for ai in a.flat:
@@ -149,8 +150,9 @@ def nanmax(a):
 @ndreduce([int64(int32), int64(int64), float32(float32), float64(float64)])
 def nanmin(a):
     if not a.size:
-        raise ValueError('zero-size array to reduction operation fmin '
-                         'which has no identity')
+        raise ValueError(
+            "zero-size array to reduction operation fmin which has no identity"
+        )
     amin = np.infty
     all_missing = 1
     for ai in a.flat:
