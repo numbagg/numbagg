@@ -1,7 +1,5 @@
-# Based on http://conda.pydata.org/docs/travis.html and https://github.com/travis-ci/travis-ci/issues/9069#issuecomment-425720905
-language: python
-sudo: required
-dist: xenial
+language: minimal
+sudo: false
 notifications:
   email: false
 
@@ -25,7 +23,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numba pandas bottleneck pytest
+  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip python numba pandas bottleneck pytest
   - source activate test_env
   - python setup.py install
 
