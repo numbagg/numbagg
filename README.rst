@@ -42,19 +42,10 @@ Advantages over Bottleneck
   No Cython!
 * Fast functions still work for >3 dimensions.
 * ``axis`` argument handles tuples of integers.
-* ufunc broadcasting lets us supply an array for the ``window`` in moving
-  window functions.
 
-The functions in Numbagg are adapted from (and soon to be tested against)
-Bottleneck's battle-hardened Cython. Still, Numbagg is experimental, and
-probably not yet ready for production.
-
-.. Differences
-.. -----------
-
-.. * ``nanargmax`` and ``nanargmin`` currently return ``-1`` when they encounter
-..   an array of all ``NaN`` instead of raising an exception like numpy. This due
-..   to a limitation of numba, but it's also arguably more useful.
+Most of the functions in Numbagg (including our test suite) are adapted from
+Bottleneck's battle-hardened implementations. Still, Numbagg is experimental,
+and probably not yet ready for production.
 
 Benchmarks
 ----------

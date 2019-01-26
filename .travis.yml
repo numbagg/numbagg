@@ -1,18 +1,17 @@
-# Based on http://conda.pydata.org/docs/travis.html and https://github.com/travis-ci/travis-ci/issues/9069#issuecomment-425720905
-language: python
-sudo: required
-dist: xenial
+language: minimal
+sudo: false
 notifications:
   email: false
 
 matrix:
   fast_finish: true
   include:
-  - python: "3.5"
-  - python: "3.6"
-  - python: "3.7"
-  - python: "3.6"
-    env: TASK=lint
+  - env: PYTHON_VERSION="3.5"
+  - env: PYTHON_VERSION="3.6"
+  - env: PYTHON_VERSION="3.7"
+  - env:
+    - PYTHON_VERSION="3.6"
+    - TASK=lint
 
 before_install:
   - sudo apt-get update
@@ -25,13 +24,13 @@ before_install:
   - conda info -a
 
 install:
-  - conda create --yes -n test_env python=$TRAVIS_PYTHON_VERSION pip nose python numba pandas bottleneck pytest
+  - conda create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
   - source activate test_env
   - python setup.py install
 
 script:
   - if [[ "$TASK" == "lint" ]]; then
-      pip install black && black . ;
+      pip install black && black . --check ;
     else
       pytest ;
     fi

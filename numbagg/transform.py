@@ -2,8 +2,6 @@ import ast
 import inspect
 import sys
 
-PY2 = sys.version_info[0] < 3
-
 
 def rewrite_ndreduce(func):
     """Transforms aggregation functions into something numba can handle.
@@ -27,10 +25,6 @@ def rewrite_ndreduce(func):
     return _apply_ast_rewrite(func, _NDReduceTransformer())
 
 
-def _func_globals(f):
-    return f.func_globals if PY2 else f.__globals__
-
-
 _OUT_NAME = "__numbagg_out"
 _TRANFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
@@ -48,23 +42,16 @@ def _apply_ast_rewrite(func, node_transformer):
     source = compile(tree, filename="<ast>", mode="exec")
 
     scope = {}
-    exec(source, _func_globals(func), scope)
+    exec(source, func.__globals__, scope)
     try:
         return scope[_TRANFORMED_FUNC_NAME]
     except KeyError:
         raise TypeError("failed to rewrite function definition:\n%s" % orig_source)
 
 
-def _ast_arg(name):
-    if PY2:
-        return ast.Name(id=name, ctx=ast.Param())
-    else:
-        return ast.arg(arg=_OUT_NAME, annotation=None)
-
-
 class _NDReduceTransformer(ast.NodeTransformer):
     def visit_FunctionDef(self, node):
-        args = node.args.args + [_ast_arg(_OUT_NAME)]
+        args = node.args.args + [ast.arg(arg=_OUT_NAME, annotation=None)]
         arguments = ast.arguments(
             args=args,
             vararg=None,
