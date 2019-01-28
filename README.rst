@@ -3,8 +3,8 @@ Numbagg: Fast N-dimensional aggregation functions with Numba
 
 .. image:: https://travis-ci.org/shoyer/numbagg.svg?branch=master
     :target: https://travis-ci.org/shoyer/numbagg
-.. image:: https://img.shields.io/pypi/v/numagg.svg
-   :target: https://pypi.python.org/pypi/numagg/
+.. image:: https://img.shields.io/pypi/v/numbagg.svg
+   :target: https://pypi.org/project/numbagg/
 
 Fast, flexible N-dimensional array functions written with Numba_ and
 NumPy's `generalized ufuncs`_.
