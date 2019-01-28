@@ -4,16 +4,21 @@ Numbagg: Fast N-dimensional aggregation functions with Numba
 .. image:: https://travis-ci.org/shoyer/numbagg.svg?branch=master
     :target: https://travis-ci.org/shoyer/numbagg
 
-Re-implementations of (some) functions found in Bottleneck_ with Numba_ and
+Fast, flexible N-dimensional array functions written with Numba_ and
 NumPy's `generalized ufuncs`_.
 
 .. _Bottleneck: https://github.com/kwgoodman/bottleneck
 .. _Numba: https://github.com/numba/numba
 .. _generalized ufuncs: http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
 
-Currently accelerated functions: ``allnan``, ``anynan``, ``count``,
-``nanargmax``, ``nanargmin``, ``nansum``, ``nanmean``, ``nanstd``, ``nanvar``,
-``nanmax``, ``nanmin``, ``move_nanmean``.
+Currently accelerated functions:
+
+- Array functions: ``allnan``, ``anynan``, ``count``, ``nanargmax``,
+  ``nanargmin``, ``nanmax``, ``nanmean``, ``nanstd``, ``nanvar``, ``nanmin``, ``nansum``
+- Moving window functions: ``move_exp_nanmean``, ``move_mean``
+
+Note: Only functions listed here (exposed in Numbagg's top level namespace) are
+supported as part of Numbagg's public API.
 
 Easy to extend
 --------------
@@ -34,6 +39,11 @@ For example, here is how we wrote ``nansum``::
             if not np.isnan(ai):
                 asum += ai
         return asum
+
+You are welcome to experiment with Numbagg's decorator functions, but these are
+not public APIs (yet): we reserve the right to change them at any time.
+
+We'd rather get your pull requests to add new functions into Numbagg directly!
 
 Advantages over Bottleneck
 --------------------------
@@ -80,8 +90,8 @@ Initial benchmarks are quite encouraging. Numbagg/Numba has comparable
     In [7]: %timeit bottleneck.nanmean(x, axis=1)
     2.19 ms ± 13.7 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
-Philosophy
-----------
+Our approach
+------------
 
 Numbagg includes somewhat awkward workarounds for features missing from
 NumPy/Numba:
