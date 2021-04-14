@@ -46,6 +46,11 @@ def move_exp_nanmean(a, alpha, out):
 
 @ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
 def move_exp_nansum(a, alpha, out):
+    """
+    Calculates the exponentially decayed sum.
+
+    Very similar to move_exp_nanmean, but calculates a decayed sum rather than the mean.
+    """
 
     N = len(a)
     if N == 0:
