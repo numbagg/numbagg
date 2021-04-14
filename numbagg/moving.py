@@ -1,5 +1,5 @@
 import numpy as np
-from numba import float32, float64, int64, int32
+from numba import float32, float64, int64
 
 from .decorators import ndmoving, ndmovingexp
 
