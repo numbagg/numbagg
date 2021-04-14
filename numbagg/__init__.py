@@ -11,4 +11,4 @@ from .funcs import (
     nanmin,
     nansum,
 )
-from .moving import move_exp_nanmean, move_mean
+from .moving import move_exp_nanmean, move_mean, move_exp_nansum

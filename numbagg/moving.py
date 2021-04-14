@@ -6,6 +6,8 @@ from .decorators import ndmoving, ndmovingexp
 
 @ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
 def move_exp_nanmean(a, alpha, out):
+    # Inspired by pandas:
+    # https://github.com/pandas-dev/pandas/blob/1.2.x/pandas/_libs/window/aggregations.pyx#L1559.
 
     N = len(a)
     if N == 0:
@@ -17,14 +19,14 @@ def move_exp_nanmean(a, alpha, out):
 
     weighted_avg = a[0]
     is_observation = not np.isnan(weighted_avg)
-    nobs = int(is_observation)
+    n_obs = int(is_observation)
     out[0] = weighted_avg
     old_wt = 1.0
 
     for i in range(1, N):
         cur = a[i]
         is_observation = not np.isnan(cur)
-        nobs += int(is_observation)
+        n_obs += int(is_observation)
         if not np.isnan(weighted_avg):
             if is_observation or (not ignore_na):
                 old_wt *= old_wt_factor
@@ -40,6 +42,36 @@ def move_exp_nanmean(a, alpha, out):
             weighted_avg = cur
 
         out[i] = weighted_avg
+
+
+@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
+def move_exp_nansum(a, alpha, out):
+
+    N = len(a)
+    if N == 0:
+        return
+
+    old_wt = 1.0 - alpha
+    ignore_na = False  # could add as option in the future
+
+    weighted_sum = a[0]
+    is_observation = not np.isnan(weighted_sum)
+    n_obs = int(is_observation)
+    out[0] = weighted_sum
+
+    for i in range(1, N):
+        cur = a[i]
+        is_observation = not np.isnan(cur)
+        n_obs += int(is_observation)
+        if not np.isnan(weighted_sum):
+            if is_observation or (not ignore_na):
+
+                if is_observation:
+                    weighted_sum = (old_wt * weighted_sum) + cur
+        elif is_observation:
+            weighted_sum = cur
+
+        out[i] = weighted_sum
 
 
 @ndmoving(
