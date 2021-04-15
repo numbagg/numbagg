@@ -46,7 +46,7 @@ def test_move_exp_nanmean_numeric():
     assert_almost_equal(result, expected)
 
 
-def test_move_exp_nansum_numberic():
+def test_move_exp_nansum_numeric():
 
     array = np.array([10, 0, np.nan, 10])
 
