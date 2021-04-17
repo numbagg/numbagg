@@ -51,11 +51,11 @@ def test_move_exp_nansum_numeric():
     array = np.array([10, 0, np.nan, 10])
 
     result = move_exp_nansum(array, alpha=0.5)
-    expected = np.array([10.0, 5.0, 5.0, 12.5])
+    expected = np.array([10.0, 5.0, 2.5, 11.25])
     assert_almost_equal(result, expected)
 
     result = move_exp_nansum(array, alpha=0.25)
-    expected = np.array([10.0, 7.5, 7.5, 15.625])
+    expected = np.array([10.0, 7.5, 5.625, 14.21875])
     assert_almost_equal(result, expected)
 
 
