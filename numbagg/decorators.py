@@ -247,6 +247,11 @@ class NumbaNDMovingExp(NumbaNDMoving):
     def __call__(self, arr, alpha, axis=-1):
         if alpha < 0:
             raise ValueError("alpha must be positive: {}".format(alpha))
+        # If an empty tuple is passed, there's no reduction to do, so we return the
+        # original array.
+        # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
+        if axis == ():
+            return arr
         axis = _validate_axis(axis, arr.ndim)
         arr = np.moveaxis(arr, axis, -1)
         result = self.gufunc(arr, alpha)

@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 
 from numbagg import move_mean, move_exp_nanmean, move_exp_nansum
 from .util import arrays, array_order
@@ -88,6 +88,11 @@ def test_move_mean_window(rand_array):
         move_mean(rand_array, window=-1)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=1, min_count=-1)
+
+
+def test_tuple_axis_arg(rand_array):
+    result = move_exp_nanmean(rand_array, axis=())
+    assert_equal(result, rand_array)
 
 
 def functions():

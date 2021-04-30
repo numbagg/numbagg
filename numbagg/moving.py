@@ -1,5 +1,5 @@
 import numpy as np
-from numba import float32, float64, int64, int32
+from numba import float32, float64, int64
 
 from .decorators import ndmoving, ndmovingexp
 
@@ -17,13 +17,11 @@ def move_exp_nanmean(a, alpha, out):
     new_wt = 1.0
     ignore_na = False  # could add as option in the future
 
-    weighted_avg = a[0]
-    is_observation = not np.isnan(weighted_avg)
-    n_obs = int(is_observation)
-    out[0] = weighted_avg
+    weighted_avg = np.nan
+    n_obs = 0
     old_wt = 1.0
 
-    for i in range(1, N):
+    for i in range(N):
         cur = a[i]
         is_observation = not np.isnan(cur)
         n_obs += int(is_observation)
