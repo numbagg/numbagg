@@ -59,6 +59,7 @@ class _NDReduceTransformer(ast.NodeTransformer):
             kw_defaults=[],
             kwarg=None,
             defaults=[],
+            posonlyargs=[],
         )
         function_def = ast.FunctionDef(
             name=_TRANFORMED_FUNC_NAME,
