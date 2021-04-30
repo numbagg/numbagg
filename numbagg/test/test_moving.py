@@ -91,7 +91,7 @@ def test_move_mean_window(rand_array):
 
 
 def test_tuple_axis_arg(rand_array):
-    result = move_exp_nanmean(rand_array, axis=())
+    result = move_exp_nanmean(rand_array, 0.1, axis=())
     assert_equal(result, rand_array)
 
 
