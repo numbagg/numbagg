@@ -108,14 +108,14 @@ def gufunc_string_signature(numba_args):
     )
 
 
-class NumbaNDReduce(object):
+class NumbaNDReduce:
     def __init__(self, func, signature):
         self.func = func
 
         for sig in signature:
             if not hasattr(sig, "return_type"):
                 raise ValueError(
-                    "signatures for ndreduce must be functions: {}".format(signature)
+                    f"signatures for ndreduce must be functions: {signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig.args):
                 raise ValueError(
@@ -124,7 +124,7 @@ class NumbaNDReduce(object):
                 )
             if ndim(sig.return_type) != 0:
                 raise ValueError(
-                    "return type for ndreduce must be a scalar: {}".format(signature)
+                    f"return type for ndreduce must be a scalar: {signature}"
                 )
         self.signature = signature
 
@@ -200,7 +200,7 @@ def rolling_validator(arr, window):
 DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 
 
-class NumbaNDMoving(object):
+class NumbaNDMoving:
     def __init__(
         self,
         func,
@@ -212,9 +212,7 @@ class NumbaNDMoving(object):
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(
-                    "signatures for ndmoving must be tuples: {}".format(signature)
-                )
+                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
         self.signature = signature
 
     @property
@@ -222,7 +220,7 @@ class NumbaNDMoving(object):
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.%s %s>" % (type(self).__name__, self.__name__)
+        return f"<numbagg.decorators.{type(self).__name__} {self.__name__}>"
 
     @cached_property
     def gufunc(self):
@@ -234,9 +232,9 @@ class NumbaNDMoving(object):
         if min_count is None:
             min_count = window
         if not 0 < window < arr.shape[axis]:
-            raise ValueError("window not in valid range: {}".format(window))
+            raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
-            raise ValueError("min_count must be positive: {}".format(min_count))
+            raise ValueError(f"min_count must be positive: {min_count}")
         axis = _validate_axis(axis, arr.ndim)
         arr = np.moveaxis(arr, axis, -1)
         result = self.gufunc(arr, window, min_count)
@@ -246,7 +244,7 @@ class NumbaNDMoving(object):
 class NumbaNDMovingExp(NumbaNDMoving):
     def __call__(self, arr, alpha, axis=-1):
         if alpha < 0:
-            raise ValueError("alpha must be positive: {}".format(alpha))
+            raise ValueError(f"alpha must be positive: {alpha}")
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
@@ -258,15 +256,13 @@ class NumbaNDMovingExp(NumbaNDMoving):
         return np.moveaxis(result, -1, axis)
 
 
-class NumbaGroupNDReduce(object):
+class NumbaGroupNDReduce:
     def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE):
         self.func = func
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(
-                    "signatures for ndmoving must be tuples: {}".format(signature)
-                )
+                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
             if len(sig) != 3:
                 raise TypeError(
                     "signature has wrong number of argument != 3: "
