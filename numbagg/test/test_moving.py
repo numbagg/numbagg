@@ -3,9 +3,9 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 
-from numbagg import move_mean, move_exp_nanmean
+from numbagg import move_mean, move_exp_nanmean, move_exp_nansum
 from .util import arrays, array_order
 
 
@@ -31,6 +31,32 @@ def test_move_exp_nanmean_2d(rand_array):
     result = move_exp_nanmean(rand_array, 0.1)
 
     assert_almost_equal(expected, result)
+
+
+def test_move_exp_nanmean_numeric():
+
+    array = np.array([10, 0, np.nan, 10])
+
+    result = move_exp_nanmean(array, alpha=0.5)
+    expected = np.array([10.0, 3.3333333, 3.3333333, 8.1818182])
+    assert_almost_equal(result, expected)
+
+    result = move_exp_nanmean(array, alpha=0.25)
+    expected = np.array([10.0, 4.2857143, 4.2857143, 7.1653543])
+    assert_almost_equal(result, expected)
+
+
+def test_move_exp_nansum_numeric():
+
+    array = np.array([10, 0, np.nan, 10])
+
+    result = move_exp_nansum(array, alpha=0.5)
+    expected = np.array([10.0, 5.0, 2.5, 11.25])
+    assert_almost_equal(result, expected)
+
+    result = move_exp_nansum(array, alpha=0.25)
+    expected = np.array([10.0, 7.5, 5.625, 14.21875])
+    assert_almost_equal(result, expected)
 
 
 def test_move_mean():
@@ -62,6 +88,11 @@ def test_move_mean_window(rand_array):
         move_mean(rand_array, window=-1)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=1, min_count=-1)
+
+
+def test_tuple_axis_arg(rand_array):
+    result = move_exp_nanmean(rand_array, 0.1, axis=())
+    assert_equal(result, rand_array)
 
 
 def functions():
@@ -261,7 +292,7 @@ def _mask(a, window, min_count, axis):
     idx3 = tuple(idx3)
     nidx1 = n[idx1]
     nidx1 = nidx1 - n[idx2]
-    idx = np.empty(a.shape, dtype=np.bool)
+    idx = np.empty(a.shape, dtype=np.bool_)
     idx[idx1] = nidx1 < min_count
     idx[idx3] = n[idx3] < min_count
     return idx

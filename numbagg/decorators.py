@@ -212,9 +212,7 @@ class NumbaNDMoving:
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for ndmoving must be tuples: {signature}"
-                )
+                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
         self.signature = signature
 
     @property
@@ -247,6 +245,11 @@ class NumbaNDMovingExp(NumbaNDMoving):
     def __call__(self, arr, alpha, axis=-1):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
+        # If an empty tuple is passed, there's no reduction to do, so we return the
+        # original array.
+        # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
+        if axis == ():
+            return arr
         axis = _validate_axis(axis, arr.ndim)
         arr = np.moveaxis(arr, axis, -1)
         result = self.gufunc(arr, alpha)
@@ -259,9 +262,7 @@ class NumbaGroupNDReduce:
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for ndmoving must be tuples: {signature}"
-                )
+                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
             if len(sig) != 3:
                 raise TypeError(
                     "signature has wrong number of argument != 3: "
