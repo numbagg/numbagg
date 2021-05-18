@@ -37,7 +37,7 @@ jobs:
 
       - name: Install conda dependencies
         run: |
-          mamba install -c pip python numba pandas bottleneck pytest
+          mamba install -c numba pandas bottleneck pytest
 
       - name: Install numbagg
         run: |
