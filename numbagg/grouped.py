@@ -1,6 +1,5 @@
-from numba import float64, float32, int64, int32
 import numpy as np
-
+from numba import float32, float64, int32, int64
 
 from .decorators import groupndreduce
 

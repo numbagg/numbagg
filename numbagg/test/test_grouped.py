@@ -1,7 +1,7 @@
-import pandas as pd
 import numpy as np
-from numpy.testing import assert_almost_equal
+import pandas as pd
 import pytest
+from numpy.testing import assert_almost_equal
 
 from numbagg.grouped import group_nanmean
 

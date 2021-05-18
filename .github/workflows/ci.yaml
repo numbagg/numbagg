@@ -1,3 +1,5 @@
+# Inspired by xarray
+
 name: CI
 
 on:

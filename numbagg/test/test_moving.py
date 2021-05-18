@@ -5,8 +5,9 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
-from numbagg import move_mean, move_exp_nanmean, move_exp_nansum
-from .util import arrays, array_order
+from numbagg import move_exp_nanmean, move_exp_nansum, move_mean
+
+from .util import array_order, arrays
 
 
 @pytest.fixture

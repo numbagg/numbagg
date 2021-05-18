@@ -1,6 +1,5 @@
 class FunctionCache(dict):
-    """A simple dict-subclass for caching the return values of a function.
-    """
+    """A simple dict-subclass for caching the return values of a function."""
 
     def __init__(self, func):
         self.func = func

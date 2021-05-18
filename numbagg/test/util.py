@@ -1,6 +1,5 @@
 import numpy as np
 
-
 DTYPES = [np.float32, np.float64]
 
 

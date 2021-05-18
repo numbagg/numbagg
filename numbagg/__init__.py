@@ -6,9 +6,26 @@ from .funcs import (
     nanargmin,
     nanmax,
     nanmean,
-    nanstd,
-    nanvar,
     nanmin,
+    nanstd,
     nansum,
+    nanvar,
 )
-from .moving import move_exp_nanmean, move_mean, move_exp_nansum
+from .moving import move_exp_nanmean, move_exp_nansum, move_mean
+
+__all__ = [
+    allnan,
+    anynan,
+    count,
+    nanargmax,
+    nanargmin,
+    nanmax,
+    nanmean,
+    nanmin,
+    nanstd,
+    nansum,
+    nanvar,
+    move_exp_nanmean,
+    move_exp_nansum,
+    move_mean,
+]

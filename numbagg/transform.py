@@ -1,6 +1,5 @@
 import ast
 import inspect
-import sys
 
 
 def rewrite_ndreduce(func):

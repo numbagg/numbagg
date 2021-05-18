@@ -1,0 +1,5 @@
+[tool.isort]
+profile = "black"
+skip_gitignore = true
+default_section = "THIRDPARTY"
+known_first_party = ["pytest-accept"]
