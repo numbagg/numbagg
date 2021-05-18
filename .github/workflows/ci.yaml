@@ -45,10 +45,10 @@ jobs:
 
       - name: Install numbagg
         run: |
-          source activate test_env
+          mamba activate test_env
           python -m pip install --no-deps -e .
 
       - name: Run tests
         run: |
-          source activate test_env
+          mamba activate test_env
           python -m pytest
