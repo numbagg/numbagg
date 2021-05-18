@@ -1,6 +1,6 @@
 # Inspired by xarray
 
-name: CI
+name: Test
 
 on:
   pull_request:
@@ -52,3 +52,11 @@ jobs:
         run: |
           mamba activate test_env
           python -m pytest
+
+  lint:
+    name: "pre-commit hooks"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.3

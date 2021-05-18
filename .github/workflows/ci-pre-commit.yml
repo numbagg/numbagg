@@ -1,6 +1,6 @@
 # Copied from xarray
 
-name: linting
+name: Lint
 
 on:
   push:
