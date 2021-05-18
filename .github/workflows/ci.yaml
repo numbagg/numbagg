@@ -12,8 +12,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "3.8", "3.9"]
+        # os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: ["ubuntu-latest"]
+        # python-version: ["3.7", "3.8", "3.9"]
+        python-version: ["3.7"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -37,12 +39,14 @@ jobs:
 
       - name: Install conda dependencies
         run: |
-          mamba install -c numba pandas bottleneck pytest
+          mamba create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
 
       - name: Install numbagg
         run: |
+          source activate test_env
           python -m pip install --no-deps -e .
 
       - name: Run tests
         run: |
+          source activate test_env
           python -m pytest
