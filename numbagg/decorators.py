@@ -1,8 +1,9 @@
 import numbers
+
 import numba
 import numpy as np
 
-from .cache import cached_property, FunctionCache
+from .cache import FunctionCache, cached_property
 from .transform import rewrite_ndreduce
 
 
