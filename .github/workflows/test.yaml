@@ -36,10 +36,6 @@ jobs:
         with:
           python-version: 3.8
 
-      - run: |
-          # $CONDA is an environment variable pointing to the root of the miniconda directory
-          echo $CONDA/bin >> $GITHUB_PATH
-
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
