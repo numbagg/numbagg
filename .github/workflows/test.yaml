@@ -29,6 +29,14 @@ jobs:
       #     path: ~/conda_pkgs_dir
       #     key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-v1
 
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - run: |
+          # $CONDA is an environment variable pointing to the root of the miniconda directory
+          echo $CONDA/bin >> $GITHUB_PATH
+
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
@@ -41,8 +49,7 @@ jobs:
 
       - name: Install conda dependencies
         run: |
-          conda init bash
-          mamba create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
+          conda create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
 
       - name: Install numbagg
         run: |
