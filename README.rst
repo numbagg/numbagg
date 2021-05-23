@@ -1,8 +1,8 @@
 Numbagg: Fast N-dimensional aggregation functions with Numba
 ============================================================
 
-.. image:: https://github.com/shoyer/numbagg/workflows/CI/badge.svg?branch=master
-   :target: https://github.com/shoyer/numbagg/actions?query=workflow%3ACI
+.. image:: https://github.com/shoyer/numbagg/workflows/Test/badge.svg?branch=master
+   :target: https://github.com/shoyer/numbagg/actions?query=workflow%3ATest
 .. image:: https://img.shields.io/pypi/v/numbagg.svg
    :target: https://pypi.org/project/numbagg/
 
