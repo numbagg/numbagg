@@ -45,14 +45,14 @@ jobs:
           channels: conda-forge
           channel-priority: strict
           mamba-version: "*"
-          activate-environment: xarray-tests
+          activate-environment: numbagg-tests
           auto-update-conda: false
           python-version: ${{ matrix.python-version }}
           use-only-tar-bz2: true
 
       - name: Install conda dependencies
         run: |
-          conda create --yes -n test_env python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
+          conda create --yes -n numbagg-tests python=$PYTHON_VERSION pip python numba pandas bottleneck pytest
 
       - name: Install numbagg
         run: |
