@@ -16,6 +16,9 @@ CLASSIFIERS = [
 
 DESCRIPTION = "Fast N-dimensional aggregation functions with Numba"
 
+with open("README.md") as f:
+    long_description = f.read()
+
 setup(
     name="numbagg",
     version="0.2.0",
@@ -24,6 +27,8 @@ setup(
     author_email="shoyer@gmail.com",
     classifiers=CLASSIFIERS,
     description=DESCRIPTION,
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     install_requires=["numpy", "numba"],
     tests_require=["pytest", "bottleneck", "pandas"],
     python_requires=">=3.7",
