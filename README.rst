@@ -1,7 +1,7 @@
 Numbagg: Fast N-dimensional aggregation functions with Numba
 ============================================================
 
-.. image:: https://github.com/numbagg/numbagg/workflows/Test/badge.svg?branch=master
+.. image:: https://github.com/numbagg/numbagg/workflows/Test/badge.svg?branch=main
    :target: https://github.com/numbagg/numbagg/actions?query=workflow%3ATest
 .. image:: https://img.shields.io/pypi/v/numbagg.svg
    :target: https://pypi.org/project/numbagg/
@@ -100,12 +100,12 @@ NumPy/Numba:
 
 * It implements its own cache for functions wrapped by Numba's ``guvectorize``,
   because that decorator is rather slow.
-* It does its `own handling of array transposes <https://github.com/numbagg/numbagg/blob/master/numbagg/decorators.py#L69>`_ to handle the ``axis`` argument,
+* It does its `own handling of array transposes <https://github.com/numbagg/numbagg/blob/main/numbagg/decorators.py#L69>`_ to handle the ``axis`` argument,
   which we hope will `eventually be directly supported <https://github.com/numpy/numpy/issues/5197>`_
   by all NumPy gufuncs.
-* It uses some `terrible hacks <https://github.com/numbagg/numbagg/blob/master/numbagg/transform.py>`_
+* It uses some `terrible hacks <https://github.com/numbagg/numbagg/blob/main/numbagg/transform.py>`_
   to hide the out-of-bound memory access necessary to write
-  `gufuncs that handle scalar values <https://github.com/numba/numba/blob/master/numba/tests/test_guvectorize_scalar.py>`_ with Numba.
+  `gufuncs that handle scalar values <https://github.com/numba/numba/blob/main/numba/tests/test_guvectorize_scalar.py>`_ with Numba.
 
 I hope that the need for most of these will eventually go away. In the
 meantime, expect Numbagg to be tightly coupled to Numba and NumPy release
