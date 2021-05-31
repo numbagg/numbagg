@@ -97,15 +97,15 @@ NumPy/Numba:
 - It implements its own cache for functions wrapped by Numba's
   `guvectorize`, because that decorator is rather slow.
 - It does its [own handling of array
-  transposes](https://github.com/numbagg/numbagg/blob/master/numbagg/decorators.py#L69)
+  transposes](https://github.com/numbagg/numbagg/blob/main/numbagg/decorators.py#L69)
   to handle the `axis` argument, which we hope will [eventually be
   directly supported](https://github.com/numpy/numpy/issues/5197) by
   all NumPy gufuncs.
 - It uses some [terrible
-  hacks](https://github.com/numbagg/numbagg/blob/master/numbagg/transform.py) to
+  hacks](https://github.com/numbagg/numbagg/blob/main/numbagg/transform.py) to
   hide the out-of-bound memory access necessary to write [gufuncs that handle
   scalar
-  values](https://github.com/numba/numba/blob/master/numba/tests/test_guvectorize_scalar.py)
+  values](https://github.com/numba/numba/blob/main/numba/tests/test_guvectorize_scalar.py)
   with Numba.
 
 I hope that the need for most of these will eventually go away. In the meantime,
