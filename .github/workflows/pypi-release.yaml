@@ -1,6 +1,6 @@
 # Copied from xarray
 
-name: Build and Upload numbagg to PyPI
+name: Release to PyPI
 on:
   release:
     types:
