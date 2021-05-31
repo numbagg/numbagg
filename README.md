@@ -2,7 +2,6 @@
 
 [![GitHub Workflow CI Status](https://img.shields.io/github/workflow/status/numbagg/numbagg/Test?logo=github&style=for-the-badge)]((https://github.com/numbagg/numbagg/actions?query=workflow%3ATest))
 [![PyPI Version](https://img.shields.io/pypi/v/numbagg?style=for-the-badge)](https://pypi.python.org/pypi/numbagg/)
-[![GitHub License](https://img.shields.io/github/license/numbagg/numbagg?style=for-the-badge)](https://github.com/numbagg/numbagg/blob/main/LICENSE)
 
 Fast, flexible N-dimensional array functions written with
 [Numba](https://github.com/numba/numba) and NumPy's [generalized
