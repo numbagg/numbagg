@@ -12,7 +12,7 @@ on:
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
-    if: github.repository == 'shoyer/numbagg'
+    if: github.repository == 'numbagg/numbagg'
     steps:
       - uses: actions/checkout@v2
         with:

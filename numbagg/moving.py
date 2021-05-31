@@ -51,7 +51,7 @@ def move_exp_nansum(a, alpha, out):
     Very similar to move_exp_nanmean, but calculates a decayed sum rather than the mean.
     """
 
-    # As per https://github.com/shoyer/numbagg/issues/26#issuecomment-830437132, we
+    # As per https://github.com/numbagg/numbagg/issues/26#issuecomment-830437132, we
     # could try implementing this with a bool flag on the same function as
     # `move_exp_nanmean` and hope that numba optimizes it away. The code here is
     # basically a subset of that function.
