@@ -31,8 +31,10 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=["numpy", "numba"],
     tests_require=["pytest", "bottleneck", "pandas"],
+    setup_requires=["setuptools_scm"],
     python_requires=">=3.7",
     url="https://github.com/numbagg/numbagg",
     test_suite="pytest",
     packages=find_packages(),
+    use_scm_version={"fallback_version": "999"},
 )
