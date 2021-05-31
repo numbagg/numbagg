@@ -27,7 +27,7 @@ setup(
     install_requires=["numpy", "numba"],
     tests_require=["pytest", "bottleneck", "pandas"],
     python_requires=">=3.5",
-    url="https://github.com/shoyer/numbagg",
+    url="https://github.com/numbagg/numbagg",
     test_suite="pytest",
     packages=find_packages(),
 )
