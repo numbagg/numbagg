@@ -21,7 +21,6 @@ with open("README.md") as f:
 
 setup(
     name="numbagg",
-    version="0.2.0",
     license="BSD",
     author="Stephan Hoyer",
     author_email="shoyer@gmail.com",
