@@ -32,7 +32,7 @@ repos:
         args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     # version must correspond to the one in .github/workflows/ci-additional.yaml
-    rev: v0.910-1
+    rev: v0.920
     hooks:
       - id: mypy
         # Copied from setup.cfg
