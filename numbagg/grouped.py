@@ -3,8 +3,11 @@ from numba import float32, float64, int32, int64
 
 from .decorators import groupndreduce
 
-
 dtypes = [
+    (int32, int32, int32),
+    (int32, int64, int32),
+    (int64, int32, int64),
+    (int64, int64, int64),
     (float32, int32, float32),
     (float32, int64, float32),
     (float64, int32, float64),
