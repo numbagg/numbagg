@@ -14,7 +14,7 @@ repos:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 21.12b0
+    rev: 22.1.0
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
@@ -26,13 +26,13 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/Carreau/velin
-    rev: 0.0.11
+    rev: 0.0.12
     hooks:
       - id: velin
         args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     # version must correspond to the one in .github/workflows/ci-additional.yaml
-    rev: v0.930
+    rev: v0.931
     hooks:
       - id: mypy
         # Copied from setup.cfg
