@@ -1,7 +1,7 @@
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
-from .decorators import ndreduce
+from numbagg.decorators import ndreduce
 
 
 @ndreduce([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
@@ -103,7 +103,7 @@ def nanvar(a):
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
 def nanargmax(a):
     if not a.size:
-        raise ValueError("attempt to get argmax of an empty sequence")
+        raise ValueError("All-NaN slice encountered")
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
@@ -118,7 +118,7 @@ def nanargmax(a):
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
 def nanargmin(a):
     if not a.size:
-        raise ValueError("attempt to get argmin of an empty sequence")
+        raise ValueError("All-NaN slice encountered")
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
