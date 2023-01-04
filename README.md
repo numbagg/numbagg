@@ -1,6 +1,6 @@
 # Numbagg: Fast N-dimensional aggregation functions with Numba
 
-[![GitHub Workflow CI Status](https://img.shields.io/github/workflow/status/numbagg/numbagg/Test?logo=github&style=for-the-badge)]((https://github.com/numbagg/numbagg/actions?query=workflow%3ATest))
+[![GitHub Workflow CI Status](https://img.shields.io/github/actions/workflow/status/numbagg/numbagg/test.yaml?branch=main&logo=github&style=for-the-badge)](https://github.com/numbagg/numbagg/actions/workflows/test.yaml)
 [![PyPI Version](https://img.shields.io/pypi/v/numbagg?style=for-the-badge)](https://pypi.python.org/pypi/numbagg/)
 
 Fast, flexible N-dimensional array functions written with
@@ -10,8 +10,8 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 Currently accelerated functions:
 
 - Array functions: `allnan`, `anynan`, `count`, `nanargmax`,
-    `nanargmin`, `nanmax`, `nanmean`, `nanstd`, `nanvar`, `nanmin`,
-    `nansum`
+  `nanargmin`, `nanmax`, `nanmean`, `nanstd`, `nanvar`, `nanmin`,
+  `nansum`
 - Moving window functions: `move_exp_nanmean`, `move_mean`, `move_sum`
 
 Note: Only functions listed here (exposed in Numbagg's top level namespace) are
@@ -46,7 +46,7 @@ We'd rather get your pull requests to add new functions into Numbagg directly!
 ## Advantages over Bottleneck
 
 - Way less code. Easier to add new functions. No ad-hoc templating
-    system. No Cython!
+  system. No Cython!
 - Fast functions still work for >3 dimensions.
 - `axis` argument handles tuples of integers.
 
