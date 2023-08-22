@@ -9,12 +9,12 @@ repos:
       - id: check-yaml
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
-    rev: 5.11.4
+    rev: 5.12.0
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 22.12.0
+    rev: 23.7.0
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: blackdoc
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
   - repo: https://github.com/Carreau/velin
@@ -32,7 +32,7 @@ repos:
         args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     # version must correspond to the one in .github/workflows/ci-additional.yaml
-    rev: v0.991
+    rev: v1.5.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
