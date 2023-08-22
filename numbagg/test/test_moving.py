@@ -18,7 +18,6 @@ def rand_array():
 
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
 def test_move_exp_nanmean(rand_array, alpha):
-
     array = rand_array[0]
     expected = pd.Series(array).ewm(alpha=alpha).mean()
     result = move_exp_nanmean(array, alpha)
@@ -27,7 +26,6 @@ def test_move_exp_nanmean(rand_array, alpha):
 
 
 def test_move_exp_nanmean_2d(rand_array):
-
     expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
     result = move_exp_nanmean(rand_array, 0.1)
 
@@ -35,7 +33,6 @@ def test_move_exp_nanmean_2d(rand_array):
 
 
 def test_move_exp_nanmean_numeric():
-
     array = np.array([10, 0, np.nan, 10])
 
     result = move_exp_nanmean(array, alpha=0.5)
@@ -48,7 +45,6 @@ def test_move_exp_nanmean_numeric():
 
 
 def test_move_exp_nansum_numeric():
-
     array = np.array([10, 0, np.nan, 10])
 
     result = move_exp_nansum(array, alpha=0.5)
@@ -82,7 +78,6 @@ def test_move_mean_random(rand_array):
 
 
 def test_move_mean_window(rand_array):
-
     with pytest.raises(TypeError):
         move_mean(rand_array, window=0.5)
     with pytest.raises(ValueError):
