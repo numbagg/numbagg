@@ -1,9 +1,9 @@
 import numbers
+from functools import cache, cached_property
 
 import numba
 import numpy as np
 
-from .cache import FunctionCache, cached_property
 from .transform import rewrite_ndreduce
 
 
@@ -129,8 +129,6 @@ class NumbaNDReduce:
                 )
         self.signature = signature
 
-        self._gufunc_cache = FunctionCache(self._create_gufunc)
-
     @property
     def __name__(self):
         return self.func.__name__
@@ -147,6 +145,7 @@ class NumbaNDReduce:
         vectorize = numba.jit(self.signature, nopython=True)
         return vectorize(self.func)
 
+    @cache
     def _create_gufunc(self, core_ndim):
         # creating compiling gufunc has some significant overhead (~130ms per
         # function and number of dimensions to aggregate), so do this in a
@@ -180,13 +179,13 @@ class NumbaNDReduce:
             # returns the right dtype
             # see: https://github.com/numba/numba/issues/1087
             # f = self._jit_func
-            f = self._gufunc_cache[arr.ndim]
+            f = self._create_gufunc(arr.ndim)
         elif isinstance(axis, numbers.Number):
             arr = np.moveaxis(arr, axis, -1)
-            f = self._gufunc_cache[1]
+            f = self._create_gufunc(1)
         else:
             arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
-            f = self._gufunc_cache[len(axis)]
+            f = self._create_gufunc(len(axis))
         return f(arr)
 
 
@@ -236,10 +235,7 @@ class NumbaNDMoving:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        axis = _validate_axis(axis, arr.ndim)
-        arr = np.moveaxis(arr, axis, -1)
-        result = self.gufunc(arr, window, min_count)
-        return np.moveaxis(result, -1, axis)
+        return self.gufunc(arr, window, min_count, axis=axis)
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
@@ -275,7 +271,6 @@ class NumbaGroupNDReduce:
                     " {}".format(signature)
                 )
         self.signature = signature
-        self._gufunc_cache = FunctionCache(self._create_gufunc)
 
     @property
     def __name__(self):
@@ -284,6 +279,7 @@ class NumbaGroupNDReduce:
     def __repr__(self):
         return "<numbagg.decorators.NumbaGroupNDReduce %s>" % self.__name__
 
+    @cache
     def _create_gufunc(self, core_ndim):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
@@ -312,7 +308,7 @@ class NumbaGroupNDReduce:
                     "axis required if values and labels have different "
                     "shapes: {} vs {}".format(values.shape, labels.shape)
                 )
-            gufunc = self._gufunc_cache[values.ndim]
+            gufunc = self._create_gufunc(values.ndim)
         elif isinstance(axis, numbers.Number):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -320,7 +316,7 @@ class NumbaGroupNDReduce:
                     "{} vs {}".format((values.shape[axis],), labels.shape)
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self._gufunc_cache[1]
+            gufunc = self._create_gufunc(1)
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -329,7 +325,7 @@ class NumbaGroupNDReduce:
                     "{} vs {}".format(values_shape, labels.shape)
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self._gufunc_cache[len(axis)]
+            gufunc = self._create_gufunc(len(axis))
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
