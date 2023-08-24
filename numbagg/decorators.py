@@ -237,9 +237,7 @@ class NumbaNDMoving:
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
         axis = _validate_axis(axis, arr.ndim)
-        arr = np.moveaxis(arr, axis, -1)
-        result = self.gufunc(arr, window, min_count)
-        return np.moveaxis(result, -1, axis)
+        return self.gufunc(arr, window, min_count, axis=axis)
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
@@ -252,9 +250,7 @@ class NumbaNDMovingExp(NumbaNDMoving):
         if axis == ():
             return arr
         axis = _validate_axis(axis, arr.ndim)
-        arr = np.moveaxis(arr, axis, -1)
-        result = self.gufunc(arr, alpha)
-        return np.moveaxis(result, -1, axis)
+        return self.gufunc(arr, alpha, axis=axis)
 
 
 class NumbaGroupNDReduce:
