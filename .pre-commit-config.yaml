@@ -7,11 +7,10 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-  # isort should run before black as black sometimes tweaks the isort output
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.4
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.285
     hooks:
-      - id: isort
+      - id: ruff
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
     rev: 22.12.0
@@ -21,10 +20,6 @@ repos:
     rev: v0.3.8
     hooks:
       - id: blackdoc
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
   - repo: https://github.com/Carreau/velin
     rev: 0.0.12
     hooks:
@@ -32,13 +27,12 @@ repos:
         args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     # version must correspond to the one in .github/workflows/ci-additional.yaml
-    rev: v0.991
+    rev: v1.5.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
         exclude: "properties|asv_bench"
         additional_dependencies: [types-setuptools]
-
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade
   #   rev: v1.22.1
