@@ -83,7 +83,6 @@ def move_exp_nansum(a, alpha, out):
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_mean(a, window, min_count, out):
-
     asum = 0.0
     count = 0
 
