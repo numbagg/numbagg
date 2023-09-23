@@ -62,6 +62,32 @@ def move_exp_nansum(a, alpha, out):
         out[i] = numer
 
 
+@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
+def move_exp_nanvar(a, alpha, out):
+    N = len(a)
+
+    x2_numer = x_numer = denom = np.nan
+    decay = 1.0 - alpha
+
+    for i in range(N):
+        a_i = a[i]
+
+        x2_numer *= decay
+        x_numer *= decay
+        denom *= decay
+
+        if not np.isnan(a_i):
+            # If it's the first observation, toggle the values to non-nan.
+            if np.isnan(x2_numer):
+                x2_numer = x_numer = denom = 0
+
+            x2_numer += a_i**2
+            x_numer += a_i
+            denom += 1
+
+        out[i] = (x2_numer / denom) - ((x_numer / denom) ** 2)
+
+
 @ndmoving(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
