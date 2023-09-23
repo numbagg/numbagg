@@ -1,3 +1,5 @@
+from importlib.metadata import version as _version
+
 from .funcs import (
     allnan,
     anynan,
@@ -12,12 +14,6 @@ from .funcs import (
     nanvar,
 )
 from .moving import move_exp_nanmean, move_exp_nansum, move_mean
-
-try:
-    from importlib.metadata import version as _version
-except ImportError:
-    # if the fallback library is missing, we are doomed.
-    from importlib_metadata import version as _version
 
 try:
     __version__ = _version("numbagg")
