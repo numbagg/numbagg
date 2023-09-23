@@ -1,5 +1,3 @@
-import pkg_resources
-
 from .funcs import (
     allnan,
     anynan,
@@ -16,11 +14,17 @@ from .funcs import (
 from .moving import move_exp_nanmean, move_exp_nansum, move_mean
 
 try:
-    __version__ = pkg_resources.get_distribution("numbagg").version
+    from importlib.metadata import version as _version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import version as _version
+
+try:
+    __version__ = _version("numbagg")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
-    __version__ = "999"
+    __version__ = "9999"
 
 __all__ = [
     allnan,
