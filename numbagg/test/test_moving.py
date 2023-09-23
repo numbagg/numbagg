@@ -23,14 +23,14 @@ def test_move_exp_nanmean(rand_array, alpha):
     expected = pd.Series(array).ewm(alpha=alpha).mean()
     result = move_exp_nanmean(array, alpha)
 
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
 
 def test_move_exp_nanmean_2d(rand_array):
     expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
     result = move_exp_nanmean(rand_array, 0.1)
 
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
 
 def test_move_exp_nanmean_numeric():
@@ -63,7 +63,7 @@ def test_move_mean():
 
     expected = pd.Series(array).rolling(window=5, min_periods=1).mean().values
     result = move_mean(array, 5, min_count=1)
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
 
 def test_move_mean_random(rand_array):
@@ -71,11 +71,11 @@ def test_move_mean_random(rand_array):
 
     expected = pd.Series(array).rolling(window=10, min_periods=1).mean().values
     result = move_mean(array, 10, min_count=1)
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
     expected = pd.Series(array).rolling(window=3, min_periods=3).mean().values
     result = move_mean(array, 3, min_count=3)
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
 
 def test_move_mean_window(rand_array):
