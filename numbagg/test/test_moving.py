@@ -33,6 +33,41 @@ def test_move_exp_nanmean_2d(rand_array):
     assert_almost_equal(result, expected)
 
 
+@pytest.mark.parametrize("func", [move_exp_nanmean, move_exp_nansum])
+def test_move_exp_min_weight(func):
+    array = np.ones(20)
+
+    # min_weight of 0 should produce values everywhere
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2)))
+    expected = 20
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.8)))
+    expected = 20
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.2)))
+    expected = 17
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.8)))
+    expected = 20
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.2)))
+    expected = 10
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.8)))
+    expected = 19
+    assert result == expected
+
+    # min_weight of 1 should never produce values
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.2)))
+    expected = 0
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.8)))
+    expected = 0
+    assert result == expected
+
+
 def test_move_exp_nanmean_numeric():
     array = np.array([10, 0, np.nan, 10])
 

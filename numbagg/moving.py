@@ -4,11 +4,17 @@ from numba import float32, float64, int64
 from .decorators import ndmoving, ndmovingexp
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nanmean(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 
     numer = denom = np.nan
+    weight = 0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -17,18 +23,31 @@ def move_exp_nanmean(a, alpha, out):
         numer *= decay
         denom *= decay
 
+        if min_weight > 0:
+            weight *= decay
+
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
             if np.isnan(numer):
                 numer = denom = 0
             numer += a_i
             denom += 1
+            if min_weight > 0:
+                weight += alpha
 
-        out[i] = numer / denom
+        if weight >= min_weight:
+            out[i] = numer / denom
+        else:
+            out[i] = np.nan
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nansum(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nansum(a, alpha, min_weight, out):
     """
     Calculates the exponentially decayed sum.
 
@@ -43,6 +62,7 @@ def move_exp_nansum(a, alpha, out):
     N = len(a)
 
     numer = np.nan
+    weight = 0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -50,13 +70,21 @@ def move_exp_nansum(a, alpha, out):
 
         numer *= decay
 
+        if min_weight > 0:
+            weight *= decay
+
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
             if np.isnan(numer):
                 numer = 0
             numer += a_i
+            if min_weight > 0:
+                weight += alpha
 
-        out[i] = numer
+        if weight >= min_weight:
+            out[i] = numer
+        else:
+            out[i] = np.nan
 
 
 @ndmoving(
