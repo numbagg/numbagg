@@ -6,41 +6,27 @@ from .decorators import ndmoving, ndmovingexp
 
 @ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
 def move_exp_nanmean(a, alpha, out):
-    # Inspired by pandas:
-    # https://github.com/pandas-dev/pandas/blob/1.2.x/pandas/_libs/window/aggregations.pyx#L1559.
-
     N = len(a)
-    if N == 0:
-        return
 
-    old_wt_factor = 1.0 - alpha
-    new_wt = 1.0
-    ignore_na = False  # could add as option in the future
-
-    weighted_avg = np.nan
-    n_obs = 0
-    old_wt = 1.0
+    numer = denom = np.nan
+    decay = 1.0 - alpha
 
     for i in range(N):
-        cur = a[i]
-        is_observation = not np.isnan(cur)
-        n_obs += int(is_observation)
-        if not np.isnan(weighted_avg):
-            if is_observation or (not ignore_na):
-                old_wt *= old_wt_factor
+        a_i = a[i]
 
-                if is_observation:
-                    # avoid numerical errors on constant series
-                    if weighted_avg != cur:
-                        weighted_avg = ((old_wt * weighted_avg) + (new_wt * cur)) / (
-                            old_wt + new_wt
-                        )
-                    old_wt += new_wt
-        elif is_observation:
-            # The first non-nan value.
-            weighted_avg = cur
+        numer *= decay
+        denom *= decay
 
-        out[i] = weighted_avg
+        if not np.isnan(a_i):
+            # If it's the first observation, set the values.
+            if np.isnan(numer):
+                numer = a_i
+                denom = 1
+            else:
+                numer += a_i
+                denom += 1
+
+        out[i] = numer / denom
 
 
 @ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
@@ -57,26 +43,23 @@ def move_exp_nansum(a, alpha, out):
     # basically a subset of that function.
 
     N = len(a)
-    if N == 0:
-        return
 
-    weight = 1.0 - alpha
-    ignore_na = False  # could add as option in the future
-    weighted_sum = 0
+    numer = np.nan
+    decay = 1.0 - alpha
 
     for i in range(N):
-        cur = a[i]
-        is_observation = not np.isnan(cur)
-        if not np.isnan(weighted_sum):
-            if is_observation or (not ignore_na):
-                weighted_sum = weight * weighted_sum
-                if is_observation:
-                    weighted_sum += cur
-        elif is_observation:
-            # The first non-nan value.
-            weighted_sum = cur
+        a_i = a[i]
 
-        out[i] = weighted_sum
+        numer *= decay
+
+        if not np.isnan(a_i):
+            # If it's the first observation, set the values.
+            if np.isnan(numer):
+                numer = a_i
+            else:
+                numer += a_i
+
+        out[i] = numer
 
 
 @ndmoving(
