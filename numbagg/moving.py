@@ -18,13 +18,11 @@ def move_exp_nanmean(a, alpha, out):
         denom *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, set the values.
+            # If it's the first observation, toggle the values to non-nan.
             if np.isnan(numer):
-                numer = a_i
-                denom = 1
-            else:
-                numer += a_i
-                denom += 1
+                numer = denom = 0
+            numer += a_i
+            denom += 1
 
         out[i] = numer / denom
 
@@ -53,11 +51,10 @@ def move_exp_nansum(a, alpha, out):
         numer *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, set the values.
+            # If it's the first observation, toggle the values to non-nan.
             if np.isnan(numer):
-                numer = a_i
-            else:
-                numer += a_i
+                numer = 0
+            numer += a_i
 
         out[i] = numer
 
