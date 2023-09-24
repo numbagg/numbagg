@@ -9,13 +9,13 @@ def move_exp_nanmean(a, alpha, out):
     N = len(a)
 
     numer = denom = np.nan
-    decay = 1.0 - alpha
+    inertia = 1.0 - alpha
 
     for i in range(N):
         a_i = a[i]
 
-        numer *= decay
-        denom *= decay
+        numer *= inertia
+        denom *= inertia
 
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
@@ -43,12 +43,12 @@ def move_exp_nansum(a, alpha, out):
     N = len(a)
 
     numer = np.nan
-    decay = 1.0 - alpha
+    inertia = 1.0 - alpha
 
     for i in range(N):
         a_i = a[i]
 
-        numer *= decay
+        numer *= inertia
 
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
