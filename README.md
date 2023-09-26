@@ -12,7 +12,8 @@ Currently accelerated functions:
 - Array functions: `allnan`, `anynan`, `count`, `nanargmax`,
   `nanargmin`, `nanmax`, `nanmean`, `nanstd`, `nanvar`, `nanmin`,
   `nansum`
-- Moving window functions: `move_exp_nanmean`, `move_mean`, `move_sum`
+- Moving window functions: `move_exp_nanmean`, `move_exp_nansum`,
+  `move_exp_nanvar`, `move_mean`, `move_sum`
 
 Note: Only functions listed here (exposed in Numbagg's top level namespace) are
 supported as part of Numbagg's public API.
@@ -87,6 +88,24 @@ In [6]: %timeit bottleneck.nanmean(x, axis=0)
 In [7]: %timeit bottleneck.nanmean(x, axis=1)
 2.19 ms ± 13.7 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 ```
+
+## Benchmarks vs. pandas
+
+Here are the current benchmark results relative to pandas for the rolling exponential functions:
+
+| Function         | n        | numbagg | pandas | %change |
+| ---------------- | -------- | ------- | ------ | ------- |
+| move_exp_nanmean | 1000     | 77.6μs  | 360μs  | -78%    |
+| move_exp_nanmean | 100000   | 6.85ms  | 18.8ms | -63%    |
+| move_exp_nanmean | 10000000 | 793ms   | 1.96s  | -59%    |
+| move_exp_nansum  | 1000     | 92.3μs  | 335μs  | -72%    |
+| move_exp_nansum  | 100000   | 10.9ms  | 11.3ms | -3%     |
+| move_exp_nansum  | 10000000 | 1.02s   | 1.22s  | -16%    |
+| move_exp_nanvar  | 1000     | 74.3μs  | 360μs  | -79%    |
+| move_exp_nanvar  | 100000   | 6.63ms  | 15.3ms | -56%    |
+| move_exp_nanvar  | 10000000 | 1.06s   | 1.86s  | -43%    |
+
+Benchmarks were run on a Mac M1 in September 2023 on numbagg's HEAD and pandas 2.1.1.
 
 ## Our approach
 
