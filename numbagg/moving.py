@@ -64,46 +64,37 @@ def move_exp_nanvar(a, alpha, out):
     sum_x2 = sum_x = sum_weight = sum_weight2 = 0
     decay = 1.0 - alpha
 
-    have_observed_value = False
+    # have_observed_value = False
 
     for i in range(N):
         a_i = a[i]
 
         if not np.isnan(a_i):
-            have_observed_value = True
-
             sum_x2 += a_i**2
             sum_x += a_i
             sum_weight += 1
             sum_weight2 += 1
 
-        if have_observed_value:
-            # decay the values
-            sum_x2 *= decay
-            sum_x *= decay
-            sum_weight *= decay
-            # We decay this twice because we want the weight^2, so need to decay again
-            # (We could explain this better; contributions welcome...)
-            sum_weight2 *= decay**2
+        # decay the values
+        sum_x2 *= decay
+        sum_x *= decay
+        sum_weight *= decay
+        # We decay this twice because we want the weight^2, so need to decay again
+        # (We could explain this better; contributions welcome...)
+        sum_weight2 *= decay**2
 
-            var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
+        var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
 
-            # - Ultimately we want `sum(weights_norm**2)`, where `weights_norm` is
-            #   `weights / sum(weights)`:
-            #
-            #   sum(weights_norm**2)
-            #   = sum(weights**2 / sum(weights)**2)
-            #   = sum(weights**2) / sum(weights)**2
-            #   = sum_weight2 / sum_weight**2
-            bias = 1 - sum_weight2 / (sum_weight**2)
+        # - Ultimately we want `sum(weights_norm**2)`, where `weights_norm` is
+        #   `weights / sum(weights)`:
+        #
+        #   sum(weights_norm**2)
+        #   = sum(weights**2 / sum(weights)**2)
+        #   = sum(weights**2) / sum(weights)**2
+        #   = sum_weight2 / sum_weight**2
+        bias = 1 - sum_weight2 / (sum_weight**2)
 
-            if bias > 0:
-                out[i] = var_biased / bias
-            else:
-                out[i] = np.nan
-
-        else:
-            out[i] = np.nan
+        out[i] = var_biased / bias
 
 
 @ndmoving(
