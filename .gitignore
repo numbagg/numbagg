@@ -6,3 +6,6 @@ dist
 .vscode
 Icon*
 .eggs
+
+*.ipynb
+.ipynb_checkpoints
