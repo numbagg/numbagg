@@ -19,10 +19,20 @@ def rand_array():
 
 
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_nanmean(rand_array, alpha):
+@pytest.mark.parametrize(
+    "functions",
+    [
+        (move_exp_nanmean, lambda x: x.mean()),
+        (move_exp_nansum, lambda x: x.sum()),
+        (move_exp_nanvar, lambda x: x.var()),
+    ],
+)
+def test_move_exp_nanmean(rand_array, alpha, functions):
     array = rand_array[0]
-    expected = pd.Series(array).ewm(alpha=alpha).mean()
-    result = move_exp_nanmean(array, alpha)
+    result = functions[0](array, alpha)
+    expected = functions[1](pd.Series(array).ewm(alpha=alpha))
+
+    assert_almost_equal(result, expected)
 
     assert_almost_equal(result, expected)
 
@@ -91,15 +101,6 @@ def test_move_exp_nansum_numeric():
 
     result = move_exp_nansum(array, alpha=0.25)
     expected = np.array([10.0, 7.5, 5.625, 14.21875])
-    assert_almost_equal(result, expected)
-
-
-@pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_nanvar(rand_array, alpha):
-    array = rand_array[0]
-    expected = pd.Series(array).ewm(alpha=alpha).var(bias=False)
-    result = move_exp_nanvar(array, alpha)
-
     assert_almost_equal(result, expected)
 
 
