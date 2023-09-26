@@ -6,6 +6,7 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
 from numbagg import move_exp_nanmean, move_exp_nansum, move_mean
+from numbagg.moving import move_exp_nanvar
 
 from .util import array_order, arrays
 
@@ -89,6 +90,15 @@ def test_move_exp_nansum_numeric():
 
     result = move_exp_nansum(array, alpha=0.25)
     expected = np.array([10.0, 7.5, 5.625, 14.21875])
+    assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_nanvar(rand_array, alpha):
+    array = rand_array[0]
+    expected = pd.Series(array).ewm(alpha=alpha).var(bias=False)
+    result = move_exp_nanvar(array, alpha)
+
     assert_almost_equal(result, expected)
 
 

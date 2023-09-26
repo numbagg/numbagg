@@ -6,3 +6,9 @@ dist
 .vscode
 Icon*
 .eggs
+
+*.ipynb
+.ipynb_checkpoints
+
+# We currently don't keep benchmark results in the repo, but could start doing this
+.asv
