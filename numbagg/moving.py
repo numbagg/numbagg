@@ -64,7 +64,6 @@ def move_exp_nanvar(a, alpha, out):
     sum_x2 = sum_x = sum_weight = sum_weight2 = 0
     decay = 1.0 - alpha
 
-    # have_observed_value = False
 
     for i in range(N):
         a_i = a[i]
