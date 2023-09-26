@@ -36,7 +36,8 @@ def test_move_exp_nanmean_2d(rand_array):
 
 @pytest.mark.parametrize("func", [move_exp_nanmean, move_exp_nansum])
 def test_move_exp_min_weight(func):
-    array = np.ones(20)
+    array = np.ones(25)
+    array[:5] = np.nan
 
     # min_weight of 0 should produce values everywhere
     result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2)))

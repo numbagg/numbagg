@@ -31,5 +31,8 @@ class Suite:
     def time_numbagg(self, func, n):
         func[0](self.array, 0.5)
 
+    def time_numbagg_min_weight(self, func, n):
+        func[0](self.array, 0.5, min_weight=0.2)
+
     def time_pandas(self, func, n):
         func[1](self.df_ewm)

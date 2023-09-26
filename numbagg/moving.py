@@ -22,9 +22,7 @@ def move_exp_nanmean(a, alpha, min_weight, out):
 
         numer *= decay
         denom *= decay
-
-        if min_weight > 0:
-            weight *= decay
+        weight *= decay
 
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
@@ -32,8 +30,7 @@ def move_exp_nanmean(a, alpha, min_weight, out):
                 numer = denom = 0
             numer += a_i
             denom += 1
-            if min_weight > 0:
-                weight += alpha
+            weight += alpha
 
         if weight >= min_weight:
             out[i] = numer / denom
@@ -69,17 +66,14 @@ def move_exp_nansum(a, alpha, min_weight, out):
         a_i = a[i]
 
         numer *= decay
-
-        if min_weight > 0:
-            weight *= decay
+        weight *= decay
 
         if not np.isnan(a_i):
             # If it's the first observation, toggle the values to non-nan.
             if np.isnan(numer):
                 numer = 0
             numer += a_i
-            if min_weight > 0:
-                weight += alpha
+            weight += alpha
 
         if weight >= min_weight:
             out[i] = numer
@@ -87,15 +81,20 @@ def move_exp_nansum(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nanvar(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nanvar(a, alpha, min_weight, out):
     N = len(a)
 
     # sum_x: decayed sum of the sequence values.
     # sum_x2: decayed sum of the squared sequence values.
     # n: decayed count of non-missing values observed so far in the sequence.
     # n2: decayed sum of the (already-decayed) weights of non-missing values.
-    sum_x2 = sum_x = sum_weight = sum_weight2 = 0
+    sum_x2 = sum_x = sum_weight = sum_weight2 = weight = 0
     decay = 1.0 - alpha
 
     have_observed_value = False
@@ -110,6 +109,7 @@ def move_exp_nanvar(a, alpha, out):
             sum_x += a_i
             sum_weight += 1
             sum_weight2 += 1
+            weight += alpha
 
         if have_observed_value:
             # decay the values
@@ -119,6 +119,7 @@ def move_exp_nanvar(a, alpha, out):
             # We decay this twice because we want the weight^2, so need to decay again
             # (We could explain this better; contributions welcome...)
             sum_weight2 *= decay**2
+            weight *= decay
 
             var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
 
@@ -131,7 +132,7 @@ def move_exp_nanvar(a, alpha, out):
             #   = sum_weight2 / sum_weight**2
             bias = 1 - sum_weight2 / (sum_weight**2)
 
-            if bias > 0:
+            if bias > 0 and weight >= min_weight:
                 out[i] = var_biased / bias
             else:
                 out[i] = np.nan
