@@ -8,7 +8,7 @@ from .decorators import ndmoving, ndmovingexp
 def move_exp_nanmean(a, alpha, out):
     N = len(a)
 
-    numer = denom = np.nan
+    numer = denom = 0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -18,9 +18,6 @@ def move_exp_nanmean(a, alpha, out):
         denom *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, toggle the values to non-nan.
-            if np.isnan(numer):
-                numer = denom = 0
             numer += a_i
             denom += 1
 
@@ -42,7 +39,7 @@ def move_exp_nansum(a, alpha, out):
 
     N = len(a)
 
-    numer = np.nan
+    numer = 0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -51,9 +48,6 @@ def move_exp_nansum(a, alpha, out):
         numer *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, toggle the values to non-nan.
-            if np.isnan(numer):
-                numer = 0
             numer += a_i
 
         out[i] = numer
