@@ -61,11 +61,7 @@ def test_move_exp_nansum_numeric():
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
 def test_move_exp_nanvar(rand_array, alpha):
     array = rand_array[0]
-    # TODO: this is currently calculating the biased variance. I think we'd prefer
-    # non-biased variance, but I need to come back to that — spent a while on it without
-    # getting it to match pandas.
-    # expected = pd.Series(array).ewm(alpha=alpha).var()
-    expected = pd.Series(array).ewm(alpha=alpha).var(bias=True)
+    expected = pd.Series(array).ewm(alpha=alpha).var(bias=False)
     result = move_exp_nanvar(array, alpha)
 
     assert_almost_equal(result, expected)
