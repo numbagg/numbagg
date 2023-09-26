@@ -41,6 +41,7 @@ def move_exp_nansum(a, alpha, out):
 
     numer = 0
     decay = 1.0 - alpha
+    zero_count = True
 
     for i in range(N):
         a_i = a[i]
@@ -48,9 +49,13 @@ def move_exp_nansum(a, alpha, out):
         numer *= decay
 
         if not np.isnan(a_i):
+            zero_count = False
             numer += a_i
 
-        out[i] = numer
+        if not zero_count:
+            out[i] = numer
+        else:
+            out[i] = np.nan
 
 
 @ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
