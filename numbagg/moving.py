@@ -13,8 +13,7 @@ from .decorators import ndmoving, ndmovingexp
 def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 
-    numer = denom = np.nan
-    weight = 0
+    numer = denom = weight = 0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -25,9 +24,6 @@ def move_exp_nanmean(a, alpha, min_weight, out):
         weight *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, toggle the values to non-nan.
-            if np.isnan(numer):
-                numer = denom = 0
             numer += a_i
             denom += 1
             weight += alpha
@@ -58,9 +54,9 @@ def move_exp_nansum(a, alpha, min_weight, out):
 
     N = len(a)
 
-    numer = np.nan
-    weight = 0
+    numer = weight = 0
     decay = 1.0 - alpha
+    zero_count = True
 
     for i in range(N):
         a_i = a[i]
@@ -69,13 +65,11 @@ def move_exp_nansum(a, alpha, min_weight, out):
         weight *= decay
 
         if not np.isnan(a_i):
-            # If it's the first observation, toggle the values to non-nan.
-            if np.isnan(numer):
-                numer = 0
+            zero_count = False
             numer += a_i
             weight += alpha
 
-        if weight >= min_weight:
+        if weight >= min_weight and not zero_count:
             out[i] = numer
         else:
             out[i] = np.nan
@@ -97,46 +91,38 @@ def move_exp_nanvar(a, alpha, min_weight, out):
     sum_x2 = sum_x = sum_weight = sum_weight2 = weight = 0
     decay = 1.0 - alpha
 
-    have_observed_value = False
-
     for i in range(N):
         a_i = a[i]
 
         if not np.isnan(a_i):
-            have_observed_value = True
-
             sum_x2 += a_i**2
             sum_x += a_i
             sum_weight += 1
             sum_weight2 += 1
             weight += alpha
 
-        if have_observed_value:
-            # decay the values
-            sum_x2 *= decay
-            sum_x *= decay
-            sum_weight *= decay
-            # We decay this twice because we want the weight^2, so need to decay again
-            # (We could explain this better; contributions welcome...)
-            sum_weight2 *= decay**2
-            weight *= decay
+        # decay the values
+        sum_x2 *= decay
+        sum_x *= decay
+        sum_weight *= decay
+        # We decay this twice because we want the weight^2, so need to decay again
+        # (We could explain this better; contributions welcome...)
+        sum_weight2 *= decay**2
+        weight *= decay
 
-            var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
+        var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
 
-            # - Ultimately we want `sum(weights_norm**2)`, where `weights_norm` is
-            #   `weights / sum(weights)`:
-            #
-            #   sum(weights_norm**2)
-            #   = sum(weights**2 / sum(weights)**2)
-            #   = sum(weights**2) / sum(weights)**2
-            #   = sum_weight2 / sum_weight**2
-            bias = 1 - sum_weight2 / (sum_weight**2)
+        # - Ultimately we want `sum(weights_norm**2)`, where `weights_norm` is
+        #   `weights / sum(weights)`:
+        #
+        #   sum(weights_norm**2)
+        #   = sum(weights**2 / sum(weights)**2)
+        #   = sum(weights**2) / sum(weights)**2
+        #   = sum_weight2 / sum_weight**2
+        bias = 1 - sum_weight2 / (sum_weight**2)
 
-            if bias > 0 and weight >= min_weight:
-                out[i] = var_biased / bias
-            else:
-                out[i] = np.nan
-
+        if weight >= min_weight:
+            out[i] = var_biased / bias
         else:
             out[i] = np.nan
 

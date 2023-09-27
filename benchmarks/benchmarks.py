@@ -1,6 +1,3 @@
-# Write the benchmarking functions here.
-# See "Writing benchmarks" in the asv docs for more information.
-
 import numpy as np
 import pandas as pd
 
@@ -18,13 +15,18 @@ class Suite:
         [1_000, 100_000, 10_000_000],
     ]
     param_names = ["func", "n"]
+    # While we're still in development mode, make these fast at the cost of small sample
+    # size.
+    repeat = 1
+    rounds = 1
+    number = 1
 
     def setup(self, func, n):
-        array = np.random.RandomState(0).rand(20, n)
+        array = np.random.RandomState(0).rand(3, n)
         self.array = np.where(array > 0.1, array, np.nan)
-        # self.array = np.random.rand(20, n)
         self.df_ewm = pd.DataFrame(self.array.T).ewm(alpha=0.5)
-        # One run for JIT
+        # One run for JIT (asv states that it does runs, but this still seems to make a
+        # difference)
         func[0](self.array, 0.5)
         func[1](self.df_ewm)
 
