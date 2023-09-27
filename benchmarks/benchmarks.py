@@ -25,8 +25,8 @@ class Suite:
         array = np.random.RandomState(0).rand(3, n)
         self.array = np.where(array > 0.1, array, np.nan)
         self.df_ewm = pd.DataFrame(self.array.T).ewm(alpha=0.5)
-        # One run for JIT (asv states that it does runs, but this still seems to make a
-        # difference)
+        # One run for JIT (asv states that it does this before runs, but this still
+        # seems to make a difference)
         func[0](self.array, 0.5)
         func[1](self.df_ewm)
 
@@ -53,8 +53,8 @@ class Moving:
         array = np.random.RandomState(0).rand(3, n)
         self.array = np.where(array > 0.1, array, np.nan)
         self.df_rolling = pd.DataFrame(self.array.T).rolling(window=20)
-        # One run for JIT (asv states that it does runs, but this still seems to make a
-        # difference)
+        # One run for JIT (asv states that it does this before runs, but this still
+        # seems to make a difference)
         func[0](self.array, 20)
         func[1](self.df_rolling)
 
