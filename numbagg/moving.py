@@ -107,21 +107,16 @@ def move_mean(a, window, min_count, out):
     asum = 0.0
     count = 0
 
-    for i in range(min_count - 1):
-        ai = a[i]
-        if not np.isnan(ai):
-            asum += ai
-            count += 1
-        out[i] = np.nan
+    # We previously had an initial loop which filled NaNs before `min_count`, but it
+    # didn't have a discernible effect on performance.
 
-    for i in range(min_count - 1, window):
+    for i in range(window):
         ai = a[i]
         if not np.isnan(ai):
             asum += ai
             count += 1
         out[i] = asum / count if count >= min_count else np.nan
 
-    count_inv = 1 / count if count >= min_count else np.nan
     for i in range(window, len(a)):
         ai = a[i]
         aold = a[i - window]
@@ -134,10 +129,8 @@ def move_mean(a, window, min_count, out):
         elif ai_valid:
             asum += ai
             count += 1
-            count_inv = 1 / count if count >= min_count else np.nan
         elif aold_valid:
             asum -= aold
             count -= 1
-            count_inv = 1 / count if count >= min_count else np.nan
 
-        out[i] = asum * count_inv
+        out[i] = asum / count if count >= min_count else np.nan
