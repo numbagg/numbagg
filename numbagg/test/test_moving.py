@@ -44,38 +44,41 @@ def test_move_exp_nanmean_2d(rand_array):
     assert_almost_equal(result, expected)
 
 
-@pytest.mark.parametrize("func", [move_exp_nanmean, move_exp_nansum])
+@pytest.mark.parametrize("func", [move_exp_nanmean, move_exp_nansum, move_exp_nanvar])
 def test_move_exp_min_weight(func):
+    # Make an array of 25 values, with the first 5 being NaN, and then look at the final
+    # 19. We can't look at the whole series, because `nanvar` will always return NaN for
+    # the first value.
     array = np.ones(25)
     array[:5] = np.nan
 
     # min_weight of 0 should produce values everywhere
-    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2)))
-    expected = 20
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2))[6:])
+    expected = 19
     assert result == expected
-    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.8)))
-    expected = 20
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.8))[6:])
+    expected = 19
     assert result == expected
 
-    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.2)))
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.2))[6:])
     expected = 17
     assert result == expected
-    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.8)))
-    expected = 20
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.8))[6:])
+    expected = 19
     assert result == expected
 
-    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.2)))
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.2))[6:])
     expected = 10
     assert result == expected
-    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.8)))
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.8))[6:])
     expected = 19
     assert result == expected
 
     # min_weight of 1 should never produce values
-    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.2)))
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.2))[6:])
     expected = 0
     assert result == expected
-    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.8)))
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.8))[6:])
     expected = 0
     assert result == expected
 

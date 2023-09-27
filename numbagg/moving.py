@@ -13,7 +13,7 @@ from .decorators import ndmoving, ndmovingexp
 def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 
-    numer = denom = weight = 0
+    numer = denom = weight = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -25,7 +25,7 @@ def move_exp_nanmean(a, alpha, min_weight, out):
 
         if not np.isnan(a_i):
             numer += a_i
-            denom += 1
+            denom += 1.0
             weight += alpha
 
         if weight >= min_weight:
@@ -54,7 +54,7 @@ def move_exp_nansum(a, alpha, min_weight, out):
 
     N = len(a)
 
-    numer = weight = 0
+    numer = weight = 0.0
     decay = 1.0 - alpha
     zero_count = True
 
@@ -88,18 +88,11 @@ def move_exp_nanvar(a, alpha, min_weight, out):
     # sum_x2: decayed sum of the squared sequence values.
     # n: decayed count of non-missing values observed so far in the sequence.
     # n2: decayed sum of the (already-decayed) weights of non-missing values.
-    sum_x2 = sum_x = sum_weight = sum_weight2 = weight = 0
+    sum_x2 = sum_x = sum_weight = sum_weight2 = weight = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
         a_i = a[i]
-
-        if not np.isnan(a_i):
-            sum_x2 += a_i**2
-            sum_x += a_i
-            sum_weight += 1
-            sum_weight2 += 1
-            weight += alpha
 
         # decay the values
         sum_x2 *= decay
@@ -109,6 +102,13 @@ def move_exp_nanvar(a, alpha, min_weight, out):
         # (We could explain this better; contributions welcome...)
         sum_weight2 *= decay**2
         weight *= decay
+
+        if not np.isnan(a_i):
+            sum_x2 += a_i**2
+            sum_x += a_i
+            sum_weight += 1.0
+            sum_weight2 += 1.0
+            weight += alpha
 
         var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
 
