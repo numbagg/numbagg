@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from numbagg import move_exp_nanmean
-from numbagg.moving import move_exp_nansum, move_exp_nanvar
+from numbagg.moving import move_exp_nansum, move_exp_nanvar, move_mean
 
 
 class Suite:
@@ -35,3 +35,31 @@ class Suite:
 
     def time_pandas(self, func, n):
         func[1](self.df_ewm)
+
+
+class Moving:
+    params = [
+        [
+            (move_mean, lambda x: x.mean()),
+        ],
+        [1_000, 100_000, 10_000_000],
+    ]
+    param_names = ["func", "n"]
+    repeat = 1
+    rounds = 1
+    number = 1
+
+    def setup(self, func, n):
+        array = np.random.RandomState(0).rand(3, n)
+        self.array = np.where(array > 0.1, array, np.nan)
+        self.df_rolling = pd.DataFrame(self.array.T).rolling(window=20)
+        # One run for JIT (asv states that it does runs, but this still seems to make a
+        # difference)
+        func[0](self.array, 20)
+        func[1](self.df_rolling)
+
+    def time_numbagg(self, func, n):
+        func[0](self.array, 20)
+
+    def time_pandas(self, func, n):
+        func[1](self.df_rolling)
