@@ -9,6 +9,7 @@ from .transform import rewrite_ndreduce
 
 def _nd_func_maker(cls, arg, **kwargs):
     if callable(arg) and not kwargs:
+        # TODO: do we ever hit this case?
         return cls(arg)
     else:
         return lambda func: cls(func, signature=arg, **kwargs)
@@ -249,7 +250,10 @@ class NumbaNDMovingExp(NumbaNDMoving):
         if axis == ():
             return arr
         axis = _validate_axis(axis, arr.ndim)
-        return self.gufunc(arr, alpha, axis=axis)
+        # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
+        # their correct handling in our tests.
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return self.gufunc(arr, alpha, axis=axis)
 
 
 class NumbaGroupNDReduce:
