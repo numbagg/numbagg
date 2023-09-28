@@ -47,13 +47,8 @@ jobs:
 
   mypy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v1
