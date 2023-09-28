@@ -8,7 +8,7 @@ from .decorators import ndmoving, ndmovingexp
 def move_exp_nanmean(a, alpha, out):
     N = len(a)
 
-    numer = denom = 0
+    numer = denom = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -19,7 +19,7 @@ def move_exp_nanmean(a, alpha, out):
 
         if not np.isnan(a_i):
             numer += a_i
-            denom += 1
+            denom += 1.0
 
         out[i] = numer / denom
 
@@ -39,7 +39,7 @@ def move_exp_nansum(a, alpha, out):
 
     N = len(a)
 
-    numer = 0
+    numer = 0.0
     decay = 1.0 - alpha
     zero_count = True
 
@@ -66,7 +66,7 @@ def move_exp_nanvar(a, alpha, out):
     # sum_x2: decayed sum of the squared sequence values.
     # n: decayed count of non-missing values observed so far in the sequence.
     # n2: decayed sum of the (already-decayed) weights of non-missing values.
-    sum_x2 = sum_x = sum_weight = sum_weight2 = 0
+    sum_x2 = sum_x = sum_weight = sum_weight2 = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -75,8 +75,8 @@ def move_exp_nanvar(a, alpha, out):
         if not np.isnan(a_i):
             sum_x2 += a_i**2
             sum_x += a_i
-            sum_weight += 1
-            sum_weight2 += 1
+            sum_weight += 1.0
+            sum_weight2 += 1.0
 
         # decay the values
         sum_x2 *= decay
