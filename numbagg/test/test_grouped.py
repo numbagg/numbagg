@@ -12,6 +12,7 @@ from numbagg.grouped import (
     group_nanmean,
     group_nanprod,
     group_nansum,
+    group_nansum_of_squares,
 )
 
 ALL_FUNCS = [
@@ -32,6 +33,7 @@ FUNCTIONS = [
     (group_nanprod, lambda x: x.prod()),
     (group_nanargmax, lambda x: x.idxmax()),
     (group_nanargmin, lambda x: x.idxmin()),
+    (group_nansum_of_squares, lambda x: x.agg(lambda y: (y**2).sum())),
 ]
 
 
