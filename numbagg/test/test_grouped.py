@@ -3,10 +3,49 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 
-from numbagg.grouped import group_nanmean, group_nansum
+from numbagg.grouped import (
+    group_nanargmax,
+    group_nanargmin,
+    group_nancount,
+    group_nanfirst,
+    group_nanlast,
+    group_nanmean,
+    group_nanprod,
+    group_nansum,
+)
 
-ALL_FUNCS = [group_nanmean, group_nansum]
-NP_FUNCS = [np.mean, np.sum]
+ALL_FUNCS = [
+    group_nanmean,
+    group_nansum,
+]
+NP_FUNCS = [
+    np.mean,
+    np.sum,
+]
+
+FUNCTIONS = [
+    (group_nanmean, lambda x: x.mean()),
+    (group_nansum, lambda x: x.sum()),
+    (group_nancount, lambda x: x.count()),
+    (group_nanfirst, lambda x: x.first()),
+    (group_nanlast, lambda x: x.last()),
+    (group_nanprod, lambda x: x.prod()),
+    (group_nanargmax, lambda x: x.idxmax()),
+    (group_nanargmin, lambda x: x.idxmin()),
+]
+
+
+@pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
+def test_group_pandas_comparison(numbagg_func, pandas_func):
+    rs = np.random.RandomState(0)
+    values = rs.rand(2000)
+    values = np.where(values > 0.1, values, np.nan)
+    # TODO: do we need to support nan here?
+    # group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
+    group = rs.choice([0, 1, 2, 3, 4, 5], size=values.shape)
+    expected = pandas_func(pd.Series(values).groupby(group))
+    result = numbagg_func(values, group)
+    assert_almost_equal(expected.values, result)
 
 
 def groupby_mean_pandas(values, group):

@@ -47,3 +47,83 @@ def group_nansum(values, labels, out):
         value = values[indices]
         if not np.isnan(value):
             out[label] += value
+
+
+@groupndreduce(dtypes)
+def group_nancount(values, labels, out):
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+
+        if not np.isnan(values[indices]):
+            out[label] += 1
+
+
+@groupndreduce(dtypes)
+def group_nanargmax(values, labels, out):
+    max_values = np.full(out.shape, -np.inf)
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]) and values[indices] > max_values[label]:
+            max_values[label] = values[indices]
+            out[label] = indices[-1]
+
+
+@groupndreduce(dtypes)
+def group_nanargmin(values, labels, out):
+    min_values = np.full(out.shape, np.inf)
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]) and values[indices] < min_values[label]:
+            min_values[label] = values[indices]
+            out[label] = indices[-1]
+
+
+@groupndreduce(dtypes)
+def group_nanfirst(values, labels, out):
+    first_indices = np.full(out.shape, -1)
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]) and first_indices[label] == -1:
+            out[label] = values[indices]
+            first_indices[label] = 0
+
+
+@groupndreduce(dtypes)
+def group_nanlast(values, labels, out):
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] = values[indices]
+
+
+@groupndreduce(dtypes)
+def group_nansum_of_squares(values, labels, out):
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] += values[indices] ** 2
+
+
+@groupndreduce(dtypes)
+def group_nanprod(values, labels, out):
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            if out[label] == 0:  # First non-NaN value for the label
+                out[label] = values[indices]
+            else:
+                out[label] *= values[indices]
