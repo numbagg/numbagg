@@ -1,4 +1,3 @@
-import numbers
 from functools import cache, cached_property
 
 import numba
@@ -122,7 +121,7 @@ class NumbaNDReduce:
             if any(ndim(arg) != 0 for arg in sig.args):
                 raise ValueError(
                     "all arguments in signature for ndreduce must be scalars: "
-                    " {}".format(signature)
+                    f" {signature}"
                 )
             if ndim(sig.return_type) != 0:
                 raise ValueError(
@@ -181,7 +180,7 @@ class NumbaNDReduce:
             # see: https://github.com/numba/numba/issues/1087
             # f = self._jit_func
             f = self._create_gufunc(arr.ndim)
-        elif isinstance(axis, numbers.Number):
+        elif isinstance(axis, int):
             arr = np.moveaxis(arr, axis, -1)
             f = self._create_gufunc(1)
         else:
@@ -265,13 +264,12 @@ class NumbaGroupNDReduce:
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
             if len(sig) != 3:
                 raise TypeError(
-                    "signature has wrong number of argument != 3: "
-                    "{}".format(signature)
+                    "signature has wrong number of argument != 3: " f"{signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
                     "all arguments in signature for ndreduce must be scalars: "
-                    " {}".format(signature)
+                    f" {signature}"
                 )
         self.signature = signature
 
@@ -309,14 +307,14 @@ class NumbaGroupNDReduce:
             if values.shape != labels.shape:
                 raise ValueError(
                     "axis required if values and labels have different "
-                    "shapes: {} vs {}".format(values.shape, labels.shape)
+                    f"shapes: {values.shape} vs {labels.shape}"
                 )
             gufunc = self._create_gufunc(values.ndim)
-        elif isinstance(axis, numbers.Number):
+        elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
                     "values must have same shape along axis as labels: "
-                    "{} vs {}".format((values.shape[axis],), labels.shape)
+                    f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
             gufunc = self._create_gufunc(1)
@@ -325,7 +323,7 @@ class NumbaGroupNDReduce:
             if labels.shape != values_shape:
                 raise ValueError(
                     "values must have same shape along axis as labels: "
-                    "{} vs {}".format(values_shape, labels.shape)
+                    f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
             gufunc = self._create_gufunc(len(axis))

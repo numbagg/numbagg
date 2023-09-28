@@ -49,3 +49,26 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest
+
+  mypy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: numbagg-tests
+          cache-environment: true
+          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
+          create-args: >-
+            python=${{matrix.python-version}} numba pandas bottleneck pytest mypy
+
+      - name: Run tests
+        run: |
+          python -m pytest

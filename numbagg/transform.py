@@ -40,7 +40,7 @@ def _apply_ast_rewrite(func, node_transformer):
     ast.fix_missing_locations(tree)
     source = compile(tree, filename="<ast>", mode="exec")
 
-    scope = {}
+    scope: dict = {}
     exec(source, func.__globals__, scope)
     try:
         return scope[_TRANFORMED_FUNC_NAME]
