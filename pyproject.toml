@@ -20,6 +20,7 @@ select = [
 [tool.mypy]
 check_untyped_defs = true
 enable_error_code = "redundant-self"
+files = "numbagg"
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
