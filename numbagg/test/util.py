@@ -26,12 +26,12 @@ def array_generator(func_name, dtypes):
 
     # define nan and inf
     if func_name in ("partition", "argpartition"):
-        nan = 0
+        nan: float = 0
     else:
         nan = np.nan
     if func_name in ("move_sum", "move_mean", "move_std", "move_var"):
         # these functions can't handle inf
-        inf = 8
+        inf: float = 8
     else:
         inf = np.inf
 
@@ -98,7 +98,7 @@ def array_generator(func_name, dtypes):
                     idx = rs.rand(*a.shape) < 0.2
                     a[idx] *= -1
                 rs.shuffle(a)
-                for shape in shapes:
+                for shape in shapes:  # type: ignore
                     yield a.reshape(shape)
 
     # non-contiguous arrays
