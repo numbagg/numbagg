@@ -22,7 +22,7 @@ def test_groupby_mean_pandas():
     group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
     expected = pd.Series(values).groupby(group).mean()
     result = groupby_mean_pandas(values, group)
-    assert_almost_equal(expected.values, result.values)  # type: ignore
+    assert_almost_equal(expected.values, result.values)
 
 
 @pytest.mark.parametrize("func, npfunc", zip(ALL_FUNCS, NP_FUNCS))
