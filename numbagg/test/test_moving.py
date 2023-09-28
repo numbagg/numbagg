@@ -1,4 +1,5 @@
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -274,7 +275,7 @@ def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
     else:
         y = np.empty(a.shape)
     idx1 = [slice(None)] * a.ndim
-    idx2 = list(idx1)
+    idx2: Any = list(idx1)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for i in range(a.shape[axis]):
@@ -289,15 +290,15 @@ def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
 
 def _mask(a, window, min_count, axis):
     n = (a == a).cumsum(axis)
-    idx1 = [slice(None)] * a.ndim
-    idx2 = [slice(None)] * a.ndim
-    idx3 = [slice(None)] * a.ndim
-    idx1[axis] = slice(window, None)
-    idx2[axis] = slice(None, -window)
-    idx3[axis] = slice(None, window)
-    idx1 = tuple(idx1)
-    idx2 = tuple(idx2)
-    idx3 = tuple(idx3)
+    idx1_ = [slice(None)] * a.ndim
+    idx2_ = [slice(None)] * a.ndim
+    idx3_ = [slice(None)] * a.ndim
+    idx1_[axis] = slice(window, None)
+    idx2_[axis] = slice(None, -window)
+    idx3_[axis] = slice(None, window)
+    idx1 = tuple(idx1_)
+    idx2 = tuple(idx2_)
+    idx3 = tuple(idx3_)
     nidx1 = n[idx1]
     nidx1 = nidx1 - n[idx2]
     idx = np.empty(a.shape, dtype=np.bool_)
@@ -365,17 +366,17 @@ def lastrank(a, axis=-1):
         # At least one dimension has length 0
         shape = list(a.shape)
         shape.pop(axis)
-        r = np.empty(shape, dtype=a.dtype)
+        r: Any = np.empty(shape, dtype=a.dtype)
         r.fill(np.nan)
         if (r.ndim == 0) and (r.size == 1):
             r = np.nan
         return r
-    indlast = [slice(None)] * ndim
-    indlast[axis] = slice(-1, None)
-    indlast = tuple(indlast)
-    indlast2 = [slice(None)] * ndim
-    indlast2[axis] = -1
-    indlast2 = tuple(indlast2)
+    indlast_ = [slice(None)] * ndim
+    indlast_[axis] = slice(-1, None)
+    indlast = tuple(indlast_)
+    indlast2_: Any = [slice(None)] * ndim
+    indlast2_[axis] = -1
+    indlast2 = tuple(indlast2_)
     n = (~np.isnan(a)).sum(axis)
     a_indlast = a[indlast]
     g = (a_indlast > a).sum(axis)
@@ -385,7 +386,7 @@ def lastrank(a, axis=-1):
     r = 2.0 * (r - 0.5)
     if ndim == 1:
         if n == 1:
-            r = 0
+            r = 0.0
         if np.isnan(a[indlast2]):  # elif?
             r = np.nan
     else:
