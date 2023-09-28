@@ -15,6 +15,7 @@ def functions():
     yield numbagg.nanargmax, np.nanargmax, np.inf
     yield numbagg.nanmin, np.nanmin, np.inf
     yield numbagg.nanmean, np.nanmean, 5
+    yield numbagg.nanmean, np.nanmean, True
     yield numbagg.nanstd, np.nanstd, 5
     yield numbagg.nanvar, np.nanvar, 5
     # yield numbagg.anynan, bn.anynan, np.inf
