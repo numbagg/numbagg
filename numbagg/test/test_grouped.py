@@ -37,16 +37,36 @@ FUNCTIONS = [
 ]
 
 
+@pytest.fixture(scope="module")
+def rs():
+    return np.random.RandomState(0)
+
+
+@pytest.fixture(params=[np.float64, np.int32], scope="module")
+def dtype(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
+def values(rs, dtype):
+    if dtype == np.int32:
+        return rs.randint(0, 100, size=200)
+    elif dtype == np.float64:
+        vals = rs.rand(200)
+        return np.where(vals > 0.1, vals, np.nan)
+    else:
+        raise ValueError(f"dtype {dtype} not supported")
+
+
+@pytest.fixture()
+def labels(rs):
+    return rs.choice([0, 1, 2, 3, 4, 5], size=200)
+
+
 @pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
-def test_group_pandas_comparison(numbagg_func, pandas_func):
-    rs = np.random.RandomState(0)
-    values = rs.rand(2000)
-    values = np.where(values > 0.1, values, np.nan)
-    # TODO: do we need to support nan here?
-    # group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
-    group = rs.choice([0, 1, 2, 3, 4, 5], size=values.shape)
-    expected = pandas_func(pd.Series(values).groupby(group))
-    result = numbagg_func(values, group)
+def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func):
+    expected = pandas_func(pd.Series(values).groupby(labels))
+    result = numbagg_func(values, labels)
     assert_almost_equal(result, expected.values)
 
 
