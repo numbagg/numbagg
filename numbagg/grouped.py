@@ -18,6 +18,7 @@ dtypes = [
 @groupndreduce(dtypes)
 def group_nanmean(values, labels, out):
     counts = np.zeros(out.shape, dtype=labels.dtype)
+    out[:] = 0.0
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -39,6 +40,7 @@ def group_nanmean(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nansum(values, labels, out):
+    out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
@@ -47,3 +49,98 @@ def group_nansum(values, labels, out):
         value = values[indices]
         if not np.isnan(value):
             out[label] += value
+
+
+@groupndreduce(dtypes)
+def group_nancount(values, labels, out):
+    out[:] = 0
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] += 1
+
+
+@groupndreduce(dtypes)
+def group_nanargmax(values, labels, out):
+    max_values = np.full(out.shape, np.nan)
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        # Check for nan in the max_values to make sure we're updating it for the first time
+        if not np.isnan(values[indices]) and (
+            np.isnan(max_values[label]) or values[indices] > max_values[label]
+        ):
+            max_values[label] = values[indices]
+            out[label] = indices[0]
+    # If the max value for any label is still NaN (no valid data points), set it to NaN
+    # We could instead set the array at the start to be `NaN` — would need to benchmark
+    # which is faster.
+    out[np.isnan(max_values)] = np.nan
+
+
+@groupndreduce(dtypes)
+def group_nanargmin(values, labels, out):
+    min_values = np.full(out.shape, np.nan)
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        # Check for nan in the min_values to make sure we're updating it for the first time
+        if not np.isnan(values[indices]) and (
+            np.isnan(min_values[label]) or values[indices] < min_values[label]
+        ):
+            min_values[label] = values[indices]
+            out[label] = indices[-1]
+    # If the min value for any label is still NaN (no valid data points), set it to NaN
+    out[np.isnan(min_values)] = np.nan
+
+
+@groupndreduce(dtypes)
+def group_nanfirst(values, labels, out):
+    # Slightly inefficient for floats, which we could fill with NaNs at the start. We
+    # could write separate routines.
+    out[:] = -1
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if out[label] == -1 and not np.isnan(values[indices]):
+            out[label] = values[indices]
+    if out.dtype.kind == "f":
+        out[out == -1] = np.nan
+
+
+@groupndreduce(dtypes)
+def group_nanlast(values, labels, out):
+    out[:] = np.nan
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] = values[indices]
+
+
+@groupndreduce(dtypes)
+def group_nanprod(values, labels, out):
+    out[:] = 1
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] *= values[indices]
+
+
+@groupndreduce(dtypes)
+def group_nansum_of_squares(values, labels, out):
+    out[:] = 0
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        if not np.isnan(values[indices]):
+            out[label] += values[indices] ** 2
