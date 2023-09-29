@@ -110,6 +110,26 @@ def test_groupby_mean_pandas(type_):
     assert_almost_equal(result, expected.values)
 
 
+@pytest.mark.parametrize(
+    "numbagg_func, pandas_func, exp",
+    [
+        (group_nansum, lambda x: x.sum(), 0),
+        (group_nanprod, lambda x: x.prod(), 1),
+        (group_nanargmin, lambda x: x.idxmin(), np.nan),
+    ],
+)
+def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
+    values = np.array([np.nan, np.nan, np.nan])
+    group = np.array([0, 1, 2])
+    expected_array = np.array([exp] * len(values))
+    expected = pandas_func(pd.Series(values).groupby(group))
+
+    result = numbagg_func(values, group)
+
+    np.testing.assert_equal(result, expected_array)
+    assert_almost_equal(result, expected.values)
+
+
 @pytest.mark.parametrize("func, npfunc", zip(ALL_FUNCS, NP_FUNCS))
 def test_group_func_axis_1d_labels(func, npfunc):
     values = np.arange(5.0)

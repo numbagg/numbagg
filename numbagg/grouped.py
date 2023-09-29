@@ -123,19 +123,13 @@ def group_nanlast(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nanprod(values, labels, out):
-    has_value = np.full(out.shape, False)
+    out[:] = 1
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
         if not np.isnan(values[indices]):
-            if not has_value[label]:  # First non-NaN value for the label
-                out[label] = values[indices]
-                has_value[label] = True
-            else:
-                out[label] *= values[indices]
-    # If a group only has NaNs, set its result to NaN
-    out[~has_value] = np.nan
+            out[label] *= values[indices]
 
 
 @groupndreduce(dtypes)
