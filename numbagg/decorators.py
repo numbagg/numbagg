@@ -304,7 +304,7 @@ class NumbaGroupNDReduce:
             values = values.astype(np.int32)
 
         if num_labels is None:
-            num_labels = np.nanmax(labels) + 1
+            num_labels = np.max(labels) + 1
 
         if axis is None:
             if values.shape != labels.shape:
