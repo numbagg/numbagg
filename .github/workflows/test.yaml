@@ -69,6 +69,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}} numba pandas bottleneck pytest mypy
 
-      - name: Run tests
+      - name: Mypy
         run: |
-          python -m pytest
+          mypy
