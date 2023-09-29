@@ -47,7 +47,48 @@ def test_group_pandas_comparison(numbagg_func, pandas_func):
     group = rs.choice([0, 1, 2, 3, 4, 5], size=values.shape)
     expected = pandas_func(pd.Series(values).groupby(group))
     result = numbagg_func(values, group)
-    assert_almost_equal(expected.values, result)
+    assert_almost_equal(result, expected.values)
+
+
+@pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
+def test_all_nan_for_label(numbagg_func, pandas_func):
+    values = np.array([1.0, 2.0, np.nan, np.nan])
+    group = np.array([0, 0, 1, 1])
+    expected = pandas_func(pd.Series(values).groupby(group))
+    result = numbagg_func(values, group)
+    assert_almost_equal(result, expected.values)
+
+
+@pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
+def test_no_valid_labels(numbagg_func, pandas_func):
+    values = np.array([1.0, 2.0, 3.0, 4.0])
+    group = np.array([-1, -1, -1, -1])
+
+    # Replace -1 with nan for pandas group
+    pandas_group = group.copy().astype(float)
+    pandas_group[pandas_group == -1] = np.nan
+
+    expected = pandas_func(pd.Series(values).groupby(pandas_group))
+    result = numbagg_func(values, group)
+    assert_almost_equal(result, expected.values)
+
+
+@pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
+def test_single_nan_for_label(numbagg_func, pandas_func):
+    values = np.array([1.0, 2.0, np.nan])
+    group = np.array([0, 0, 1])
+    expected = pandas_func(pd.Series(values).groupby(group))
+    result = numbagg_func(values, group)
+    assert_almost_equal(result, expected.values)
+
+
+@pytest.mark.parametrize("numbagg_func, pandas_func", FUNCTIONS)
+def test_all_values_are_nan(numbagg_func, pandas_func):
+    values = np.array([np.nan, np.nan, np.nan])
+    group = np.array([0, 1, 2])
+    expected = pandas_func(pd.Series(values).groupby(group))
+    result = numbagg_func(values, group)
+    assert_almost_equal(result, expected.values)
 
 
 def groupby_mean_pandas(values, group):
@@ -66,7 +107,7 @@ def test_groupby_mean_pandas(type_):
     group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
     expected = pd.Series(values).groupby(group).mean()
     result = groupby_mean_pandas(values, group)
-    assert_almost_equal(expected.values, result.values)
+    assert_almost_equal(result, expected.values)
 
 
 @pytest.mark.parametrize("func, npfunc", zip(ALL_FUNCS, NP_FUNCS))
