@@ -301,7 +301,7 @@ class NumbaGroupNDReduce:
         labels = np.asarray(labels)
 
         if values.dtype == np.bool_:
-            values = values.astype(np.int32)
+            values = values.view(np.uint8)
 
         if num_labels is None:
             num_labels = np.max(labels) + 1
