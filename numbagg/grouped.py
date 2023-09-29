@@ -39,6 +39,7 @@ def group_nanmean(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nansum(values, labels, out):
+    # `out` arrives zero-ed, so no need to zero it again.
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
@@ -73,6 +74,8 @@ def group_nanargmax(values, labels, out):
             max_values[label] = values[indices]
             out[label] = indices[0]
     # If the max value for any label is still NaN (no valid data points), set it to NaN
+    # We could instead set the array at the start to be `NaN` — would need to benchmark
+    # which is faster.
     out[np.isnan(max_values)] = np.nan
 
 
@@ -100,7 +103,7 @@ def group_nanfirst(values, labels, out):
         label = labels[indices]
         if label < 0:
             continue
-        if not np.isnan(values[indices]) and np.isnan(out[label]):
+        if not np.isnan(out[label]) and np.isnan(values[indices]):
             out[label] = values[indices]
 
 
