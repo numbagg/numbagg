@@ -103,7 +103,7 @@ def group_nanfirst(values, labels, out):
         label = labels[indices]
         if label < 0:
             continue
-        if not np.isnan(out[label]) and np.isnan(values[indices]):
+        if np.isnan(out[label]) and not np.isnan(values[indices]):
             out[label] = values[indices]
 
 
