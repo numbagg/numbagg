@@ -75,7 +75,7 @@ def test_move_mean():
 
     expected = pd.Series(array).rolling(window=5, min_periods=1).mean().values
     result = move_mean(array, 5, min_count=1)
-    assert_almost_equal(result, expected)  # type: ignore
+    assert_almost_equal(result, expected)  # type: ignore[arg-type,unused-ignore]
 
 
 def test_move_mean_random(rand_array):
