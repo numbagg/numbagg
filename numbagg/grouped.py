@@ -53,6 +53,7 @@ def group_nansum(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nancount(values, labels, out):
+    out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
@@ -99,13 +100,17 @@ def group_nanargmin(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nanfirst(values, labels, out):
-    out[:] = np.nan
+    # Slightly inefficient for floats, which we could fill with NaNs at the start. We
+    # could write separate routines.
+    out[:] = -1
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
-        if np.isnan(out[label]) and not np.isnan(values[indices]):
+        if out[label] == -1 and not np.isnan(values[indices]):
             out[label] = values[indices]
+    if out.dtype.kind == "f":
+        out[out == -1] = np.nan
 
 
 @groupndreduce(dtypes)
@@ -132,6 +137,7 @@ def group_nanprod(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nansum_of_squares(values, labels, out):
+    out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
