@@ -333,6 +333,8 @@ class NumbaGroupNDReduce:
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
-        result = np.zeros(broadcast_shape + (num_labels,), values.dtype)
+        # Different functions optimize with different inits — e.g. `sum` uses 0, while
+        # `prod` uses 1. So we don't initialize, and instead delegate to the function.
+        result = np.empty(broadcast_shape + (num_labels,), values.dtype)
         gufunc(values, labels, result)
         return result

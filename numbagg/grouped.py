@@ -18,6 +18,7 @@ dtypes = [
 @groupndreduce(dtypes)
 def group_nanmean(values, labels, out):
     counts = np.zeros(out.shape, dtype=labels.dtype)
+    out[:] = 0.0
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -39,7 +40,7 @@ def group_nanmean(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nansum(values, labels, out):
-    # `out` arrives zero-ed, so no need to zero it again.
+    out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
