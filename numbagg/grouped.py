@@ -95,30 +95,24 @@ def group_nanargmin(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nanfirst(values, labels, out):
-    first_indices = np.full(out.shape, -1)
+    out[:] = np.nan
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
-        if not np.isnan(values[indices]) and first_indices[label] == -1:
+        if not np.isnan(values[indices]) and np.isnan(out[label]):
             out[label] = values[indices]
-            first_indices[label] = 0
-    # If no non-NaN value is found for any group, set its result to NaN
-    out[first_indices == -1] = np.nan
 
 
 @groupndreduce(dtypes)
 def group_nanlast(values, labels, out):
-    last_indices = np.full(out.shape, -1)
+    out[:] = np.nan
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
         if not np.isnan(values[indices]):
             out[label] = values[indices]
-            last_indices[label] = 0
-    # If no non-NaN value is found for any group, set its result to NaN
-    out[last_indices == -1] = np.nan
 
 
 @groupndreduce(dtypes)
