@@ -16,9 +16,12 @@ def groupby_mean_pandas(values, group):
     return pd.Series(result, index=uniques)
 
 
-def test_groupby_mean_pandas():
+@pytest.mark.parametrize(
+    "type_", [np.float32, np.float64, np.bool_, np.int32, np.int64]
+)
+def test_groupby_mean_pandas(type_):
     rs = np.random.RandomState(0)
-    values = rs.rand(2000)
+    values = rs.rand(2000).astype(type_)
     group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
     expected = pd.Series(values).groupby(group).mean()
     result = groupby_mean_pandas(values, group)
