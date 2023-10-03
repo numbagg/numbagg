@@ -4,6 +4,8 @@ import pytest
 from numpy.testing import assert_almost_equal
 
 from numbagg.grouped import (
+    group_nanall,
+    group_nanany,
     group_nanargmax,
     group_nanargmin,
     group_nancount,
@@ -20,17 +22,19 @@ from numbagg.grouped import (
 )
 
 FUNCTIONS = [
-    (group_nanmean, lambda x: x.mean(), np.nanmean),
-    (group_nansum, lambda x: x.sum(), np.nansum),
+    (group_nanall, lambda x: x.all(), None),
+    (group_nanany, lambda x: x.any(), None),
+    (group_nanargmax, lambda x: x.idxmax(), np.nanargmax),
+    (group_nanargmin, lambda x: x.idxmin(), np.nanargmin),
     (group_nancount, lambda x: x.count(), None),
     (group_nanfirst, lambda x: x.first(), None),
     (group_nanlast, lambda x: x.last(), None),
-    (group_nanprod, lambda x: x.prod(), np.nanprod),
-    (group_nanargmax, lambda x: x.idxmax(), np.nanargmax),
-    (group_nanargmin, lambda x: x.idxmin(), np.nanargmin),
-    (group_nanmin, lambda x: x.min(), np.nanmin),
     (group_nanmax, lambda x: x.max(), np.nanmax),
+    (group_nanmean, lambda x: x.mean(), np.nanmean),
+    (group_nanmin, lambda x: x.min(), np.nanmin),
+    (group_nanprod, lambda x: x.prod(), np.nanprod),
     (group_nanstd, lambda x: x.std(), np.nanstd),
+    (group_nansum, lambda x: x.sum(), np.nansum),
     (group_nanvar, lambda x: x.var(), np.nanvar),
     (
         group_nansum_of_squares,
@@ -61,7 +65,7 @@ def rs():
     return np.random.RandomState(0)
 
 
-@pytest.fixture(params=[np.float64, np.int32], scope="module")
+@pytest.fixture(params=[np.float64, np.int32, np.bool_], scope="module")
 def dtype(request):
     return request.param
 
@@ -78,12 +82,14 @@ def labels(rs):
 @pytest.fixture(scope="module")
 def values(rs, labels, dtype):
     if dtype == np.int32:
-        return rs.randint(0, 100, size=200)
+        return rs.randint(-100, 100, size=200)
     elif dtype == np.float64:
         vals = rs.rand(200)
         vals = np.where(vals > 0.1, vals, np.nan)
         # Have one group all missing
         return np.where(labels != 2, vals, np.nan)
+    elif dtype == np.bool_:
+        return rs.choice([True, False], size=200)
     else:
         raise ValueError(f"dtype {dtype} not supported")
 
@@ -99,9 +105,12 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
             pytest.skip("group_nanprod result too large")
         if numbagg_func == group_nanstd:
             pytest.skip(
-                "group_nanstd returns floats (raise issue if this is a problem)"
+                "group_nanstd returns floats for int inputs (raise issue if this is a problem)"
             )
         assert_almost_equal(result, expected.values.astype(np.int32))
+    elif dtype == np.bool_:
+        if numbagg_func in [group_nanprod, group_nanstd]:
+            pytest.skip("group_nanprod/group_nanstd not supported for bools")
     else:
         assert_almost_equal(result, expected.values)
 
