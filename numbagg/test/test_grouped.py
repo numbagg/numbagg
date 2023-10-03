@@ -65,27 +65,32 @@ def dtype(request):
 
 
 @pytest.fixture(scope="module")
-def values(rs, dtype):
+def labels(rs):
+    # `-1` is a special value for missing labels
+    labels = rs.choice([-1, 0, 1, 2, 3, 4, 5], size=200)
+    # The tests are dependent on this being dense
+    assert len(np.unique(labels)) == 7
+    return labels
+
+
+@pytest.fixture(scope="module")
+def values(rs, labels, dtype):
     if dtype == np.int32:
         return rs.randint(0, 100, size=200)
     elif dtype == np.float64:
         vals = rs.rand(200)
-        return np.where(vals > 0.1, vals, np.nan)
+        vals = np.where(vals > 0.1, vals, np.nan)
+        # Have one group all missing
+        return np.where(labels != 2, vals, np.nan)
     else:
         raise ValueError(f"dtype {dtype} not supported")
 
 
-@pytest.fixture()
-def labels(rs):
-    labels = rs.choice([0, 1, 2, 3, 4, 5], size=200)
-    # The tests are dependent on this being dense
-    assert len(np.unique(labels)) == 6
-    return labels
-
-
 @pytest.mark.parametrize("numbagg_func, pandas_func, _", FUNCTIONS)
 def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, dtype):
-    expected = pandas_func(pd.Series(values).groupby(labels))
+    # Pandas uses `NaN` rather than `-1` for missing labels
+    pandas_labels = np.where(labels >= 0, labels, np.nan)
+    expected = pandas_func(pd.Series(values).groupby(pandas_labels))
     result = numbagg_func(values, labels)
     if dtype == np.int32:
         if numbagg_func == group_nanprod:
