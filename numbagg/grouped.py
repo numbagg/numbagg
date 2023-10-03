@@ -147,7 +147,7 @@ def group_nansum_of_squares(values, labels, out):
 
 
 @groupndreduce(dtypes)
-def group_nanstd(values, labels, out):
+def group_nanvar(values, labels, out):
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
@@ -171,9 +171,18 @@ def group_nanstd(values, labels, out):
         if count < 2:  # not enough data for std deviation
             out[label] = np.nan
         else:
-            out[label] = np.sqrt(
-                (sums_of_squares[label] - (sums[label] ** 2 / count)) / (count - 1)
+            out[label] = (sums_of_squares[label] - (sums[label] ** 2 / count)) / (
+                count - 1
             )
+
+
+# Is this the best approach for wrapping? We can't call `group_nanvar` directly because
+# it's not a gufunc, because of our decorator. Having this be outside numba also means
+# that we transform ints to floats, which breaks our convention.
+#
+# One approach would be to just copy & paste the whole thing and add the `sqrt`...
+def group_nanstd(values, labels):
+    return np.sqrt(group_nanvar(values, labels))
 
 
 @groupndreduce(dtypes)

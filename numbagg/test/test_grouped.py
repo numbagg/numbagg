@@ -16,6 +16,7 @@ from numbagg.grouped import (
     group_nanstd,
     group_nansum,
     group_nansum_of_squares,
+    group_nanvar,
 )
 
 FUNCTIONS = [
@@ -30,6 +31,7 @@ FUNCTIONS = [
     (group_nanmin, lambda x: x.min(), np.nanmin),
     (group_nanmax, lambda x: x.max(), np.nanmax),
     (group_nanstd, lambda x: x.std(), np.nanstd),
+    (group_nanvar, lambda x: x.var(), np.nanvar),
     (
         group_nansum_of_squares,
         lambda x: x.agg(lambda y: (y**2).sum()),
@@ -90,6 +92,10 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
     if dtype == np.int32:
         if numbagg_func == group_nanprod:
             pytest.skip("group_nanprod result too large")
+        if numbagg_func == group_nanstd:
+            pytest.skip(
+                "group_nanstd returns floats (raise issue if this is a problem)"
+            )
         assert_almost_equal(result, expected.values.astype(np.int32))
     else:
         assert_almost_equal(result, expected.values)
