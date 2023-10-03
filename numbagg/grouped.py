@@ -144,3 +144,66 @@ def group_nansum_of_squares(values, labels, out):
             continue
         if not np.isnan(values[indices]):
             out[label] += values[indices] ** 2
+
+
+@groupndreduce(dtypes)
+def group_nanstd(values, labels, out):
+    sums = np.zeros(out.shape, dtype=values.dtype)
+    sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
+    counts = np.zeros(out.shape, dtype=labels.dtype)
+    out[:] = np.nan
+
+    # Calculate sums, sum of squares, and counts
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+
+        value = values[indices]
+        if not np.isnan(value):
+            counts[label] += 1
+            sums[label] += value
+            sums_of_squares[label] += value**2
+
+    # Calculate standard deviation for each group
+    for label in range(len(out)):
+        count = counts[label]
+        if count < 2:  # not enough data for std deviation
+            out[label] = np.nan
+        else:
+            out[label] = np.sqrt(
+                (sums_of_squares[label] - (sums[label] ** 2 / count)) / (count - 1)
+            )
+
+
+@groupndreduce(dtypes)
+def group_nanmin(values, labels, out):
+    # Floats could save an allocation by writing directly to `out`
+    # Though weirdly it works OK for `nanmax`? Copying exactly the same function and
+    # changing the sign causes a failure for int32s
+    min_values = np.full(out.shape, np.nan)
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        value = values[indices]
+        if not np.isnan(value) and (
+            np.isnan(min_values[label]) or value < min_values[label]
+        ):
+            min_values[label] = value
+
+    out[:] = min_values
+
+
+@groupndreduce(dtypes)
+def group_nanmax(values, labels, out):
+    out[:] = np.nan
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        value = values[indices]
+        if not np.isnan(value) and (np.isnan(out[label]) or value > out[label]):
+            out[label] = value

@@ -9,8 +9,11 @@ from numbagg.grouped import (
     group_nancount,
     group_nanfirst,
     group_nanlast,
+    group_nanmax,
     group_nanmean,
+    group_nanmin,
     group_nanprod,
+    group_nanstd,
     group_nansum,
     group_nansum_of_squares,
 )
@@ -24,6 +27,9 @@ FUNCTIONS = [
     (group_nanprod, lambda x: x.prod(), np.nanprod),
     (group_nanargmax, lambda x: x.idxmax(), np.nanargmax),
     (group_nanargmin, lambda x: x.idxmin(), np.nanargmin),
+    (group_nanmin, lambda x: x.min(), np.nanmin),
+    (group_nanmax, lambda x: x.max(), np.nanmax),
+    (group_nanstd, lambda x: x.std(), np.nanstd),
     (
         group_nansum_of_squares,
         lambda x: x.agg(lambda y: (y**2).sum()),
@@ -33,11 +39,18 @@ FUNCTIONS = [
 
 # Functions which return the same scalar if one is passed
 FUNCTIONS_CONSTANT = [
-    (group_nanmean, lambda x: x.mean(), np.nanmean),
-    (group_nansum, lambda x: x.sum(), np.nansum),
-    (group_nanfirst, lambda x: x.first(), None),
-    (group_nanlast, lambda x: x.last(), None),
-    (group_nanprod, lambda x: x.prod(), np.nanprod),
+    fs
+    for fs in FUNCTIONS
+    if fs[0]
+    in [
+        group_nanmean,
+        group_nansum,
+        group_nanfirst,
+        group_nanlast,
+        group_nanprod,
+        group_nanmin,
+        group_nanmax,
+    ]
 ]
 
 
@@ -229,6 +242,14 @@ def test_numeric_int_nanmean():
 
     result = group_nanmean(values, labels)
     assert_almost_equal(result, np.array([2, 4, 6]))
+
+
+def test_numeric_int_nanmin():
+    values = np.array([1, 2, 3, 4, 5, 6], dtype=np.int32)
+    labels = np.array([0, 0, 0, 1, 1, 2], dtype=np.int32)
+
+    result = group_nanmin(values, labels)
+    assert_almost_equal(result, np.array([1, 4, 6]))
 
 
 def test_numeric_int_nanprod():
