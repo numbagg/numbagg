@@ -4,9 +4,9 @@ import pytest
 from numpy.testing import assert_almost_equal
 
 from numbagg.grouped import (
+    group_count,
     group_nanargmax,
     group_nanargmin,
-    group_nancount,
     group_nanfirst,
     group_nanlast,
     group_nanmean,
@@ -18,7 +18,7 @@ from numbagg.grouped import (
 FUNCTIONS = [
     (group_nanmean, lambda x: x.mean(), np.nanmean),
     (group_nansum, lambda x: x.sum(), np.nansum),
-    (group_nancount, lambda x: x.count(), None),
+    (group_count, lambda x: x.count(), None),
     (group_nanfirst, lambda x: x.first(), None),
     (group_nanlast, lambda x: x.last(), None),
     (group_nanprod, lambda x: x.prod(), np.nanprod),
@@ -215,11 +215,11 @@ def test_group_nanmean_axis_2d_labels(func):
     assert_almost_equal(values.reshape(5, -1), result)
 
 
-def test_numeric_int_nancount():
+def test_numeric_int_count():
     values = np.array([1, 2, 3, 4, 5], dtype=np.int32)
     labels = np.array([0, 0, 0, 1, 1], dtype=np.int32)
 
-    result = group_nancount(values, labels)
+    result = group_count(values, labels)
     assert_almost_equal(result, np.array([3, 2]))
 
 

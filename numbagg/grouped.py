@@ -52,7 +52,7 @@ def group_nansum(values, labels, out):
 
 
 @groupndreduce(dtypes)
-def group_nancount(values, labels, out):
+def group_count(values, labels, out):
     out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
