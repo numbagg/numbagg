@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -58,6 +60,18 @@ FUNCTIONS_CONSTANT = [
         group_nanmax,
     ]
 ]
+
+
+@pytest.fixture(autouse=True)
+def silence_pandas_idx_warnings():
+    # Not sure whether we adopt this behavior, but no need to litter with
+    # warnings in the meantime...
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The behavior of Series.* with all-NA values, or any-NA and skipna=False, is deprecated. In a future version this will raise ValueError",
+        )
+        yield
 
 
 @pytest.fixture(scope="module")
