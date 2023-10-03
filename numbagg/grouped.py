@@ -216,3 +216,29 @@ def group_nanmax(values, labels, out):
         value = values[indices]
         if not np.isnan(value) and (np.isnan(out[label]) or value > out[label]):
             out[label] = value
+
+
+@groupndreduce(dtypes)
+def group_nanany(values, labels, out):
+    out[:] = 0  # assuming 0 is 'False' for the given dtype
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        value = values[indices]
+        if not np.isnan(value) and value:
+            out[label] = 1
+
+
+@groupndreduce(dtypes)
+def group_nanall(values, labels, out):
+    out[:] = 1  # assuming 1 is 'True' for the given dtype
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+        value = values[indices]
+        if not np.isnan(value) and not value:
+            out[label] = 0
