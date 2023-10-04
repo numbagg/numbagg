@@ -1,4 +1,5 @@
 from functools import cache, cached_property
+from typing import Callable
 
 import numba
 import numpy as np
@@ -203,8 +204,8 @@ DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 class NumbaNDMoving:
     def __init__(
         self,
-        func,
-        signature=DEFAULT_MOVING_SIGNATURE,
+        func: Callable,
+        signature: tuple = DEFAULT_MOVING_SIGNATURE,
         window_validator=rolling_validator,
     ):
         self.func = func
@@ -228,7 +229,7 @@ class NumbaNDMoving:
         vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
         return vectorize(self.func)
 
-    def __call__(self, arr, window, min_count=None, axis=-1):
+    def __call__(self, arr: np.ndarray, window, min_count=None, axis=-1):
         if min_count is None:
             min_count = window
         if not 0 < window < arr.shape[axis]:
@@ -256,8 +257,16 @@ class NumbaNDMovingExp(NumbaNDMoving):
 
 
 class NumbaGroupNDReduce:
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE):
+    def __init__(
+        self,
+        func,
+        signature=DEFAULT_MOVING_SIGNATURE,
+        supports_nd=True,
+        supports_bool=True,
+    ):
         self.func = func
+        self.supports_nd = supports_nd
+        self.supports_bool = supports_bool
 
         for sig in signature:
             if not isinstance(sig, tuple):
@@ -299,6 +308,17 @@ class NumbaGroupNDReduce:
     def __call__(self, values, labels, axis=None, num_labels=None):
         values = np.asarray(values)
         labels = np.asarray(labels)
+        if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
+            # TODO: it might be possible to allow returning an extra dimension for the
+            # indices by using the technique at
+            # https://stackoverflow.com/a/66372474/3064736. Or we could have the numba
+            # function return indices for the flattened array, and we stack them into nd
+            # indices.
+            raise ValueError(
+                f"values and labels must be 1-dimensional for {self.func.__name__}. "
+                f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
+                "Please raise an issue if this feature would be particularly helpful."
+            )
 
         if values.dtype == np.bool_:
             values = values.astype(np.int32)
