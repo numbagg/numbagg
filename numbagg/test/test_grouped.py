@@ -217,7 +217,7 @@ def test_group_func_axis_1d_labels(func, _, npfunc):
     values = np.arange(5.0)
     labels = np.arange(5)
     result = func(values, labels)
-    assert_almost_equal(values, result)
+    assert_almost_equal(result, values)
 
     values = np.arange(25.0).reshape(5, 5)
     labels = np.arange(5)
@@ -227,13 +227,13 @@ def test_group_func_axis_1d_labels(func, _, npfunc):
     assert "axis required" in str(excinfo.value)
 
     result = func(values, labels, axis=1)
-    assert_almost_equal(values, result)
+    assert_almost_equal(result, values)
 
     result = func(values, labels, axis=(1,))
-    assert_almost_equal(values, result)
+    assert_almost_equal(result, values)
 
     result = func(values, labels, axis=0)
-    assert_almost_equal(values.T, result)
+    assert_almost_equal(result, values.T)
 
     with pytest.raises(ValueError) as excinfo:
         func(values, labels[:4], axis=0)
@@ -247,7 +247,7 @@ def test_group_func_axis_1d_labels(func, _, npfunc):
     expected = np.stack(
         [npfunc(values[:, :2], axis=1), npfunc(values[:, 3:], axis=1)], axis=-1
     )
-    assert_almost_equal(expected, result)
+    assert_almost_equal(result, expected)
 
 
 @pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS_CONSTANT])
@@ -255,11 +255,11 @@ def test_group_nanmean_axis_2d_labels(func):
     values = np.arange(25.0).reshape(5, 5)
     labels = np.arange(25).reshape(5, 5)
     result = func(values, labels)
-    assert_almost_equal(values.ravel(), result)
+    assert_almost_equal(result, values.ravel())
 
     values = np.arange(125.0).reshape(5, 5, 5)
     result = func(values, labels, axis=(1, 2))
-    assert_almost_equal(values.reshape(5, -1), result)
+    assert_almost_equal(result, values.reshape(5, -1))
 
 
 def test_numeric_int_nancount():
