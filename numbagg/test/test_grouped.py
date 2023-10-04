@@ -87,9 +87,9 @@ def dtype(request):
 @pytest.fixture(scope="module")
 def labels(rs):
     # `-1` is a special value for missing labels
-    labels = rs.choice([-1, 0, 1, 2, 3, 4, 5], size=200)
+    labels = rs.choice([-1, 0, 1, 2, 3, 4], size=200)
     # The tests are dependent on this being dense
-    assert len(np.unique(labels)) == 7
+    assert len(np.unique(labels)) == 6
     return labels
 
 
@@ -123,8 +123,8 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
             )
         assert_almost_equal(result, expected.values.astype(np.int32))
     elif dtype == np.bool_:
-        if numbagg_func in [group_nanprod, group_nanstd]:
-            pytest.skip("group_nanprod/group_nanstd not supported for bools")
+        if not numbagg_func.supports_bool:
+            pytest.skip(f"{numbagg_func} doesn't support bools")
     else:
         assert_almost_equal(result, expected.values)
 
@@ -210,7 +210,9 @@ def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
 
 
 @pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS if f[0].supports_nd])
-def test_additional_dim_equivalence(func, values, labels):
+def test_additional_dim_equivalence(func, values, labels, dtype):
+    if dtype == np.bool_ and not func.supports_bool:
+        pytest.skip(f"{func} doesn't support bools")
     values = values[:10]
     labels = labels[:10]
     expected = func(values, labels)

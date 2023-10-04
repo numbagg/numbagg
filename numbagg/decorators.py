@@ -257,9 +257,16 @@ class NumbaNDMovingExp(NumbaNDMoving):
 
 
 class NumbaGroupNDReduce:
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE, supports_nd=True):
+    def __init__(
+        self,
+        func,
+        signature=DEFAULT_MOVING_SIGNATURE,
+        supports_nd=True,
+        supports_bool=True,
+    ):
         self.func = func
         self.supports_nd = supports_nd
+        self.supports_bool = supports_bool
 
         for sig in signature:
             if not isinstance(sig, tuple):

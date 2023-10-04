@@ -158,7 +158,7 @@ def group_nansum_of_squares(values, labels, out):
             out[label] += values[indices] ** 2
 
 
-@groupndreduce(dtypes)
+@groupndreduce(dtypes, supports_bool=False)
 def group_nanvar(values, labels, out):
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
@@ -198,6 +198,7 @@ def group_nanstd(values, labels, **kwargs):
 
 
 group_nanstd.supports_nd = True  # type: ignore[attr-defined]
+group_nanstd.supports_bool = False  # type: ignore[attr-defined]
 
 
 @groupndreduce(dtypes)
@@ -222,15 +223,20 @@ def group_nanmin(values, labels, out):
 
 @groupndreduce(dtypes)
 def group_nanmax(values, labels, out):
-    out[:] = np.nan
+    # Floats could save an allocation by writing directly to `out`
+    max_values = np.full(out.shape, np.nan)
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
         value = values[indices]
-        if not np.isnan(value) and (np.isnan(out[label]) or value > out[label]):
-            out[label] = value
+        if not np.isnan(value) and (
+            np.isnan(max_values[label]) or value > max_values[label]
+        ):
+            max_values[label] = value
+
+    out[:] = max_values
 
 
 @groupndreduce(dtypes)
