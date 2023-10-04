@@ -171,6 +171,7 @@ class NumbaNDReduce:
             + (first_sig.return_type,)
         )
 
+        # TODO: can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
@@ -226,7 +227,9 @@ class NumbaNDMoving:
     @cached_property
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(
+            self.signature, gufunc_sig, nopython=True, cache=True
+        )
         return vectorize(self.func)
 
     def __call__(self, arr: np.ndarray, window, min_count=None, axis=-1):
@@ -302,7 +305,7 @@ class NumbaGroupNDReduce:
 
         first_sig = numba_sig[0]
         gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
-        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True, cache=True)
         return vectorize(self.func)
 
     def __call__(self, values, labels, axis=None, num_labels=None):
