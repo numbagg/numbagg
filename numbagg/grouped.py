@@ -62,55 +62,67 @@ def group_nancount(values, labels, out):
             out[label] += 1
 
 
-@groupndreduce(dtypes)
+@groupndreduce(dtypes, supports_nd=False)
 def group_nanargmax(values, labels, out):
     max_values = np.full(out.shape, np.nan)
-    for indices in np.ndindex(values.shape):
-        label = labels[indices]
+    for i in range(len(values)):
+        value = values[i]
+        label = labels[i]
         if label < 0:
             continue
         # Check for nan in the max_values to make sure we're updating it for the first time
-        if not np.isnan(values[indices]) and (
-            np.isnan(max_values[label]) or values[indices] > max_values[label]
+        if not np.isnan(value) and (
+            np.isnan(max_values[label]) or value > max_values[label]
         ):
-            max_values[label] = values[indices]
-            out[label] = indices[0]
+            max_values[label] = value
+            out[label] = i
     # If the max value for any label is still NaN (no valid data points), set it to NaN
     # We could instead set the array at the start to be `NaN` — would need to benchmark
     # which is faster.
-    out[np.isnan(max_values)] = np.nan
+    #
+    # I'm quite confused why, but this raises a warning, so we do the full_loop instead.
+    #
+    #   out[np.isnan(max_values)] = np.nan
+    for i in range(len(out)):
+        if np.isnan(max_values[i]):
+            out[i] = np.nan
 
 
-@groupndreduce(dtypes)
+@groupndreduce(dtypes, supports_nd=False)
 def group_nanargmin(values, labels, out):
+    # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
-    for indices in np.ndindex(values.shape):
-        label = labels[indices]
+    for i in range(len(values.flat)):
+        value = values[i]
+        label = labels[i]
         if label < 0:
             continue
-        # Check for nan in the min_values to make sure we're updating it for the first time
-        if not np.isnan(values[indices]) and (
-            np.isnan(min_values[label]) or values[indices] < min_values[label]
+        if not np.isnan(value) and (
+            np.isnan(min_values[label]) or value < min_values[label]
         ):
-            min_values[label] = values[indices]
-            out[label] = indices[-1]
-    # If the min value for any label is still NaN (no valid data points), set it to NaN
-    out[np.isnan(min_values)] = np.nan
+            min_values[label] = value
+            out[label] = i
+    for idx in np.ndindex(out.shape):
+        if np.isnan(min_values[idx]):
+            out[idx] = np.nan
 
 
 @groupndreduce(dtypes)
 def group_nanfirst(values, labels, out):
-    # Slightly inefficient for floats, which we could fill with NaNs at the start. We
-    # could write separate routines.
-    out[:] = -1
+    # Slightly inefficient for floats, for which we could avoid allocationg the
+    # `have_seen_values` array, and instead use an array with NaNs from the start. We
+    # could write separate routines, though I don't think we can use `@overload` with
+    # out own gufuncs.
+    have_seen_value = np.zeros(out.shape, dtype=np.bool_)
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
-        if out[label] == -1 and not np.isnan(values[indices]):
+        if not have_seen_value[label] and not np.isnan(values[indices]):
+            have_seen_value[label] = True
             out[label] = values[indices]
     if out.dtype.kind == "f":
-        out[out == -1] = np.nan
+        out[~have_seen_value] = np.nan
 
 
 @groupndreduce(dtypes)
@@ -181,8 +193,11 @@ def group_nanvar(values, labels, out):
 # that we transform ints to floats, which breaks our convention.
 #
 # One approach would be to just copy & paste the whole thing and add the `sqrt`...
-def group_nanstd(values, labels):
-    return np.sqrt(group_nanvar(values, labels))
+def group_nanstd(values, labels, **kwargs):
+    return np.sqrt(group_nanvar(values, labels, **kwargs))
+
+
+group_nanstd.supports_nd = True  # type: ignore[attr-defined]
 
 
 @groupndreduce(dtypes)

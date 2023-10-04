@@ -50,7 +50,7 @@ FUNCTIONS_CONSTANT = [
     fs
     for fs in FUNCTIONS
     if fs[0]
-    in [
+    in {
         group_nanmean,
         group_nansum,
         group_nanfirst,
@@ -58,7 +58,7 @@ FUNCTIONS_CONSTANT = [
         group_nanprod,
         group_nanmin,
         group_nanmax,
-    ]
+    }
 ]
 
 
@@ -209,6 +209,16 @@ def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
     assert_almost_equal(result, expected.values)
 
 
+@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS if f[0].supports_nd])
+def test_additional_dim_equivalence(func, values, labels):
+    values = values[:10]
+    labels = labels[:10]
+    expected = func(values, labels)
+    values_2d = np.tile(values[:10], (2, 1))
+    result = func(values_2d, labels, axis=1)[0]
+    assert_almost_equal(result, expected)
+
+
 @pytest.mark.parametrize("func, _, npfunc", [f for f in FUNCTIONS_CONSTANT])
 def test_group_func_axis_1d_labels(func, _, npfunc):
     if npfunc is None:
@@ -251,7 +261,7 @@ def test_group_func_axis_1d_labels(func, _, npfunc):
 
 
 @pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS_CONSTANT])
-def test_group_nanmean_axis_2d_labels(func):
+def test_group_axis_2d_labels(func):
     values = np.arange(25.0).reshape(5, 5)
     labels = np.arange(25).reshape(5, 5)
     result = func(values, labels)
