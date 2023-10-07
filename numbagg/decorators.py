@@ -71,17 +71,6 @@ def groupndreduce(*args, **kwargs):
     return _nd_func_maker(NumbaGroupNDReduce, *args, **kwargs)
 
 
-def _validate_axis(axis, ndim):
-    """Helper function to convert axis into a non-negative integer, or raise if
-    it's invalid.
-    """
-    if axis < 0:
-        axis += ndim
-    if axis < 0 or axis >= ndim:
-        raise ValueError("invalid axis %s" % axis)
-    return axis
-
-
 def ndim(arg):
     return getattr(arg, "ndim", 0)
 
@@ -239,7 +228,6 @@ class NumbaNDMoving:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        axis = _validate_axis(axis, arr.ndim)
         return self.gufunc(arr, window, min_count, axis=axis)
 
 
@@ -252,7 +240,6 @@ class NumbaNDMovingExp(NumbaNDMoving):
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
         if axis == ():
             return arr
-        axis = _validate_axis(axis, arr.ndim)
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
