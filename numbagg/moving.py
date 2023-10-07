@@ -4,11 +4,16 @@ from numba import float32, float64, int64
 from .decorators import ndmoving, ndmovingexp
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nanmean(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 
-    numer = denom = 0.0
+    numer = denom = weight = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
@@ -16,16 +21,26 @@ def move_exp_nanmean(a, alpha, out):
 
         numer *= decay
         denom *= decay
+        weight *= decay
 
         if not np.isnan(a_i):
             numer += a_i
             denom += 1.0
+            weight += alpha
 
-        out[i] = numer / denom
+        if weight >= min_weight:
+            out[i] = numer / denom
+        else:
+            out[i] = np.nan
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nansum(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nansum(a, alpha, min_weight, out):
     """
     Calculates the exponentially decayed sum.
 
@@ -39,7 +54,7 @@ def move_exp_nansum(a, alpha, out):
 
     N = len(a)
 
-    numer = 0.0
+    numer = weight = 0.0
     decay = 1.0 - alpha
     zero_count = True
 
@@ -47,36 +62,37 @@ def move_exp_nansum(a, alpha, out):
         a_i = a[i]
 
         numer *= decay
+        weight *= decay
 
         if not np.isnan(a_i):
             zero_count = False
             numer += a_i
+            weight += alpha
 
-        if not zero_count:
+        if weight >= min_weight and not zero_count:
             out[i] = numer
         else:
             out[i] = np.nan
 
 
-@ndmovingexp([(float32[:], float32, float32[:]), (float64[:], float64, float64[:])])
-def move_exp_nanvar(a, alpha, out):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nanvar(a, alpha, min_weight, out):
     N = len(a)
 
     # sum_x: decayed sum of the sequence values.
     # sum_x2: decayed sum of the squared sequence values.
     # n: decayed count of non-missing values observed so far in the sequence.
     # n2: decayed sum of the (already-decayed) weights of non-missing values.
-    sum_x2 = sum_x = sum_weight = sum_weight2 = 0.0
+    sum_x2 = sum_x = sum_weight = sum_weight2 = weight = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
         a_i = a[i]
-
-        if not np.isnan(a_i):
-            sum_x2 += a_i**2
-            sum_x += a_i
-            sum_weight += 1.0
-            sum_weight2 += 1.0
 
         # decay the values
         sum_x2 *= decay
@@ -85,6 +101,14 @@ def move_exp_nanvar(a, alpha, out):
         # We decay this twice because we want the weight^2, so need to decay again
         # (We could explain this better; contributions welcome...)
         sum_weight2 *= decay**2
+        weight *= decay
+
+        if not np.isnan(a_i):
+            sum_x2 += a_i**2
+            sum_x += a_i
+            sum_weight += 1.0
+            sum_weight2 += 1.0
+            weight += alpha
 
         var_biased = (sum_x2 / sum_weight) - ((sum_x / sum_weight) ** 2)
 
@@ -97,7 +121,10 @@ def move_exp_nanvar(a, alpha, out):
         #   = sum_weight2 / sum_weight**2
         bias = 1 - sum_weight2 / (sum_weight**2)
 
-        out[i] = var_biased / bias
+        if weight >= min_weight:
+            out[i] = var_biased / bias
+        else:
+            out[i] = np.nan
 
 
 @ndmoving(

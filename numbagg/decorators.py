@@ -232,7 +232,7 @@ class NumbaNDMoving:
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
-    def __call__(self, arr, alpha, axis=-1):
+    def __call__(self, arr, alpha, min_weight=0, axis=-1):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
         # If an empty tuple is passed, there's no reduction to do, so we return the
@@ -243,7 +243,7 @@ class NumbaNDMovingExp(NumbaNDMoving):
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(arr, alpha, axis=axis)
+            return self.gufunc(arr, alpha, min_weight, axis=axis)
 
 
 class NumbaGroupNDReduce:
