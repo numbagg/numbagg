@@ -127,6 +127,17 @@ def move_exp_nanvar(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
+def move_exp_nanstd(a, alpha, min_weight=0):
+    """
+    Note that technically the unbiased weighted standard deviation is exactly the same
+    as the square root of the unbiased weighted variance. But it's close, and it's what
+    pandas does.
+
+    (If anyone wants to take a pass at improving it, they're welcome.)
+    """
+    return np.sqrt(move_exp_nanvar(a, alpha, min_weight))
+
+
 @ndmoving(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )

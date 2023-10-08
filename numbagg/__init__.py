@@ -13,7 +13,13 @@ from .funcs import (
     nansum,
     nanvar,
 )
-from .moving import move_exp_nanmean, move_exp_nansum, move_mean
+from .moving import (
+    move_exp_nanmean,
+    move_exp_nanstd,
+    move_exp_nansum,
+    move_exp_nanvar,
+    move_mean,
+)
 
 try:
     __version__ = _version("numbagg")
@@ -36,6 +42,8 @@ __all__ = [
     nanvar,
     move_exp_nanmean,
     move_exp_nansum,
+    move_exp_nanvar,
+    move_exp_nanstd,
     move_mean,
     __version__,
 ]
