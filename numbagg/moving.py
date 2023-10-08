@@ -133,7 +133,7 @@ def move_exp_nanstd(a, alpha, min_weight=0):
     as the square root of the unbiased weighted variance. But it's close, and it's what
     pandas does.
 
-    (If anyone wants to take a pass at improving it, they're welcome.)
+    (If anyone knows the math well and wants to take a pass at improving it, contributions are welcome.)
     """
     return np.sqrt(move_exp_nanvar(a, alpha, min_weight))
 
