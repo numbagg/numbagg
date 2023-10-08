@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
-from numbagg import move_exp_nanmean, move_exp_nansum, move_mean
+from numbagg import move_exp_nanmean, move_exp_nanstd, move_exp_nansum, move_mean
 from numbagg.moving import move_exp_nanvar
 
 from .util import array_order, arrays
@@ -26,6 +26,7 @@ def rand_array():
         (move_exp_nanmean, lambda x: x.mean()),
         (move_exp_nansum, lambda x: x.sum()),
         (move_exp_nanvar, lambda x: x.var()),
+        (move_exp_nanstd, lambda x: x.std()),
     ],
 )
 def test_move_exp_nanmean(rand_array, alpha, functions):
@@ -45,7 +46,9 @@ def test_move_exp_nanmean_2d(rand_array):
     assert_almost_equal(result, expected)
 
 
-@pytest.mark.parametrize("func", [move_exp_nanmean, move_exp_nansum, move_exp_nanvar])
+@pytest.mark.parametrize(
+    "func", [move_exp_nanmean, move_exp_nansum, move_exp_nanvar, move_exp_nanstd]
+)
 def test_move_exp_min_weight(func):
     # Make an array of 25 values, with the first 5 being NaN, and then look at the final
     # 19. We can't look at the whole series, because `nanvar` will always return NaN for
