@@ -179,7 +179,7 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
             sum_x2 / sum_weight
         )
 
-        # Adjust for the bias
+        # Adjust for the bias. (explained in `move_exp_nanvar`)
         bias = 1 - sum_weight2 / (sum_weight**2)
 
         if weight >= min_weight:
