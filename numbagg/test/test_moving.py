@@ -6,8 +6,15 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
-from numbagg import move_exp_nanmean, move_exp_nanstd, move_exp_nansum, move_mean
-from numbagg.moving import move_exp_nancov, move_exp_nanvar
+from numbagg import (
+    move_exp_nancorr,
+    move_exp_nancov,
+    move_exp_nanmean,
+    move_exp_nanstd,
+    move_exp_nansum,
+    move_exp_nanvar,
+    move_mean,
+)
 
 from .util import array_order, arrays
 
@@ -19,7 +26,6 @@ def rand_array():
     return np.where(arr > 0.1, arr, np.nan)
 
 
-@pytest.mark.parametrize("alpha", [0.5, 0.1])
 @pytest.mark.parametrize(
     "functions",
     [
@@ -29,12 +35,28 @@ def rand_array():
         (move_exp_nanstd, lambda x: x.std()),
     ],
 )
-def test_move_exp_nanmean(rand_array, alpha, functions):
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_pandas_comp(rand_array, alpha, functions):
     array = rand_array[0]
     result = functions[0](array, alpha=alpha)
     expected = functions[1](pd.Series(array).ewm(alpha=alpha))
 
     assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "functions",
+    [
+        (move_exp_nancov, lambda x, y: x.cov(y)),
+        (move_exp_nancorr, lambda x, y: x.corr(y)),
+    ],
+)
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_pandas_comp_two_arr(rand_array, alpha, functions):
+    array = rand_array[0]
+    array_2 = rand_array[0] + rand_array[1]
+    result = functions[0](array, array_2, alpha=alpha)
+    expected = functions[1](pd.Series(array).ewm(alpha=alpha), pd.Series(array_2))
 
     assert_almost_equal(result, expected)
 
@@ -140,20 +162,16 @@ def test_move_exp_nansum_numeric():
     assert_almost_equal(result, expected)
 
 
-@pytest.mark.parametrize("alpha", [0.5, 0.1])
-@pytest.mark.parametrize(
-    "functions",
-    [
-        (move_exp_nancov, lambda x, y: x.cov(y)),
-    ],
-)
-def test_move_exp_nancov(rand_array, alpha, functions):
-    array = rand_array[0]
-    result = functions[0](array, array * 1.5 + 3, alpha=alpha)
-    expected = functions[1](
-        pd.Series(array).ewm(alpha=alpha), pd.Series(array * 1.5 + 3)
-    )
+def test_move_exp_nancorr_numeric():
+    array1 = np.array([10, 0, 5, 10])
+    array2 = np.array([10, 0, 10, 5])
 
+    result = move_exp_nancorr(array1, array2, alpha=0.5)
+    expected = np.array([np.nan, 1.0, 0.8485281, 0.2274294])
+    assert_almost_equal(result, expected)
+
+    result = move_exp_nancorr(array1, array2, alpha=0.25)
+    expected = np.array([np.nan, 1.0, 0.85, 0.4789468])
     assert_almost_equal(result, expected)
 
 
