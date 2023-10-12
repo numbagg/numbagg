@@ -139,8 +139,10 @@ def move_exp_nanstd(a, *, alpha, min_weight=0):
 
 
 @ndmovingexp(
-    # @guvectorize
-    [(float64[:], float64[:], float64, float64, float64[:])]
+    [
+        (float32[:], float32[:], float32, float32, float32[:]),
+        (float64[:], float64[:], float64, float64, float64[:]),
+    ]
 )
 def move_exp_nancov(a1, a2, alpha, min_weight, out):
     N = len(a1)
