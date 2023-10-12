@@ -7,7 +7,7 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
 from numbagg import move_exp_nanmean, move_exp_nanstd, move_exp_nansum, move_mean
-from numbagg.moving import move_exp_nanvar
+from numbagg.moving import move_exp_nancov, move_exp_nanvar
 
 from .util import array_order, arrays
 
@@ -31,7 +31,7 @@ def rand_array():
 )
 def test_move_exp_nanmean(rand_array, alpha, functions):
     array = rand_array[0]
-    result = functions[0](array, alpha)
+    result = functions[0](array, alpha=alpha)
     expected = functions[1](pd.Series(array).ewm(alpha=alpha))
 
     assert_almost_equal(result, expected)
@@ -41,7 +41,7 @@ def test_move_exp_nanmean(rand_array, alpha, functions):
 
 def test_move_exp_nanmean_2d(rand_array):
     expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
-    result = move_exp_nanmean(rand_array, 0.1)
+    result = move_exp_nanmean(rand_array, alpha=0.1)
 
     assert_almost_equal(result, expected)
 
@@ -108,11 +108,11 @@ def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
 
     # Run with min_weight slightly above the final value required, assert it doesn't let
     # it through
-    result = move_exp_nanmean(array, alpha, min_weight=weight + 0.01)
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight + 0.01)
     assert np.isnan(result[-1])
 
     # And with min_weight slightly below
-    result = move_exp_nanmean(array, alpha, min_weight=weight - 0.01)
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight - 0.01)
     assert not np.isnan(result[-1])
 
 
@@ -137,6 +137,23 @@ def test_move_exp_nansum_numeric():
 
     result = move_exp_nansum(array, alpha=0.25)
     expected = np.array([10.0, 7.5, 5.625, 14.21875])
+    assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+@pytest.mark.parametrize(
+    "functions",
+    [
+        (move_exp_nancov, lambda x, y: x.cov(y)),
+    ],
+)
+def test_move_exp_nancov(rand_array, alpha, functions):
+    array = rand_array[0]
+    result = functions[0](array, array * 1.5 + 3, alpha=alpha)
+    expected = functions[1](
+        pd.Series(array).ewm(alpha=alpha), pd.Series(array * 1.5 + 3)
+    )
+
     assert_almost_equal(result, expected)
 
 
@@ -171,7 +188,7 @@ def test_move_mean_window(rand_array):
 
 
 def test_tuple_axis_arg(rand_array):
-    result = move_exp_nanmean(rand_array, 0.1, axis=())
+    result = move_exp_nanmean(rand_array, alpha=0.1, axis=())
     assert_equal(result, rand_array)
 
 

@@ -127,7 +127,7 @@ def move_exp_nanvar(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-def move_exp_nanstd(a, alpha, min_weight=0):
+def move_exp_nanstd(a, *, alpha, min_weight=0):
     """
     Note that technically the unbiased weighted standard deviation is exactly the same
     as the square root of the unbiased weighted variance. But it's close, and it's what
@@ -135,7 +135,57 @@ def move_exp_nanstd(a, alpha, min_weight=0):
 
     (If anyone knows the math well and wants to take a pass at improving it, contributions are welcome.)
     """
-    return np.sqrt(move_exp_nanvar(a, alpha, min_weight))
+    return np.sqrt(move_exp_nanvar(a, alpha=alpha, min_weight=min_weight))
+
+
+@ndmovingexp(
+    [
+        (float32[:], float32[:], float32, float32, float32[:]),
+        (float64[:], float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nancov(a1, a2, alpha, min_weight, out):
+    N = len(a1)
+
+    # sum_x1: decayed sum of the sequence values for a1.
+    # sum_x2: decayed sum of the sequence values for a2.
+    # sum_x1x2: decayed sum of the product of sequence values for a1 and a2.
+    # sum_weight: decayed count of non-missing values observed so far in the sequence.
+    # sum_weight2: decayed sum of the (already-decayed) weights of non-missing values.
+    sum_x1 = sum_x2 = sum_x1x2 = sum_weight = sum_weight2 = weight = 0
+    decay = 1.0 - alpha
+
+    for i in range(N):
+        a1_i = a1[i]
+        a2_i = a2[i]
+
+        # decay the values
+        sum_x1 *= decay
+        sum_x2 *= decay
+        sum_x1x2 *= decay
+        sum_weight *= decay
+        sum_weight2 *= decay**2
+        weight *= decay
+
+        if not (np.isnan(a1_i) or np.isnan(a2_i)):
+            sum_x1 += a1_i
+            sum_x2 += a2_i
+            sum_x1x2 += a1_i * a2_i
+            sum_weight += 1
+            sum_weight2 += 1
+            weight += alpha
+
+        cov_biased = (sum_x1x2 / sum_weight) - (sum_x1 / sum_weight) * (
+            sum_x2 / sum_weight
+        )
+
+        # Adjust for the bias. (explained in `move_exp_nanvar`)
+        bias = 1 - sum_weight2 / (sum_weight**2)
+
+        if weight >= min_weight:
+            out[i] = cov_biased / bias
+        else:
+            out[i] = np.nan
 
 
 @ndmoving(

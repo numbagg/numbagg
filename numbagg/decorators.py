@@ -232,18 +232,22 @@ class NumbaNDMoving:
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
-    def __call__(self, arr, alpha, min_weight=0, axis=-1):
+    def __call__(self, *arr, alpha, min_weight=0, axis=-1):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
         if axis == ():
-            return arr
+            if len(arr) > 1:
+                raise ValueError(
+                    "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                )
+            return arr[0]
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(arr, alpha, min_weight, axis=axis)
+            return self.gufunc(*arr, alpha, min_weight, axis=axis)
 
 
 class NumbaGroupNDReduce:
