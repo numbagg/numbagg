@@ -240,7 +240,9 @@ class NumbaNDMovingExp(NumbaNDMoving):
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
         if axis == ():
             if len(arr) > 1:
-                raise ValueError("cannot pass empty tuple for more than one arrays")
+                raise ValueError(
+                    "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                )
             return arr[0]
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
