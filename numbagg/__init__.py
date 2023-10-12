@@ -14,6 +14,8 @@ from .funcs import (
     nanvar,
 )
 from .moving import (
+    move_exp_nancorr,
+    move_exp_nancov,
     move_exp_nanmean,
     move_exp_nanstd,
     move_exp_nansum,
@@ -42,6 +44,8 @@ __all__ = [
     nanvar,
     move_exp_nanmean,
     move_exp_nansum,
+    move_exp_nancorr,
+    move_exp_nancov,
     move_exp_nanvar,
     move_exp_nanstd,
     move_mean,
