@@ -241,7 +241,7 @@ class NumbaNDMovingExp(NumbaNDMoving):
         if axis == ():
             if len(arr) > 1:
                 raise ValueError("cannot pass empty tuple for more than one arrays")
-            return arr
+            return arr[0]
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
