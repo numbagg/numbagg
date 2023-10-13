@@ -127,15 +127,71 @@ def move_exp_nanvar(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-def move_exp_nanstd(a, *, alpha, min_weight=0):
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
+def move_exp_nanstd(a, alpha, min_weight, out):
     """
-    Note that technically the unbiased weighted standard deviation is exactly the same
-    as the square root of the unbiased weighted variance. But it's close, and it's what
-    pandas does.
+    Calculates the exponentially decayed standard deviation.
 
-    (If anyone knows the math well and wants to take a pass at improving it, contributions are welcome.)
+    Note that technically the unbiased weighted standard deviation is not exactly the
+    same as the square root of the unbiased weighted variance, since the bias is
+    concave. But it's close, and it's what pandas does.
+
+    (If anyone knows the math well and wants to take a pass at improving it,
+    contributions are welcome.)
     """
-    return np.sqrt(move_exp_nanvar(a, alpha=alpha, min_weight=min_weight))
+    # This is very similar to `move_exp_nanvar`, but square-roots in the final step. It
+    # could be implemented as a wrapper around `move_exp_nanvar`, but it causes a couple
+    # of small complications around warnings for `np.sqrt` on invalid values, and passing
+    # the `axis` parameter, such that it was easier to just copy-pasta.
+
+    N = len(a)
+
+    # sum_x: decayed sum of the sequence values.
+    # sum_x2: decayed sum of the squared sequence values.
+    # n: decayed count of non-missing values observed so far in the sequence.
+    # n2: decayed sum of the (already-decayed) weights of non-missing values.
+    sum_x_2 = sum_x = sum_weight = sum_weight_2 = weight = 0.0
+    decay = 1.0 - alpha
+
+    for i in range(N):
+        a_i = a[i]
+
+        # decay the values
+        sum_x_2 *= decay
+        sum_x *= decay
+        sum_weight *= decay
+        # We decay this twice because we want the weight^2, so need to decay again
+        # (We could explain this better; contributions welcome...)
+        sum_weight_2 *= decay**2
+        weight *= decay
+
+        if not np.isnan(a_i):
+            sum_x_2 += a_i**2
+            sum_x += a_i
+            sum_weight += 1.0
+            sum_weight_2 += 1.0
+            weight += alpha
+
+        var_biased = (sum_x_2 / sum_weight) - ((sum_x / sum_weight) ** 2)
+
+        # - Ultimately we want `sum(weights_norm**2)`, where `weights_norm` is
+        #   `weights / sum(weights)`:
+        #
+        #   sum(weights_norm**2)
+        #   = sum(weights**2 / sum(weights)**2)
+        #   = sum(weights**2) / sum(weights)**2
+        #   = sum_weight_2 / sum_weight**2
+        bias = 1 - sum_weight_2 / (sum_weight**2)
+
+        if weight >= min_weight:
+            out[i] = np.sqrt(var_biased / bias)
+        else:
+            out[i] = np.nan
 
 
 @ndmovingexp(
