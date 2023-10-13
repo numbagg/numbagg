@@ -51,6 +51,8 @@ jobs:
   test-built-dist:
     needs: build-artifacts
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/setup-python@v4
         name: Install Python
@@ -79,6 +81,8 @@ jobs:
     needs: test-built-dist
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v3
         with:
