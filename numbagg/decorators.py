@@ -1,4 +1,5 @@
 from functools import cache, cached_property
+from typing import Callable
 
 import numba
 import numpy as np
@@ -68,17 +69,6 @@ def ndmovingexp(*args, **kwargs):
 def groupndreduce(*args, **kwargs):
     """Create an N-dimensional grouped aggregation function."""
     return _nd_func_maker(NumbaGroupNDReduce, *args, **kwargs)
-
-
-def _validate_axis(axis, ndim):
-    """Helper function to convert axis into a non-negative integer, or raise if
-    it's invalid.
-    """
-    if axis < 0:
-        axis += ndim
-    if axis < 0 or axis >= ndim:
-        raise ValueError("invalid axis %s" % axis)
-    return axis
 
 
 def ndim(arg):
@@ -170,6 +160,7 @@ class NumbaNDReduce:
             + (first_sig.return_type,)
         )
 
+        # TODO: can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
@@ -203,8 +194,8 @@ DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
 class NumbaNDMoving:
     def __init__(
         self,
-        func,
-        signature=DEFAULT_MOVING_SIGNATURE,
+        func: Callable,
+        signature: tuple = DEFAULT_MOVING_SIGNATURE,
         window_validator=rolling_validator,
     ):
         self.func = func
@@ -225,39 +216,51 @@ class NumbaNDMoving:
     @cached_property
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(self.signature, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(
+            self.signature, gufunc_sig, nopython=True, cache=True
+        )
         return vectorize(self.func)
 
-    def __call__(self, arr, window, min_count=None, axis=-1):
+    def __call__(self, arr: np.ndarray, window, min_count=None, axis=-1):
         if min_count is None:
             min_count = window
         if not 0 < window < arr.shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        axis = _validate_axis(axis, arr.ndim)
         return self.gufunc(arr, window, min_count, axis=axis)
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
-    def __call__(self, arr, alpha, axis=-1):
+    def __call__(self, *arr, alpha, min_weight=0, axis=-1):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
         if axis == ():
-            return arr
-        axis = _validate_axis(axis, arr.ndim)
+            if len(arr) > 1:
+                raise ValueError(
+                    "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                )
+            return arr[0]
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(arr, alpha, axis=axis)
+            return self.gufunc(*arr, alpha, min_weight, axis=axis)
 
 
 class NumbaGroupNDReduce:
-    def __init__(self, func, signature=DEFAULT_MOVING_SIGNATURE):
+    def __init__(
+        self,
+        func,
+        signature=DEFAULT_MOVING_SIGNATURE,
+        supports_nd=True,
+        supports_bool=True,
+    ):
         self.func = func
+        self.supports_nd = supports_nd
+        self.supports_bool = supports_bool
 
         for sig in signature:
             if not isinstance(sig, tuple):
@@ -293,12 +296,23 @@ class NumbaGroupNDReduce:
 
         first_sig = numba_sig[0]
         gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
-        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True, cache=True)
         return vectorize(self.func)
 
     def __call__(self, values, labels, axis=None, num_labels=None):
         values = np.asarray(values)
         labels = np.asarray(labels)
+        if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
+            # TODO: it might be possible to allow returning an extra dimension for the
+            # indices by using the technique at
+            # https://stackoverflow.com/a/66372474/3064736. Or we could have the numba
+            # function return indices for the flattened array, and we stack them into nd
+            # indices.
+            raise ValueError(
+                f"values and labels must be 1-dimensional for {self.func.__name__}. "
+                f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
+                "Please raise an issue if this feature would be particularly helpful."
+            )
 
         if values.dtype == np.bool_:
             values = values.astype(np.int32)

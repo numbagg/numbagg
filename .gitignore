@@ -6,6 +6,7 @@ dist
 .vscode
 Icon*
 .eggs
+__pycache__
 
 *.ipynb
 .ipynb_checkpoints
