@@ -1,11 +1,20 @@
 import warnings
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
-from numbagg import move_exp_nanmean, move_exp_nansum, move_mean
+from numbagg import (
+    move_exp_nancorr,
+    move_exp_nancov,
+    move_exp_nanmean,
+    move_exp_nanstd,
+    move_exp_nansum,
+    move_exp_nanvar,
+    move_mean,
+)
 
 from .util import array_order, arrays
 
@@ -17,20 +26,116 @@ def rand_array():
     return np.where(arr > 0.1, arr, np.nan)
 
 
+@pytest.mark.parametrize(
+    "functions",
+    [
+        (move_exp_nanmean, lambda x: x.mean()),
+        (move_exp_nansum, lambda x: x.sum()),
+        (move_exp_nanvar, lambda x: x.var()),
+        (move_exp_nanstd, lambda x: x.std()),
+    ],
+)
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_nanmean(rand_array, alpha):
+def test_move_exp_pandas_comp(rand_array, alpha, functions):
     array = rand_array[0]
-    expected = pd.Series(array).ewm(alpha=alpha).mean()
-    result = move_exp_nanmean(array, alpha)
+    result = functions[0](array, alpha=alpha)
+    expected = functions[1](pd.Series(array).ewm(alpha=alpha))
+
+    assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "functions",
+    [
+        (move_exp_nancov, lambda x, y: x.cov(y)),
+        (move_exp_nancorr, lambda x, y: x.corr(y)),
+    ],
+)
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_pandas_comp_two_arr(rand_array, alpha, functions):
+    array = rand_array[0]
+    array_2 = rand_array[0] + rand_array[1]
+    result = functions[0](array, array_2, alpha=alpha)
+    expected = functions[1](pd.Series(array).ewm(alpha=alpha), pd.Series(array_2))
 
     assert_almost_equal(result, expected)
 
 
 def test_move_exp_nanmean_2d(rand_array):
     expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
-    result = move_exp_nanmean(rand_array, 0.1)
+    result = move_exp_nanmean(rand_array, alpha=0.1)
 
     assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "func", [move_exp_nanmean, move_exp_nansum, move_exp_nanvar, move_exp_nanstd]
+)
+def test_move_exp_min_weight(func):
+    # Make an array of 25 values, with the first 5 being NaN, and then look at the final
+    # 19. We can't look at the whole series, because `nanvar` will always return NaN for
+    # the first value.
+    array = np.ones(25)
+    array[:5] = np.nan
+
+    # min_weight of 0 should produce values everywhere
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2))[6:])
+    expected = 19
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.2))[6:])
+    expected = 17
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.2))[6:])
+    expected = 10
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    # min_weight of 1 should never produce values
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.2))[6:])
+    expected = 0
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.8))[6:])
+    expected = 0
+    assert result == expected
+
+
+@pytest.mark.parametrize("n", [10, 200])
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+@pytest.mark.parametrize("test_nans", [True, False])
+def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
+    array = rand_array[0, :n]
+    if not test_nans:
+        array = np.nan_to_num(array)
+    # High alphas mean fast decays, mean initial weights are higher
+    initial_weight = alpha
+    weights = (
+        np.array([(1 - alpha) ** (i - 1) for i in range(n, 0, -1)]) * initial_weight
+    )
+    assert_almost_equal(weights[-1], initial_weight)
+    # Fill weights with NaNs where array has them
+    weights = np.where(np.isnan(array), np.nan, weights)
+
+    # This is the weight of the final value
+    weight = np.nansum(weights)
+
+    # Run with min_weight slightly above the final value required, assert it doesn't let
+    # it through
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight + 0.01)
+    assert np.isnan(result[-1])
+
+    # And with min_weight slightly below
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight - 0.01)
+    assert not np.isnan(result[-1])
 
 
 def test_move_exp_nanmean_numeric():
@@ -57,13 +162,26 @@ def test_move_exp_nansum_numeric():
     assert_almost_equal(result, expected)
 
 
+def test_move_exp_nancorr_numeric():
+    array1 = np.array([10, 0, 5, 10])
+    array2 = np.array([10, 0, 10, 5])
+
+    result = move_exp_nancorr(array1, array2, alpha=0.5)
+    expected = np.array([np.nan, 1.0, 0.8485281, 0.2274294])
+    assert_almost_equal(result, expected)
+
+    result = move_exp_nancorr(array1, array2, alpha=0.25)
+    expected = np.array([np.nan, 1.0, 0.85, 0.4789468])
+    assert_almost_equal(result, expected)
+
+
 def test_move_mean():
     array = np.arange(100.0)
     array[::7] = np.nan
 
     expected = pd.Series(array).rolling(window=5, min_periods=1).mean().values
     result = move_mean(array, 5, min_count=1)
-    assert_almost_equal(result, expected)
+    assert_almost_equal(result, expected)  # type: ignore[arg-type,unused-ignore]
 
 
 def test_move_mean_random(rand_array):
@@ -88,7 +206,7 @@ def test_move_mean_window(rand_array):
 
 
 def test_tuple_axis_arg(rand_array):
-    result = move_exp_nanmean(rand_array, 0.1, axis=())
+    result = move_exp_nanmean(rand_array, alpha=0.1, axis=())
     assert_equal(result, rand_array)
 
 
@@ -263,7 +381,7 @@ def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
     else:
         y = np.empty(a.shape)
     idx1 = [slice(None)] * a.ndim
-    idx2 = list(idx1)
+    idx2: Any = list(idx1)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for i in range(a.shape[axis]):
@@ -278,15 +396,15 @@ def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
 
 def _mask(a, window, min_count, axis):
     n = (a == a).cumsum(axis)
-    idx1 = [slice(None)] * a.ndim
-    idx2 = [slice(None)] * a.ndim
-    idx3 = [slice(None)] * a.ndim
-    idx1[axis] = slice(window, None)
-    idx2[axis] = slice(None, -window)
-    idx3[axis] = slice(None, window)
-    idx1 = tuple(idx1)
-    idx2 = tuple(idx2)
-    idx3 = tuple(idx3)
+    idx1_ = [slice(None)] * a.ndim
+    idx2_ = [slice(None)] * a.ndim
+    idx3_ = [slice(None)] * a.ndim
+    idx1_[axis] = slice(window, None)
+    idx2_[axis] = slice(None, -window)
+    idx3_[axis] = slice(None, window)
+    idx1 = tuple(idx1_)
+    idx2 = tuple(idx2_)
+    idx3 = tuple(idx3_)
     nidx1 = n[idx1]
     nidx1 = nidx1 - n[idx2]
     idx = np.empty(a.shape, dtype=np.bool_)
@@ -354,17 +472,17 @@ def lastrank(a, axis=-1):
         # At least one dimension has length 0
         shape = list(a.shape)
         shape.pop(axis)
-        r = np.empty(shape, dtype=a.dtype)
+        r: Any = np.empty(shape, dtype=a.dtype)
         r.fill(np.nan)
         if (r.ndim == 0) and (r.size == 1):
             r = np.nan
         return r
-    indlast = [slice(None)] * ndim
-    indlast[axis] = slice(-1, None)
-    indlast = tuple(indlast)
-    indlast2 = [slice(None)] * ndim
-    indlast2[axis] = -1
-    indlast2 = tuple(indlast2)
+    indlast_ = [slice(None)] * ndim
+    indlast_[axis] = slice(-1, None)
+    indlast = tuple(indlast_)
+    indlast2_: Any = [slice(None)] * ndim
+    indlast2_[axis] = -1
+    indlast2 = tuple(indlast2_)
     n = (~np.isnan(a)).sum(axis)
     a_indlast = a[indlast]
     g = (a_indlast > a).sum(axis)
@@ -374,7 +492,7 @@ def lastrank(a, axis=-1):
     r = 2.0 * (r - 0.5)
     if ndim == 1:
         if n == 1:
-            r = 0
+            r = 0.0
         if np.isnan(a[indlast2]):  # elif?
             r = np.nan
     else:

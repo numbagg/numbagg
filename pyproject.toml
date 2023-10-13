@@ -1,5 +1,75 @@
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-default_section = "THIRDPARTY"
-known_first_party = ["pytest-accept"]
+[build-system]
+requires = ["setuptools", "wheel", "setuptools_scm"]
+
+[project]
+authors = [
+  {name = "Stephan Hoyer", email = "shoyer@gmail.com"},
+  {name = "Maximilian Roos", email = "m@maxroos.com"},
+]
+classifiers = [
+  # "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = ["numpy", "numba"]
+description = "Fast N-dimensional aggregation functions with Numba"
+dynamic = ["version"]
+license = {file = "LICENSE"}
+name = "numbagg"
+readme = "README.md"
+requires-python = ">=3.9"
+
+[project.urls]
+homepage = "https://github.com/numbagg/numbagg"
+
+[project.optional-dependencies]
+test = ["pytest", "bottleneck", "pandas"]
+
+[tool.setuptools_scm]
+fallback_version = "999"
+
+[tool.ruff]
+builtins = ["ellipsis"]
+target-version = "py39"
+# E402: module level import not at top of file
+# E501: line too long - let black worry about that
+# E731: do not assign a lambda expression, use a def
+ignore = [
+  "E402",
+  "E501",
+  "E731",
+]
+select = [
+  "F", # Pyflakes
+  "E", # Pycodestyle
+  "W",
+  "I", # isort
+  "UP", # Pyupgrade
+]
+
+[tool.mypy]
+check_untyped_defs = true
+enable_error_code = "redundant-self"
+files = "numbagg"
+show_error_codes = true
+show_error_context = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Much of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "bottleneck.*",
+  "pandas.*",
+  "numba.*",
+  "pytest.*",
+  "setuptools",
+]
