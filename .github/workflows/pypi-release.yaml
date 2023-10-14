@@ -2,9 +2,9 @@
 
 name: Release to PyPI
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "*"
 
 jobs:
   build-artifacts:
@@ -76,7 +76,6 @@ jobs:
 
   upload-to-pypi:
     needs: test-built-dist
-    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
