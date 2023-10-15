@@ -10,6 +10,34 @@ from .decorators import ndmoving, ndmovingexp
         (float64[:], float64, float64, float64[:]),
     ]
 )
+def move_exp_nancount(a, alpha, min_weight, out):
+    N = len(a)
+
+    count = weight = 0.0
+    decay = 1.0 - alpha
+
+    for i in range(N):
+        a_i = a[i]
+
+        count *= decay
+        weight *= decay
+
+        if not np.isnan(a_i):
+            count += 1
+            weight += alpha
+
+        if weight >= min_weight:
+            out[i] = count
+        else:
+            out[i] = np.nan
+
+
+@ndmovingexp(
+    [
+        (float32[:], float32, float32, float32[:]),
+        (float64[:], float64, float64, float64[:]),
+    ]
+)
 def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 

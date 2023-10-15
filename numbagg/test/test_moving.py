@@ -8,6 +8,7 @@ from numpy.testing import assert_almost_equal, assert_equal
 
 from numbagg import (
     move_exp_nancorr,
+    move_exp_nancount,
     move_exp_nancov,
     move_exp_nanmean,
     move_exp_nanstd,
@@ -69,7 +70,14 @@ def test_move_exp_nanmean_2d(rand_array):
 
 
 @pytest.mark.parametrize(
-    "func", [move_exp_nanmean, move_exp_nansum, move_exp_nanvar, move_exp_nanstd]
+    "func",
+    [
+        move_exp_nancount,
+        move_exp_nanmean,
+        move_exp_nansum,
+        move_exp_nanvar,
+        move_exp_nanstd,
+    ],
 )
 def test_move_exp_min_weight(func):
     # Make an array of 25 values, with the first 5 being NaN, and then look at the final
@@ -136,6 +144,28 @@ def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
     # And with min_weight slightly below
     result = move_exp_nanmean(array, alpha=alpha, min_weight=weight - 0.01)
     assert not np.isnan(result[-1])
+
+
+def test_move_exp_nancount_numeric():
+    array = np.array([1, 0, np.nan, np.nan, 1, 0])
+
+    result = move_exp_nancount(array, alpha=0.5)
+    expected = np.array([1.0, 1.5, 0.75, 0.375, 1.1875, 1.59375])
+    assert_almost_equal(result, expected)
+
+    result = move_exp_nancount(array, alpha=0.25)
+    expected = np.array([1.0, 1.75, 1.3125, 0.984375, 1.7382812, 2.3037109])
+    assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+def test_move_exp_nancount_nansum(alpha):
+    # An array with NaNs & 1s should be the same for count & sum
+    array = np.array([1, 1, np.nan, np.nan, 1, 1])
+
+    result = move_exp_nancount(array, alpha=alpha)
+    expected = move_exp_nansum(array, alpha=alpha)
+    assert_almost_equal(result, expected)
 
 
 def test_move_exp_nanmean_numeric():
