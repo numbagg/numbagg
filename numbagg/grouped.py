@@ -13,11 +13,20 @@ dtypes = [
     (float64, int32, float64),
     (float64, int64, float64),
 ]
+dtypes_counts = [
+    (int32, int32, int64, int32),
+    (int32, int64, int64, int32),
+    (int64, int32, int64, int64),
+    (int64, int64, int64, int64),
+    (float32, int32, int64, float32),
+    (float32, int64, int64, float32),
+    (float64, int32, int64, float64),
+    (float64, int64, int64, float64),
+]
 
 
-@groupndreduce(dtypes)
-def group_nanmean(values, labels, out):
-    counts = np.zeros(out.shape, dtype=labels.dtype)
+@groupndreduce(dtypes_counts)
+def group_nanmean(values, labels, counts, out):
     out[:] = 0.0
 
     for indices in np.ndindex(values.shape):

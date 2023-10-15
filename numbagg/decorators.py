@@ -261,13 +261,16 @@ class NumbaGroupNDReduce:
         self.func = func
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
+        nargs = len(signature[0])
+        self.needs_count = True if nargs == 4 else False
 
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
-            if len(sig) != 3:
+            if len(sig) != nargs:
                 raise TypeError(
-                    "signature has wrong number of argument != 3: " f"{signature}"
+                    f"signature has wrong number of argument != {nargs}: "
+                    f"{signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
@@ -290,12 +293,18 @@ class NumbaGroupNDReduce:
         numba_sig = []
         slices = (slice(None),) * core_ndim
         for input_sig in self.signature:
-            values, labels, out = input_sig
-            new_sig = (values[slices], labels[slices], out[:])
+            if self.needs_count:
+                values, labels, counts, out = input_sig
+                new_sig = (values[slices], labels[slices], counts[:], out[:])
+            else:
+                values, labels, out = input_sig
+                new_sig = (values[slices], labels[slices], out[:])  # type: ignore[assignment]
             numba_sig.append(new_sig)
 
         first_sig = numba_sig[0]
-        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
+        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + (
+            ",(z)" if not self.needs_count else ",(z),(z)"
+        )
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True, cache=True)
         return vectorize(self.func)
 
@@ -327,6 +336,7 @@ class NumbaGroupNDReduce:
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
             gufunc = self._create_gufunc(values.ndim)
+
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -335,6 +345,7 @@ class NumbaGroupNDReduce:
                 )
             values = np.moveaxis(values, axis, -1)
             gufunc = self._create_gufunc(1)
+
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -350,5 +361,9 @@ class NumbaGroupNDReduce:
         # Different functions optimize with different inits — e.g. `sum` uses 0, while
         # `prod` uses 1. So we don't initialize here, and instead rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
-        gufunc(values, labels, result)
+        if self.needs_count:
+            counts = np.zeros(result.shape, dtype=np.int64)
+            gufunc(values, labels, counts, result)
+        else:
+            gufunc(values, labels, result)
         return result
