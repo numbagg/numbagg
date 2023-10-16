@@ -177,7 +177,7 @@ def group_nanvar(values, labels, out):
             sums[label] += value
             sums_of_squares[label] += value**2
 
-    # Calculate standard deviation for each group
+    # Calculate for each group
     for label in range(len(out)):
         count = counts[label]
         if count < 2:  # not enough data for std deviation
@@ -188,17 +188,34 @@ def group_nanvar(values, labels, out):
             )
 
 
-# Is this the best approach for wrapping? We can't call `group_nanvar` directly because
-# it's not a gufunc, because of our decorator. Having this be outside numba also means
-# that we transform ints to floats, which breaks our convention.
-#
-# One approach would be to just copy & paste the whole thing and add the `sqrt`...
-def group_nanstd(values, labels, **kwargs):
-    return np.sqrt(group_nanvar(values, labels, **kwargs))
+@groupndreduce(dtypes, supports_bool=False)
+def group_nanstd(values, labels, out):
+    # Copy-pasted from `group_nanvar`
+    sums = np.zeros(out.shape, dtype=values.dtype)
+    sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
+    counts = np.zeros(out.shape, dtype=labels.dtype)
+    out[:] = np.nan
 
+    # Calculate sums, sum of squares, and counts
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
 
-group_nanstd.supports_nd = True  # type: ignore[attr-defined]
-group_nanstd.supports_bool = False  # type: ignore[attr-defined]
+        value = values[indices]
+        if not np.isnan(value):
+            counts[label] += 1
+            sums[label] += value
+            sums_of_squares[label] += value**2
+
+    for label in range(len(out)):
+        count = counts[label]
+        if count < 2:  # not enough data for std deviation
+            out[label] = np.nan
+        else:
+            out[label] = np.sqrt(
+                (sums_of_squares[label] - (sums[label] ** 2 / count)) / (count - 1)
+            )
 
 
 @groupndreduce(dtypes)
