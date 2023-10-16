@@ -1,4 +1,5 @@
-# import bottleneck as bn
+from functools import partial
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
@@ -16,8 +17,8 @@ def functions():
     yield numbagg.nanmin, np.nanmin, np.inf
     yield numbagg.nanmean, np.nanmean, 5
     yield numbagg.nanmean, np.nanmean, True
-    yield numbagg.nanstd, np.nanstd, 5
-    yield numbagg.nanvar, np.nanvar, 5
+    yield numbagg.nanstd, partial(np.nanstd, ddof=1), 5
+    yield numbagg.nanvar, partial(np.nanvar, ddof=1), 5
     # yield numbagg.anynan, bn.anynan, np.inf
     # yield numbagg.allnan, bn.allnan, np.inf
     yield numbagg.count, slow_count, np.inf

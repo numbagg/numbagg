@@ -301,12 +301,12 @@ def slow_move_mean(a, window, min_count=None, axis=-1):
     return move_func(np.nanmean, a, window, min_count, axis=axis)
 
 
-def slow_move_std(a, window, min_count=None, axis=-1, ddof=0):
+def slow_move_std(a, window, min_count=None, axis=-1, ddof=1):
     "Slow move_std for unaccelerated dtype"
     return move_func(np.nanstd, a, window, min_count, axis=axis, ddof=ddof)
 
 
-def slow_move_var(a, window, min_count=None, axis=-1, ddof=0):
+def slow_move_var(a, window, min_count=None, axis=-1, ddof=1):
     "Slow move_var for unaccelerated dtype"
     return move_func(np.nanvar, a, window, min_count, axis=axis, ddof=ddof)
 
