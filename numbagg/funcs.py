@@ -1,5 +1,5 @@
 import numpy as np
-from numba import bool_, float32, float64, int32, int64
+from numba import bool_, float32, float64, guvectorize, int32, int64
 
 from numbagg.decorators import ndreduce
 
@@ -162,6 +162,69 @@ def nanmin(a):
     if all_missing:
         amin = np.nan
     return amin
+
+
+@guvectorize([(float64[:], float64, float64[:])], "(n),()->()")
+def nanquantile_single(arr, quantile, out):
+    # valid (non NaN) observations along the first axis
+    valid_obs = np.sum(np.isfinite(arr))
+    # replace NaN with maximum
+    max_val = np.nanmax(arr)
+    arr[np.isnan(arr)] = max_val
+
+    rank = (valid_obs - 1) * quantile
+    floor_index = int(np.floor(rank))
+    col_index = int(np.ceil(rank))
+    sorted = np.partition(arr, kth=[floor_index, col_index])
+
+    # linear interpolation (like numpy percentile) takes the fractional part of desired position
+    floor_val = sorted[floor_index]
+    ceil_val = sorted[col_index]
+
+    proportion = rank - np.floor(rank)
+
+    result = floor_val + proportion * (ceil_val - floor_val)
+
+    out[0] = result
+
+
+nanquantile = nanquantile_single
+
+
+# WIP (which doesn't work) on multiple quantiles
+# @guvectorize([(float64[:], float64[:, :], float64[:])], "(n),(n,m)->(m)")
+@guvectorize([(float64[:], float64[:], float64[:])], "(n),()->()")
+def nanquantile_multiple(arr, quantiles, out):
+    # valid (non NaN) observations along the first axis
+    valid_obs = np.sum(np.isfinite(arr))
+    # replace NaN with maximum
+    max_val = np.nanmax(arr)
+    arr[np.isnan(arr)] = max_val
+    # TODO: would `argsort` or `partition` be faster here?
+    arr = np.sort(arr)
+
+    for i in range(len(quantiles)):
+        quant = quantiles[i]
+        # desired position as well as floor and ceiling of it
+        rank = (valid_obs - 1) * quant
+
+        # linear interpolation (like numpy percentile) takes the fractional part of desired position
+        floor_val = arr[int(np.floor(rank))]
+        ceil_val = arr[int(np.ceil(rank))]
+
+        proportion = rank - np.floor(rank)
+
+        result = floor_val + proportion * (ceil_val - floor_val)
+
+        # quant_arr = floor_val + ceil_val
+        # quant_arr[fc_equal_k_mask] = _zvalue_from_index(
+        #     arr=arr, ind=rank.astype(np.int32)
+        # )[
+        #     fc_equal_k_mask
+        # ]  # if floor == ceiling take floor value
+
+        # out[i] = result
+        out[0] = result
 
 
 count = nancount
