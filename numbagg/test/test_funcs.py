@@ -20,7 +20,7 @@ def functions():
     yield numbagg.nanvar, np.nanvar, 5
     # yield numbagg.anynan, bn.anynan, np.inf
     # yield numbagg.allnan, bn.allnan, np.inf
-    yield numbagg.count, slow_count, np.inf
+    yield numbagg.nancount, slow_count, np.inf
 
 
 @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")

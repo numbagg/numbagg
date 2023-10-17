@@ -25,7 +25,7 @@ def anynan(a):
 
 
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
-def count(a):
+def nancount(a):
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
@@ -162,3 +162,6 @@ def nanmin(a):
     if all_missing:
         amin = np.nan
     return amin
+
+
+count = nancount
