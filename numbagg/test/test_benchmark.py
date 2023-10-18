@@ -1,11 +1,11 @@
 from functools import partial
+from typing import Callable
 
 import numpy as np
 import pandas as pd
 import pytest
 
-import numbagg
-from numbagg.moving import move_exp_nanmean, move_exp_nansum, move_exp_nanvar
+from numbagg import move_exp_nanmean, move_exp_nansum, move_exp_nanvar
 
 
 @pytest.fixture(params=["numbagg", "pandas"])
@@ -13,10 +13,11 @@ def library(request):
     return request.param
 
 
+# Tuple of (setup, run)
 PANDAS_FUNCTIONS = {
-    move_exp_nanmean: lambda x: x.mean(),
-    move_exp_nansum: lambda x: x.sum(),
-    move_exp_nanvar: lambda x: x.var(),
+    move_exp_nanmean: (lambda x: x.ewm(alpha=0.5), lambda x: x.mean()),
+    move_exp_nansum: (lambda x: x.ewm(alpha=0.5), lambda x: x.sum()),
+    move_exp_nanvar: (lambda x: x.ewm(alpha=0.5), lambda x: x.var()),
 }
 
 
@@ -32,9 +33,12 @@ def numbagg_func(request):
 
 
 @pytest.fixture()
-def func(library, numbagg_func):
+def funcs(library, numbagg_func) -> tuple[Callable, Callable]:
+    """
+    Returns a setup function and a running function
+    """
     if library == "numbagg":
-        return partial(numbagg_func, alpha=0.5)
+        return lambda x: x, partial(numbagg_func, alpha=0.5)
     elif library == "pandas":
         return PANDAS_FUNCTIONS[numbagg_func]
     else:
@@ -53,20 +57,20 @@ def array(size):
 
 
 @pytest.fixture()
-def obj(array, library):
+def obj(array, library, funcs):
     if library == "numbagg":
         return array
     elif library == "pandas":
-        return pd.DataFrame(array.T).ewm(alpha=0.5)
+        return pd.DataFrame(array.T).pipe(funcs[0])
     else:
         raise ValueError(f"Unknown library {library}")
 
 
 # @pytest.mark.parametrize("size", [1_000], indirect=True)
-def test_benchmark_small(benchmark, func, numbagg_func, obj, size):
+def test_benchmark_small(benchmark, funcs, numbagg_func, obj, size):
     benchmark.group = f"{numbagg_func}|{size}"
     benchmark.pedantic(
-        func, args=(obj,), warmup_rounds=1, rounds=3, iterations=10_000_000 // size
+        funcs[1], args=(obj,), warmup_rounds=1, rounds=3, iterations=10_000_000 // size
     )
 
 
