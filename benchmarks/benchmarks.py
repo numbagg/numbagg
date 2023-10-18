@@ -77,6 +77,12 @@ class Funcs:
     params = [
         [
             (nanquantile, lambda x, y: x.quantile(y), np.nanquantile),
+            # WIP benchmark for `np.quantile`, since that's supposed to be faster than `np.nanquantile`
+            (
+                nanquantile,
+                lambda x, y: x.quantile(y),
+                lambda x, y: np.quantile(np.nan_to_num(x), y),
+            ),
         ],
         [10, 1_000, 100_000],
     ]
