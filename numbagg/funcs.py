@@ -25,7 +25,7 @@ def anynan(a):
 
 
 @ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
-def count(a):
+def nancount(a):
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
@@ -58,8 +58,9 @@ def nanmean(a):
 
 @ndreduce([float32(float32), float64(float64)])
 def nanstd(a):
-    # for now, fix ddof=0
-    ddof = 0
+    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
+    # discussion of whether to add an option.
+    ddof = 1
     asum = 0
     count = 0
     for ai in a.flat:
@@ -80,8 +81,9 @@ def nanstd(a):
 
 @ndreduce([float32(float32), float64(float64)])
 def nanvar(a):
-    # for now, fix ddof=0
-    ddof = 0
+    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
+    # discussion of whether to add an option.
+    ddof = 1
     asum = 0
     count = 0
     for ai in a.flat:
@@ -162,3 +164,6 @@ def nanmin(a):
     if all_missing:
         amin = np.nan
     return amin
+
+
+count = nancount
