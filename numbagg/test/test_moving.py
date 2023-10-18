@@ -7,6 +7,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_equal
 
 from numbagg import (
+    ffill,
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -236,6 +237,14 @@ def test_move_mean_window(rand_array):
         move_mean(rand_array, window=-1)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=1, min_count=-1)
+
+
+def test_ffill(rand_array):
+    a = rand_array[0]
+    expected = pd.Series(a).ffill().values
+    result = ffill(a)
+
+    assert_almost_equal(result, expected)
 
 
 def test_tuple_axis_arg(rand_array):

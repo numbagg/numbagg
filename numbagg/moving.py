@@ -357,3 +357,17 @@ def move_mean(a, window, min_count, out):
             count -= 1
 
         out[i] = asum / count if count >= min_count else np.nan
+
+
+@ndmoving(
+    [
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def ffill(a, out):
+    current = np.nan
+    for i in range(len(a)):
+        if not np.isnan(a[i]):
+            current = a[i]
+        out[i] = current
