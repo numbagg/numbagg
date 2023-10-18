@@ -124,7 +124,7 @@ class NumbaNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def transformed_func(self):
@@ -211,7 +211,7 @@ class NumbaNDMoving:
         return self.func.__name__
 
     def __repr__(self):
-        return f"<numbagg.decorators.{type(self).__name__} {self.__name__}>"
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def gufunc(self):
@@ -281,7 +281,7 @@ class NumbaGroupNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaGroupNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cache
     def _create_gufunc(self, core_ndim):
