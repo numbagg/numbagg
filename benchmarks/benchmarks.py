@@ -73,15 +73,23 @@ class Moving:
         func[1](self.df_rolling)
 
 
+# TODO: clean up — move the `quantile` to another option, rather than duplicating
+# everything. Maybe move to pytest-benchmark.
+
+
 class Funcs:
     params = [
         [
-            (nanquantile, lambda x, y: x.quantile(y), np.nanquantile),
+            (
+                nanquantile,
+                lambda x, y, axis: x.quantile(y, axis=axis),
+                np.nanquantile,
+            ),
             # WIP benchmark for `np.quantile`, since that's supposed to be faster than `np.nanquantile`
             (
                 nanquantile,
-                lambda x, y: x.quantile(y),
-                lambda x, y: np.quantile(np.nan_to_num(x), y),
+                lambda x, y, axis: x.quantile(y, axis=axis),
+                lambda x, y, axis: np.quantile(np.nan_to_num(x), y, axis=axis),
             ),
         ],
         [10, 1_000, 100_000],
@@ -100,15 +108,15 @@ class Funcs:
         self.y = 0.75
         # One run for JIT (asv states that it does this before runs, but this still
         # seems to make a difference)
-        func[0](self.array, self.y)
-        func[1](self.df, self.y)
-        func[2](self.array, self.y)
+        func[0](self.array, self.y, axis=0)
+        func[1](self.df, self.y, axis=0)
+        func[2](self.array, self.y, axis=0)
 
     def time_numbagg(self, func, n):
-        func[0](self.array, self.y)
+        func[0](self.array, self.y, axis=0)
 
     def time_pandas(self, func, n):
-        func[1](self.df, self.y)
+        func[1](self.df, self.y, axis=0)
 
     def time_numpy(self, func, n):
-        func[2](self.array, self.y)
+        func[2](self.array, self.y, axis=0)
