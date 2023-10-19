@@ -26,6 +26,11 @@ def functions():
         lambda x: np.nanquantile(x, [0.25, 0.75]),
         5,
     )
+    yield (
+        lambda x: numbagg.nanquantile(x, 0.5),
+        lambda x: np.nanquantile(x, 0.5),
+        5,
+    )
 
 
 @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")

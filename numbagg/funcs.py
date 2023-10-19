@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Iterable
+
 import numpy as np
 from numba import bool_, float32, float64, guvectorize, int32, int64
 
@@ -200,7 +204,12 @@ def nanquantile_(arr, quantile, out):
         out[i] = result
 
 
-def nanquantile(a, quantiles, axis=None, **kwargs):
+def nanquantile(
+    a: np.ndarray,
+    quantiles: float | list[float] | np.ndarray,
+    axis: int | tuple[int] | None = None,
+    **kwargs,
+):
     if kwargs.get("axes"):
         raise ValueError(
             "`axes` argument is not supported yet by nanquantile. It's not difficult to add it, but "
@@ -208,7 +217,10 @@ def nanquantile(a, quantiles, axis=None, **kwargs):
             "in particular if vectorizing over lists of quantiles would be useful."
         )
 
+    if not isinstance(quantiles, Iterable):
+        quantiles = [quantiles]
     quantiles = np.asarray(quantiles)
+
     if axis is None:
         axis = list(range(a.ndim))
 
