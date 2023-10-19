@@ -217,7 +217,7 @@ def nanquantile(
             "in particular if vectorizing over lists of quantiles would be useful."
         )
 
-    if not isinstance(quantiles, Iterable):
+    if not isinstance(quantiles, (Iterable, np.ndarray)):
         quantiles = [quantiles]
     quantiles = np.asarray(quantiles)
 
