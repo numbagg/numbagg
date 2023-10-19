@@ -164,67 +164,62 @@ def nanmin(a):
     return amin
 
 
-@guvectorize([(float64[:], float64, float64[:])], "(n),()->()")
-def nanquantile_single(arr, quantile, out):
-    # valid (non NaN) observations along the first axis
+@guvectorize([(float64[:], float64[:], float64[:])], "(n),(m)->(m)")
+def nanquantile_(arr, quantile, out):
+    # valid (non NaN) observations
     valid_obs = np.sum(np.isfinite(arr))
     # replace NaN with maximum
     max_val = np.nanmax(arr)
     arr[np.isnan(arr)] = max_val
 
-    rank = (valid_obs - 1) * quantile
-    floor_index = int(np.floor(rank))
-    col_index = int(np.ceil(rank))
-    sorted = np.partition(arr, kth=[floor_index, col_index])
+    # two columns for indexes — floor and ceiling
+    indexes = np.zeros((len(quantile), 2), dtype=np.int32)
+    # store ranks as floats
+    ranks = np.zeros(len(quantile), dtype=np.float64)
 
-    # linear interpolation (like numpy percentile) takes the fractional part of desired position
-    floor_val = sorted[floor_index]
-    ceil_val = sorted[col_index]
+    for i in range(len(quantile)):
+        rank = (valid_obs - 1) * quantile[i]
+        ranks[i] = rank
+        indexes[i, 0] = int(np.floor(rank))
+        indexes[i, 1] = int(np.ceil(rank))
 
-    proportion = rank - np.floor(rank)
+    # partition sorts but only ensures indexes passed to kth are in the correct positions
+    unique_indices = np.unique(indexes)
+    sorted = np.partition(arr, kth=unique_indices)
 
-    result = floor_val + proportion * (ceil_val - floor_val)
+    for i in range(len(quantile)):
+        # linear interpolation (like numpy percentile) takes the fractional part of
+        # desired position
+        proportion = ranks[i] - indexes[i, 0]
 
-    out[0] = result
-
-
-nanquantile = nanquantile_single
-
-
-# WIP (which doesn't work) on multiple quantiles
-# @guvectorize([(float64[:], float64[:, :], float64[:])], "(n),(n,m)->(m)")
-@guvectorize([(float64[:], float64[:], float64[:])], "(n),()->()")
-def nanquantile_multiple(arr, quantiles, out):
-    # valid (non NaN) observations along the first axis
-    valid_obs = np.sum(np.isfinite(arr))
-    # replace NaN with maximum
-    max_val = np.nanmax(arr)
-    arr[np.isnan(arr)] = max_val
-    # TODO: would `argsort` or `partition` be faster here?
-    arr = np.sort(arr)
-
-    for i in range(len(quantiles)):
-        quant = quantiles[i]
-        # desired position as well as floor and ceiling of it
-        rank = (valid_obs - 1) * quant
-
-        # linear interpolation (like numpy percentile) takes the fractional part of desired position
-        floor_val = arr[int(np.floor(rank))]
-        ceil_val = arr[int(np.ceil(rank))]
-
-        proportion = rank - np.floor(rank)
+        floor_val = sorted[indexes[i, 0]]
+        ceil_val = sorted[indexes[i, 1]]
 
         result = floor_val + proportion * (ceil_val - floor_val)
 
-        # quant_arr = floor_val + ceil_val
-        # quant_arr[fc_equal_k_mask] = _zvalue_from_index(
-        #     arr=arr, ind=rank.astype(np.int32)
-        # )[
-        #     fc_equal_k_mask
-        # ]  # if floor == ceiling take floor value
+        out[i] = result
 
-        # out[i] = result
-        out[0] = result
+
+def nanquantile(a, quantiles, axis=None, **kwargs):
+    if kwargs.get("axes"):
+        raise ValueError(
+            "`axes` argument is not supported yet by nanquantile. It's not difficult to add it, but "
+            "requires some testing. Raise an issue on numbagg if it would be helpful, "
+            "in particular if vectorizing over lists of quantiles would be useful."
+        )
+
+    quantiles = np.asarray(quantiles)
+    if axis is None:
+        axis = list(range(a.ndim))
+
+    # The second array is the quantiles array, and is always only a single axis. The
+    # third array is the result array, and returns a final axis for quantiles.
+    axes = [axis, -1, -1]
+
+    result = nanquantile_(a, quantiles, axes=axes, **kwargs)
+
+    # numpy returns quantiles as the first axis, so we move ours to that position too
+    return np.moveaxis(result, -1, 0)
 
 
 count = nancount

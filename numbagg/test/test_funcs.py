@@ -21,6 +21,11 @@ def functions():
     # yield numbagg.anynan, bn.anynan, np.inf
     # yield numbagg.allnan, bn.allnan, np.inf
     yield numbagg.nancount, slow_count, np.inf
+    yield (
+        lambda x: numbagg.nanquantile(x, [0.25, 0.75]),
+        lambda x: np.nanquantile(x, [0.25, 0.75]),
+        5,
+    )
 
 
 @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
@@ -90,10 +95,9 @@ def slow_count(x, axis=None):
 
 
 def test_nan_quantile():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
+    arr = np.random.RandomState(0).rand(2000).reshape(10, 10, -1)
 
-    # quantiles = np.array([0.25, 0.75])
-    quantiles = 0.25
+    quantiles = np.array([0.25, 0.75])
     result = numbagg.nanquantile(arr, quantiles, axis=1)
     expected = np.nanquantile(arr, quantiles, axis=1)
 
