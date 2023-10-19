@@ -164,7 +164,7 @@ class NumbaNDReduce:
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
-    def __call__(self, arr, axis=None):
+    def __call__(self, arr, *args, axis=None):
         if axis is None:
             # TODO: switch to using jit_func (it's faster), once numba reliably
             # returns the right dtype
@@ -177,7 +177,7 @@ class NumbaNDReduce:
         else:
             arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
             f = self._create_gufunc(len(axis))
-        return f(arr)
+        return f(arr, *args)
 
 
 MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"

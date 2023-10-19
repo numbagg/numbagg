@@ -1,11 +1,16 @@
 import numpy as np
 import pandas as pd
 
-from numbagg import move_exp_nanmean
-from numbagg.moving import move_exp_nansum, move_exp_nanvar, move_mean
+from numbagg import (
+    move_exp_nanmean,
+    move_exp_nansum,
+    move_exp_nanvar,
+    move_mean,
+    nanquantile,
+)
 
 
-class Suite:
+class Exp:
     params = [
         [
             (move_exp_nanmean, lambda x: x.mean()),
@@ -66,3 +71,52 @@ class Moving:
 
     def time_pandas(self, func, n):
         func[1](self.df_rolling)
+
+
+# TODO: clean up — move the `quantile` to another option, rather than duplicating
+# everything. Maybe move to pytest-benchmark.
+
+
+class Funcs:
+    params = [
+        [
+            (
+                nanquantile,
+                lambda x, y, axis: x.quantile(y, axis=axis),
+                np.nanquantile,
+            ),
+            # WIP benchmark for `np.quantile`, since that's supposed to be faster than `np.nanquantile`
+            (
+                nanquantile,
+                lambda x, y, axis: x.quantile(y, axis=axis),
+                lambda x, y, axis: np.quantile(np.nan_to_num(x), y, axis=axis),
+            ),
+        ],
+        [10, 1_000, 100_000],
+    ]
+    param_names = ["func", "n"]
+    # While we're still in development mode, make these fast at the cost of small sample
+    # size.
+    repeat = 1
+    rounds = 1
+    number = 1
+
+    def setup(self, func, n):
+        array = np.random.RandomState(0).rand(300, n)
+        self.array = np.where(array > 0.1, array, np.nan)
+        self.df = pd.DataFrame(self.array.T)
+        self.y = 0.75
+        # One run for JIT (asv states that it does this before runs, but this still
+        # seems to make a difference)
+        func[0](self.array, self.y, axis=0)
+        func[1](self.df, self.y, axis=0)
+        func[2](self.array, self.y, axis=0)
+
+    def time_numbagg(self, func, n):
+        func[0](self.array, self.y, axis=0)
+
+    def time_pandas(self, func, n):
+        func[1](self.df, self.y, axis=0)
+
+    def time_numpy(self, func, n):
+        func[2](self.array, self.y, axis=0)
