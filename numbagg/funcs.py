@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 from numba import bool_, float32, float64, guvectorize, int32, int64
@@ -207,7 +207,7 @@ def nanquantile_(arr, quantile, out):
 def nanquantile(
     a: np.ndarray,
     quantiles: float | list[float] | np.ndarray,
-    axis: int | tuple[int] | None = None,
+    axis: int | tuple[int, ...] | None = None,
     **kwargs,
 ):
     if kwargs.get("axes"):
@@ -222,7 +222,7 @@ def nanquantile(
     quantiles = np.asarray(quantiles)
 
     if axis is None:
-        axis = list(range(a.ndim))
+        axis = tuple(range(a.ndim))
 
     # The second array is the quantiles array, and is always only a single axis. The
     # third array is the result array, and returns a final axis for quantiles.
