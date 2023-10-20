@@ -149,7 +149,7 @@ def move_exp_nanvar(a, alpha, min_weight, out):
         #   = sum_weight_2 / sum_weight**2
         bias = 1 - sum_weight_2 / (sum_weight**2)
 
-        if weight >= min_weight:
+        if weight >= min_weight and bias > 0:
             out[i] = var_biased / bias
         else:
             out[i] = np.nan
@@ -216,7 +216,7 @@ def move_exp_nanstd(a, alpha, min_weight, out):
         #   = sum_weight_2 / sum_weight**2
         bias = 1 - sum_weight_2 / (sum_weight**2)
 
-        if weight >= min_weight:
+        if weight >= min_weight and bias > 0:
             out[i] = np.sqrt(var_biased / bias)
         else:
             out[i] = np.nan
@@ -264,7 +264,7 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
         # Adjust for the bias. (explained in `move_exp_nanvar`)
         bias = 1 - sum_weight_2 / (sum_weight**2)
 
-        if weight >= min_weight:
+        if weight >= min_weight and bias > 0:
             out[i] = cov_biased / bias
         else:
             out[i] = np.nan
@@ -307,21 +307,16 @@ def move_exp_nancorr(a1, a2, alpha, min_weight, out):
             sum_x1_2 += a1_i**2
             sum_x2_2 += a2_i**2
 
-        cov_biased = (sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)) / sum_weight
-        var_a1_biased = (sum_x1_2 - (sum_x1**2 / sum_weight)) / sum_weight
-        var_a2_biased = (sum_x2_2 - (sum_x2**2 / sum_weight)) / sum_weight
+        # The bias cancels out, so we don't need to adjust for it
 
-        # Adjust for the bias. (explained in `move_exp_nanvar`)
-        bias = 1 - sum_weight_2 / (sum_weight**2)
+        cov = (sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)) / sum_weight
+        var_a1 = (sum_x1_2 - (sum_x1**2 / sum_weight)) / sum_weight
+        var_a2 = (sum_x2_2 - (sum_x2**2 / sum_weight)) / sum_weight
 
         if weight >= min_weight:
-            var_a1_unbiased = var_a1_biased / bias
-            var_a2_unbiased = var_a2_biased / bias
-            cov_unbiased = cov_biased / bias
-
-            denominator = np.sqrt(var_a1_unbiased * var_a2_unbiased)
+            denominator = np.sqrt(var_a1 * var_a2)
             if denominator != 0:
-                out[i] = cov_unbiased / denominator
+                out[i] = cov / denominator
             else:
                 out[i] = np.nan
         else:
