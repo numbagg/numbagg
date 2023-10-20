@@ -17,6 +17,7 @@ from numbagg import (
     move_mean,
 )
 
+from . import COMPARISONS
 from .util import array_order, arrays
 
 
@@ -28,43 +29,33 @@ def rand_array():
 
 
 @pytest.mark.parametrize(
-    "functions",
+    "func",
     [
-        (move_exp_nanmean, lambda x: x.mean()),
-        (move_exp_nansum, lambda x: x.sum()),
-        (move_exp_nanvar, lambda x: x.var()),
-        (move_exp_nanstd, lambda x: x.std()),
+        move_exp_nanmean,
+        move_exp_nansum,
+        move_exp_nanvar,
+        move_exp_nanstd,
+        move_exp_nancov,
+        move_exp_nancorr,
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp(rand_array, alpha, functions):
-    array = rand_array[0]
-    result = functions[0](array, alpha=alpha)
-    expected = functions[1](pd.Series(array).ewm(alpha=alpha))
+def test_move_exp_pandas_comp(rand_array, alpha, func):
+    comp_dict = COMPARISONS[func]
+    array = rand_array[:3]
+    if comp_dict.get("setup"):
+        array = comp_dict["setup"](array)
 
-    assert_almost_equal(result, expected)
+    # We need to pass multiple args for nancov & nancorr; in retrospect this could have
+    # been a different function.
+    if isinstance(array, tuple):
+        result = func(*array, alpha=alpha)
+        pandas_inputs = COMPARISONS[func]["pandas"]["setup"](*array, alpha=alpha)
+    else:
+        result = func(array, alpha=alpha)
+        pandas_inputs = COMPARISONS[func]["pandas"]["setup"](array, alpha=alpha)
 
-
-@pytest.mark.parametrize(
-    "functions",
-    [
-        (move_exp_nancov, lambda x, y: x.cov(y)),
-        (move_exp_nancorr, lambda x, y: x.corr(y)),
-    ],
-)
-@pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp_two_arr(rand_array, alpha, functions):
-    array = rand_array[0]
-    array_2 = rand_array[0] + rand_array[1]
-    result = functions[0](array, array_2, alpha=alpha)
-    expected = functions[1](pd.Series(array).ewm(alpha=alpha), pd.Series(array_2))
-
-    assert_almost_equal(result, expected)
-
-
-def test_move_exp_nanmean_2d(rand_array):
-    expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
-    result = move_exp_nanmean(rand_array, alpha=0.1)
+    expected = COMPARISONS[func]["pandas"]["run"](pandas_inputs)
 
     assert_almost_equal(result, expected)
 
