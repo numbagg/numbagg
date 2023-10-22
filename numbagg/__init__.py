@@ -15,7 +15,8 @@ from .funcs import (
     nansum,
     nanvar,
 )
-from .moving import (
+from .moving import move_mean
+from .moving_exp import (
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -23,7 +24,6 @@ from .moving import (
     move_exp_nanstd,
     move_exp_nansum,
     move_exp_nanvar,
-    move_mean,
 )
 
 try:
