@@ -73,3 +73,6 @@ module = [
   "pytest.*",
   "setuptools",
 ]
+
+[tool.pytest.ini_options]
+addopts = ["--benchmark-skip"]
