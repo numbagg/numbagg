@@ -10,7 +10,6 @@ from .. import (
     move_exp_nansum,
     move_exp_nanvar,
 )
-from . import COMPARISONS
 
 
 @pytest.fixture(
@@ -28,16 +27,6 @@ def func(request):
     return request.param
 
 
-@pytest.fixture
-def setup(library, func):
-    return COMPARISONS[func][library]["setup"]
-
-
-@pytest.fixture
-def run(library, func):
-    return COMPARISONS[func][library]["run"]
-
-
 @pytest.fixture(params=[1_000, 100_000, 10_000_000])
 def size(request):
     return request.param
@@ -47,11 +36,6 @@ def size(request):
 def array(size):
     array = np.random.RandomState(0).rand(3, size)
     return np.where(array > 0.1, array, np.nan)
-
-
-@pytest.fixture()
-def obj(array, setup):
-    return setup(array)
 
 
 def test_benchmark_small(benchmark, run, func, obj, size):

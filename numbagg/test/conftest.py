@@ -106,8 +106,8 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
             run=lambda arrays: arrays[0].corr(arrays[1]).T,
         ),
         numbagg=dict(
-            setup=lambda a: a,
-            run=lambda a, alpha=0.5: move_exp_nancorr(a, alpha=alpha),
+            setup=numbagg_2_array_setup,
+            run=lambda a, alpha=0.5: move_exp_nancorr(*a, alpha=alpha),
         ),
     ),
     move_exp_nancov: dict(
@@ -116,8 +116,8 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
             run=lambda arrays: arrays[0].cov(arrays[1]).T,
         ),
         numbagg=dict(
-            setup=lambda a: a,
-            run=lambda a, alpha=0.5: move_exp_nancov(a, alpha=alpha),
+            setup=numbagg_2_array_setup,
+            run=lambda a, alpha=0.5: move_exp_nancov(*a, alpha=alpha),
         ),
     ),
 }
@@ -126,6 +126,21 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
 @pytest.fixture(params=["numbagg", "pandas"])
 def library(request):
     return request.param
+
+
+@pytest.fixture
+def setup(library, func):
+    return COMPARISONS[func][library]["setup"]
+
+
+@pytest.fixture
+def run(library, func):
+    return COMPARISONS[func][library]["run"]
+
+
+@pytest.fixture()
+def obj(array, setup):
+    return setup(array)
 
 
 @pytest.fixture(autouse=True)
