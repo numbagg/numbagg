@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+
 import numpy as np
-from numba import bool_, float32, float64, int32, int64
+from numba import bool_, float32, float64, guvectorize, int32, int64
 
 from numbagg.decorators import ndreduce
 
@@ -164,6 +168,72 @@ def nanmin(a):
     if all_missing:
         amin = np.nan
     return amin
+
+
+@guvectorize([(float64[:], float64[:], float64[:])], "(n),(m)->(m)")
+def nanquantile_(arr, quantile, out):
+    # valid (non NaN) observations
+    valid_obs = np.sum(np.isfinite(arr))
+    # replace NaN with maximum
+    max_val = np.nanmax(arr)
+    arr[np.isnan(arr)] = max_val
+
+    # two columns for indexes — floor and ceiling
+    indexes = np.zeros((len(quantile), 2), dtype=np.int32)
+    # store ranks as floats
+    ranks = np.zeros(len(quantile), dtype=np.float64)
+
+    for i in range(len(quantile)):
+        rank = (valid_obs - 1) * quantile[i]
+        ranks[i] = rank
+        indexes[i, 0] = int(np.floor(rank))
+        indexes[i, 1] = int(np.ceil(rank))
+
+    # partition sorts but only ensures indexes passed to kth are in the correct positions
+    unique_indices = np.unique(indexes)
+    sorted = np.partition(arr, kth=unique_indices)
+
+    for i in range(len(quantile)):
+        # linear interpolation (like numpy percentile) takes the fractional part of
+        # desired position
+        proportion = ranks[i] - indexes[i, 0]
+
+        floor_val = sorted[indexes[i, 0]]
+        ceil_val = sorted[indexes[i, 1]]
+
+        result = floor_val + proportion * (ceil_val - floor_val)
+
+        out[i] = result
+
+
+def nanquantile(
+    a: np.ndarray,
+    quantiles: float | list[float] | np.ndarray,
+    axis: int | tuple[int, ...] | None = None,
+    **kwargs,
+):
+    if kwargs.get("axes"):
+        raise ValueError(
+            "`axes` argument is not supported yet by nanquantile. It's not difficult to add it, but "
+            "requires some testing. Raise an issue on numbagg if it would be helpful, "
+            "in particular if vectorizing over lists of quantiles would be useful."
+        )
+
+    if not isinstance(quantiles, (Iterable, np.ndarray)):
+        quantiles = [quantiles]
+    quantiles = np.asarray(quantiles)
+
+    if axis is None:
+        axis = tuple(range(a.ndim))
+
+    # The second array is the quantiles array, and is always only a single axis. The
+    # third array is the result array, and returns a final axis for quantiles.
+    axes = [axis, -1, -1]
+
+    result = nanquantile_(a, quantiles, axes=axes, **kwargs)
+
+    # numpy returns quantiles as the first axis, so we move ours to that position too
+    return np.moveaxis(result, -1, 0)
 
 
 count = nancount

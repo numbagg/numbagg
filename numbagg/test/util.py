@@ -4,7 +4,9 @@ DTYPES = [np.float32, np.float64]
 
 
 def arrays(func_name, dtypes=DTYPES):
-    return array_iter(array_generator, func_name, dtypes)
+    result = list(array_iter(array_generator, func_name, dtypes))
+    assert len(result) > 0
+    return result
 
 
 def array_iter(arrays_func, *args):

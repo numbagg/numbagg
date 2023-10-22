@@ -124,7 +124,7 @@ class NumbaNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def transformed_func(self):
@@ -164,7 +164,7 @@ class NumbaNDReduce:
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
-    def __call__(self, arr, axis=None):
+    def __call__(self, arr, *args, axis=None):
         if axis is None:
             # TODO: switch to using jit_func (it's faster), once numba reliably
             # returns the right dtype
@@ -177,7 +177,7 @@ class NumbaNDReduce:
         else:
             arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
             f = self._create_gufunc(len(axis))
-        return f(arr)
+        return f(arr, *args)
 
 
 MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
@@ -211,7 +211,7 @@ class NumbaNDMoving:
         return self.func.__name__
 
     def __repr__(self):
-        return f"<numbagg.decorators.{type(self).__name__} {self.__name__}>"
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def gufunc(self):
@@ -281,7 +281,7 @@ class NumbaGroupNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaGroupNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cache
     def _create_gufunc(self, core_ndim):
