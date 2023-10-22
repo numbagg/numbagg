@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 
 from numbagg import (
     move_exp_nancorr,
@@ -17,10 +17,11 @@ from numbagg import (
     move_mean,
 )
 
+from . import COMPARISONS
 from .util import array_order, arrays
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def rand_array():
     arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
     arr[0, 0] = np.nan
@@ -28,45 +29,47 @@ def rand_array():
 
 
 @pytest.mark.parametrize(
-    "functions",
+    "func",
     [
-        (move_exp_nanmean, lambda x: x.mean()),
-        (move_exp_nansum, lambda x: x.sum()),
-        (move_exp_nanvar, lambda x: x.var()),
-        (move_exp_nanstd, lambda x: x.std()),
+        move_exp_nancount,
+        move_exp_nanmean,
+        move_exp_nanstd,
+        move_exp_nansum,
+        move_exp_nanvar,
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp(rand_array, alpha, functions):
-    array = rand_array[0]
-    result = functions[0](array, alpha=alpha)
-    expected = functions[1](pd.Series(array).ewm(alpha=alpha))
+def test_move_exp_pandas_comp(rand_array, alpha, func):
+    c = COMPARISONS[func]
+    array = rand_array[:3]
 
-    assert_almost_equal(result, expected)
+    result = func(array, alpha=alpha)
+    pandas_inputs = c["pandas"]["setup"](array, alpha=alpha)
+
+    expected = c["pandas"]["run"](pandas_inputs)
+
+    assert_allclose(result, expected)
 
 
 @pytest.mark.parametrize(
-    "functions",
+    "func",
     [
-        (move_exp_nancov, lambda x, y: x.cov(y)),
-        (move_exp_nancorr, lambda x, y: x.corr(y)),
+        move_exp_nancov,
+        move_exp_nancorr,
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp_two_arr(rand_array, alpha, functions):
-    array = rand_array[0]
-    array_2 = rand_array[0] + rand_array[1]
-    result = functions[0](array, array_2, alpha=alpha)
-    expected = functions[1](pd.Series(array).ewm(alpha=alpha), pd.Series(array_2))
+def test_move_exp_pandas_comp_two_arrays(rand_array, alpha, func):
+    c = COMPARISONS[func]
+    a1 = rand_array[:3]
+    a2 = 0.3 * a1 + rand_array[3:6]
 
-    assert_almost_equal(result, expected)
+    result = func(a1, a2, alpha=alpha)
 
+    pandas_inputs = c["pandas"]["setup"](a1, a2, alpha=alpha)
+    expected = c["pandas"]["run"](pandas_inputs)
 
-def test_move_exp_nanmean_2d(rand_array):
-    expected = pd.DataFrame(rand_array).T.ewm(alpha=0.1).mean().T
-    result = move_exp_nanmean(rand_array, alpha=0.1)
-
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -74,9 +77,9 @@ def test_move_exp_nanmean_2d(rand_array):
     [
         move_exp_nancount,
         move_exp_nanmean,
+        move_exp_nanstd,
         move_exp_nansum,
         move_exp_nanvar,
-        move_exp_nanstd,
     ],
 )
 def test_move_exp_min_weight(func):
@@ -129,7 +132,7 @@ def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
     weights = (
         np.array([(1 - alpha) ** (i - 1) for i in range(n, 0, -1)]) * initial_weight
     )
-    assert_almost_equal(weights[-1], initial_weight)
+    assert_allclose(weights[-1], initial_weight)
     # Fill weights with NaNs where array has them
     weights = np.where(np.isnan(array), np.nan, weights)
 
@@ -151,11 +154,11 @@ def test_move_exp_nancount_numeric():
 
     result = move_exp_nancount(array, alpha=0.5)
     expected = np.array([1.0, 1.5, 0.75, 0.375, 1.1875, 1.59375])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
     result = move_exp_nancount(array, alpha=0.25)
     expected = np.array([1.0, 1.75, 1.3125, 0.984375, 1.7382812, 2.3037109])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 @pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
@@ -165,7 +168,7 @@ def test_move_exp_nancount_nansum(alpha):
 
     result = move_exp_nancount(array, alpha=alpha)
     expected = move_exp_nansum(array, alpha=alpha)
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 def test_move_exp_nanmean_numeric():
@@ -173,11 +176,11 @@ def test_move_exp_nanmean_numeric():
 
     result = move_exp_nanmean(array, alpha=0.5)
     expected = np.array([10.0, 3.3333333, 3.3333333, 8.1818182])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
     result = move_exp_nanmean(array, alpha=0.25)
     expected = np.array([10.0, 4.2857143, 4.2857143, 7.1653543])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 def test_move_exp_nansum_numeric():
@@ -185,11 +188,11 @@ def test_move_exp_nansum_numeric():
 
     result = move_exp_nansum(array, alpha=0.5)
     expected = np.array([10.0, 5.0, 2.5, 11.25])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
     result = move_exp_nansum(array, alpha=0.25)
     expected = np.array([10.0, 7.5, 5.625, 14.21875])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 def test_move_exp_nancorr_numeric():
@@ -198,11 +201,11 @@ def test_move_exp_nancorr_numeric():
 
     result = move_exp_nancorr(array1, array2, alpha=0.5)
     expected = np.array([np.nan, 1.0, 0.8485281, 0.2274294])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
     result = move_exp_nancorr(array1, array2, alpha=0.25)
     expected = np.array([np.nan, 1.0, 0.85, 0.4789468])
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 def test_move_mean():
@@ -211,7 +214,7 @@ def test_move_mean():
 
     expected = pd.Series(array).rolling(window=5, min_periods=1).mean().values
     result = move_mean(array, 5, min_count=1)
-    assert_almost_equal(result, expected)  # type: ignore[arg-type,unused-ignore]
+    assert_allclose(result, expected)  # type: ignore[arg-type,unused-ignore]
 
 
 def test_move_mean_random(rand_array):
@@ -219,11 +222,11 @@ def test_move_mean_random(rand_array):
 
     expected = pd.Series(array).rolling(window=10, min_periods=1).mean().values
     result = move_mean(array, 10, min_count=1)
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
     expected = pd.Series(array).rolling(window=3, min_periods=3).mean().values
     result = move_mean(array, 3, min_count=3)
-    assert_almost_equal(result, expected)
+    assert_allclose(result, expected)
 
 
 def test_move_mean_window(rand_array):
