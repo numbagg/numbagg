@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Callable
+
 import pandas as pd
 
 from .. import (
@@ -27,7 +31,7 @@ def pandas_ewm_2arg_setup(a1, a2, alpha):
     return pd.DataFrame(a1).T.ewm(alpha=alpha), pd.DataFrame(a2).T
 
 
-COMPARISONS = {
+COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_exp_nancount: dict(
         # There's no pandas equivalent for move_exp_nancount
         pandas=dict(

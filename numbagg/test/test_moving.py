@@ -42,8 +42,6 @@ def rand_array():
 def test_move_exp_pandas_comp(rand_array, alpha, func):
     c = COMPARISONS[func]
     array = rand_array[:3]
-    if c.get("setup"):
-        array = c["setup"](array)
 
     result = func(array, alpha=alpha)
     pandas_inputs = c["pandas"]["setup"](array, alpha=alpha)
