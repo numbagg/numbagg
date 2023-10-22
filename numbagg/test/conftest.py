@@ -16,6 +16,7 @@ from .. import (
     move_exp_nanvar,
 )
 
+# TODO: add these as functions to the dict
 # move_mean,
 # nanargmax,
 # nanargmin,
