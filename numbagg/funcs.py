@@ -236,4 +236,24 @@ def nanquantile(
     return np.moveaxis(result, -1, 0)
 
 
+@guvectorize([(float64[:], float64[:]), (float32[:], float32[:])], "(n)->(n)")
+def bfill(a, out):
+    current = np.nan
+    # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
+    # `list` will cause a copy.
+    for i in range(len(a) - 1, -1, -1):
+        if not np.isnan(a[i]):
+            current = a[i]
+        out[i] = current
+
+
+@guvectorize([(float64[:], float64[:]), (float32[:], float32[:])], "(n)->(n)")
+def ffill(a, out):
+    current = np.nan
+    for i, val in enumerate(a):
+        if not np.isnan(val):
+            current = val
+        out[i] = current
+
+
 count = nancount

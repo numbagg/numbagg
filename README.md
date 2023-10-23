@@ -11,7 +11,7 @@ Currently accelerated functions:
 
 - Array functions: `allnan`, `anynan`, `count`, `nanargmax`,
   `nanargmin`, `nanmax`, `nanmean`, `nanstd`, `nanvar`, `nanmin`,
-  `nansum`, `nanquantile`.
+  `nansum`, `nanquantile`, `ffill`, `bfill`.
 - Grouped functions: `group_nanall`, `group_nanany`, `group_nanargmax`,
   `group_nanargmin`, `group_nancount`, `group_nanfirst`, `group_nanlast`,
   `group_nanmax`, `group_nanmean`, `group_nanmin`, `group_nanprod`,
