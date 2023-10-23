@@ -113,8 +113,8 @@ def move_std(a, window, min_count, out):
             count += 1
 
         if count >= min_count:
-            variance = asum_sq / count - (asum / count) ** 2
-            out[i] = np.sqrt(variance * count / (count - 1))
+            variance = (asum_sq - asum**2 / count) / (count - 1)
+            out[i] = np.sqrt(variance)
         else:
             out[i] = np.nan
 
@@ -132,8 +132,8 @@ def move_std(a, window, min_count, out):
             count -= 1
 
         if count >= min_count:
-            variance = asum_sq / count - (asum / count) ** 2
-            out[i] = np.sqrt(variance * count / (count - 1))
+            variance = (asum_sq - asum**2 / count) / (count - 1)
+            out[i] = np.sqrt(variance)
         else:
             out[i] = np.nan
 
@@ -157,7 +157,7 @@ def move_var(a, window, min_count, out):
             count += 1
 
         if count >= min_count:
-            out[i] = asum_sq / (count - 1) - asum**2 / (count * (count - 1))
+            out[i] = (asum_sq - asum**2 / count) / (count - 1)
         else:
             out[i] = np.nan
 
@@ -175,7 +175,7 @@ def move_var(a, window, min_count, out):
             count -= 1
 
         if count >= min_count:
-            out[i] = asum_sq / (count - 1) - asum**2 / (count * (count - 1))
+            out[i] = (asum_sq - asum**2 / count) / (count - 1)
 
         else:
             out[i] = np.nan
