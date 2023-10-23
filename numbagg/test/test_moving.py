@@ -2,7 +2,6 @@ import warnings
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
 
