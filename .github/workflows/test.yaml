@@ -74,7 +74,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python numbagg/tests/run_benchmarks.py
+          python numbagg/test/run_benchmarks.py
 
   mypy:
     runs-on: ubuntu-latest
