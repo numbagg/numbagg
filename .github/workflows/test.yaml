@@ -72,9 +72,9 @@ jobs:
         run: |
           python -m pip install --no-deps -e .
 
-      - name: Run tests
+      - name: Run benchmarks
         run: |
-          python numbagg/test/run_benchmarks.py
+          micromamba run -n numbagg-benchmarks python numbagg/test/run_benchmarks.py
 
   mypy:
     runs-on: ubuntu-latest
