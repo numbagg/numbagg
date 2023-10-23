@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 
 from .. import (
+    move_corr,
+    move_cov,
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -9,11 +11,17 @@ from .. import (
     move_exp_nanstd,
     move_exp_nansum,
     move_exp_nanvar,
+    move_mean,
+    move_std,
+    move_sum,
+    move_var,
 )
 
 
 @pytest.fixture(
     params=[
+        move_corr,
+        move_cov,
         move_exp_nancorr,
         move_exp_nancount,
         move_exp_nancov,
@@ -21,6 +29,10 @@ from .. import (
         move_exp_nanstd,
         move_exp_nansum,
         move_exp_nanvar,
+        move_mean,
+        move_std,
+        move_sum,
+        move_var,
     ],
 )
 def func(request):

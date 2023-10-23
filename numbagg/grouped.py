@@ -221,8 +221,6 @@ def group_nanstd(values, labels, out):
 @groupndreduce(dtypes)
 def group_nanmin(values, labels, out):
     # Floats could save an allocation by writing directly to `out`
-    # Though weirdly it works OK for `nanmax`? Copying exactly the same function and
-    # changing the sign causes a failure for int32s
     min_values = np.full(out.shape, np.nan)
 
     for indices in np.ndindex(values.shape):
