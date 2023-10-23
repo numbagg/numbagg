@@ -19,7 +19,7 @@ Currently accelerated functions:
 - Moving window functions listed below
 - Exponentially weighted moving functions listed below
 
-## Benchmarks[^1]
+## Benchmarks
 
 | func                |  numbagg |    pandas |  ratio |
 | :------------------ | -------: | --------: | -----: |
@@ -81,6 +81,17 @@ Currently accelerated functions:
 | `move_var`          |     1000 |   0.01ms |    0.15ms | 18.91x |
 |                     |   100000 |   0.71ms |    5.40ms |  7.66x |
 |                     | 10000000 |  79.82ms |  534.13ms |  6.69x |
+
+[^1][^2]
+
+[^1]:
+    Benchmarks were run on a Mac M1 in October 2023 on numbagg's HEAD and
+    pandas 2.1.1. Any contributions to improve the benchmarks for other
+    libraries are more than welcome.
+
+[^2]:
+    Pandas doesn't have an equivalent `move_exp_nancount` function, so this is
+    compared to a function which uses its `sum` function on an array of `1`s.
 
 </details>
 
@@ -146,8 +157,3 @@ expect Numbagg to be tightly coupled to Numba and NumPy release cycles.
 
 3-clause BSD. Includes portions of Bottleneck, which is distributed under a
 Simplified BSD license.
-
-[^1]:
-    Benchmarks were run on a Mac M1 in October 2023 on numbagg's HEAD and
-    pandas 2.1.1. Any contributions to improve the benchmarks for other
-    libraries are more than welcome.
