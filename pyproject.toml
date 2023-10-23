@@ -19,6 +19,14 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = ["numpy", "numba"]
+dev-dependencies = [
+  "pytest",
+  "pytest-benchmark",
+  "tabulate",
+  "jq",
+  "setuptools_scm",
+]
+
 description = "Fast N-dimensional aggregation functions with Numba"
 dynamic = ["version"]
 license = {file = "LICENSE"}
@@ -72,6 +80,7 @@ module = [
   "numba.*",
   "pytest.*",
   "setuptools",
+  "jq.*",
 ]
 
 [tool.pytest.ini_options]
