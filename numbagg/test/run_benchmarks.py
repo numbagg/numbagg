@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import jq
@@ -6,14 +7,14 @@ from tabulate import tabulate
 
 
 def run():
-    # subprocess.run(
-    #     [
-    #         "pytest",
-    #         "numbagg/test/test_benchmark.py",
-    #         "--benchmark-only",
-    #         "--benchmark-json=benchmark.json",
-    #     ]
-    # )
+    subprocess.run(
+        [
+            "pytest",
+            "numbagg/test/test_benchmark.py",
+            "--benchmark-only",
+            "--benchmark-json=benchmark.json",
+        ]
+    )
 
     json = jq.compile(
         '.benchmarks | map(.params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.mean, })'

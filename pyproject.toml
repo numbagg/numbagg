@@ -80,6 +80,7 @@ module = [
   "numba.*",
   "pytest.*",
   "setuptools",
+  "tabulate.*",
   "jq.*",
 ]
 
