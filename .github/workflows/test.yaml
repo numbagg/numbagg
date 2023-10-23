@@ -66,7 +66,7 @@ jobs:
           environment-name: numbagg-tests
           cache-environment: true
           create-args: >-
-            python=3.10 numba pandas bottleneck pytest pytest-benchmark
+            python=3.10 numba pandas bottleneck pytest pytest-benchmark tabulate jq
 
       - name: Install numbagg
         run: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest --benchmark-only
+          python numbagg/tests/run_benchmarks.py
 
   mypy:
     runs-on: ubuntu-latest

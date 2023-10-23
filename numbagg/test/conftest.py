@@ -87,7 +87,7 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
         # There's no pandas equivalent for move_exp_nancount
         pandas=dict(
             setup=lambda a, alpha=0.5: pd.DataFrame(a).T.notnull().ewm(alpha=alpha),
-            run=lambda a: a.sum().T,
+            run=lambda a: a.sum(engine="numba").T,
         ),
         numbagg=dict(
             setup=lambda a: a,
@@ -117,7 +117,7 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_exp_nansum: dict(
         pandas=dict(
             setup=pandas_ewm_setup,
-            run=lambda a: a.sum().T,
+            run=lambda a: a.sum(engine="numba").T,
         ),
         numbagg=dict(
             setup=lambda a: a,
@@ -127,7 +127,7 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_exp_nanmean: dict(
         pandas=dict(
             setup=pandas_ewm_setup,
-            run=lambda a: a.mean().T,
+            run=lambda a: a.mean(engine="numba").T,
         ),
         numbagg=dict(
             setup=lambda a: a,
@@ -157,7 +157,7 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_mean: dict(
         pandas=dict(
             setup=pandas_move_setup,
-            run=lambda a: a.mean().T,
+            run=lambda a: a.mean(engine="numba").T,
         ),
         numbagg=dict(
             setup=lambda a: a,
@@ -167,7 +167,7 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_sum: dict(
         pandas=dict(
             setup=pandas_move_setup,
-            run=lambda a: a.sum().T,
+            run=lambda a: a.sum(engine="numba").T,
         ),
         numbagg=dict(setup=lambda a: a, run=numbagg_move_run(move_sum)),
     ),
@@ -184,14 +184,14 @@ COMPARISONS: dict[Callable, dict[str, dict[str, Callable]]] = {
     move_std: dict(
         pandas=dict(
             setup=pandas_move_setup,
-            run=lambda a: a.std().T,
+            run=lambda a: a.std(engine="numba").T,
         ),
         numbagg=dict(setup=lambda a: a, run=numbagg_move_run(move_std)),
     ),
     move_var: dict(
         pandas=dict(
             setup=pandas_move_setup,
-            run=lambda a: a.var().T,
+            run=lambda a: a.var(engine="numba").T,
         ),
         numbagg=dict(setup=lambda a: a, run=numbagg_move_run(move_var)),
     ),
