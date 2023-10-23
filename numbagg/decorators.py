@@ -221,14 +221,14 @@ class NumbaNDMoving:
         )
         return vectorize(self.func)
 
-    def __call__(self, arr: np.ndarray, window, min_count=None, axis=-1):
+    def __call__(self, *arr: np.ndarray, window, min_count=None, axis=-1):
         if min_count is None:
             min_count = window
-        if not 0 < window < arr.shape[axis]:
+        if not 0 < window < arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        return self.gufunc(arr, window, min_count, axis=axis)
+        return self.gufunc(*arr, window, min_count, axis=axis)
 
 
 class NumbaNDMovingExp(NumbaNDMoving):

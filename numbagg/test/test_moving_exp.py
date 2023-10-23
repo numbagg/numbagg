@@ -4,9 +4,18 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
-from numbagg import move_corr, move_cov, move_mean, move_std, move_sum, move_var
+from numbagg import (
+    move_exp_nancorr,
+    move_exp_nancount,
+    move_exp_nancov,
+    move_exp_nanmean,
+    move_exp_nanstd,
+    move_exp_nansum,
+    move_exp_nanvar,
+    move_mean,
+)
 
 from .conftest import COMPARISONS
 from .util import array_order, arrays
@@ -21,20 +30,184 @@ def rand_array():
 
 @pytest.mark.parametrize(
     "func",
-    [move_mean, move_sum, move_std, move_var, move_cov, move_corr],
+    [
+        move_exp_nancount,
+        move_exp_nanmean,
+        move_exp_nanstd,
+        move_exp_nansum,
+        move_exp_nanvar,
+        move_exp_nancov,
+        move_exp_nancorr,
+    ],
 )
-@pytest.mark.parametrize("window", [10, 50])
-@pytest.mark.parametrize("min_count", [3, None])
-def test_move_pandas_comp(rand_array, func, window, min_count):
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_pandas_comp(rand_array, alpha, func):
     c = COMPARISONS[func]
     array = rand_array[:3]
 
     input = c["numbagg"]["setup"](array)
-    result = c["numbagg"]["run"](input, window=window, min_count=min_count)
+    result = c["numbagg"]["run"](input, alpha=alpha)
 
-    input = c["pandas"]["setup"](array, window=window, min_count=min_count)
+    input = c["pandas"]["setup"](array, alpha=alpha)
     expected = c["pandas"]["run"](input)
 
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        move_exp_nancount,
+        move_exp_nanmean,
+        move_exp_nanstd,
+        move_exp_nansum,
+        move_exp_nanvar,
+    ],
+)
+def test_move_exp_min_weight(func):
+    # Make an array of 25 values, with the first 5 being NaN, and then look at the final
+    # 19. We can't look at the whole series, because `nanvar` will always return NaN for
+    # the first value.
+    array = np.ones(25)
+    array[:5] = np.nan
+
+    # min_weight of 0 should produce values everywhere
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.2))[6:])
+    expected = 19
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.0, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.2))[6:])
+    expected = 17
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.5, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.2))[6:])
+    expected = 10
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=0.9, alpha=0.8))[6:])
+    expected = 19
+    assert result == expected
+
+    # min_weight of 1 should never produce values
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.2))[6:])
+    expected = 0
+    assert result == expected
+    result = np.sum(~np.isnan(func(array, min_weight=1.0, alpha=0.8))[6:])
+    expected = 0
+    assert result == expected
+
+
+@pytest.mark.parametrize("n", [10, 200])
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+@pytest.mark.parametrize("test_nans", [True, False])
+def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
+    array = rand_array[0, :n]
+    if not test_nans:
+        array = np.nan_to_num(array)
+    # High alphas mean fast decays, mean initial weights are higher
+    initial_weight = alpha
+    weights = (
+        np.array([(1 - alpha) ** (i - 1) for i in range(n, 0, -1)]) * initial_weight
+    )
+    assert_allclose(weights[-1], initial_weight)
+    # Fill weights with NaNs where array has them
+    weights = np.where(np.isnan(array), np.nan, weights)
+
+    # This is the weight of the final value
+    weight = np.nansum(weights)
+
+    # Run with min_weight slightly above the final value required, assert it doesn't let
+    # it through
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight + 0.01)
+    assert np.isnan(result[-1])
+
+    # And with min_weight slightly below
+    result = move_exp_nanmean(array, alpha=alpha, min_weight=weight - 0.01)
+    assert not np.isnan(result[-1])
+
+
+def test_move_exp_nancount_numeric():
+    array = np.array([1, 0, np.nan, np.nan, 1, 0])
+
+    result = move_exp_nancount(array, alpha=0.5)
+    expected = np.array([1.0, 1.5, 0.75, 0.375, 1.1875, 1.59375])
+    assert_allclose(result, expected)
+
+    result = move_exp_nancount(array, alpha=0.25)
+    expected = np.array([1.0, 1.75, 1.3125, 0.984375, 1.7382812, 2.3037109])
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+def test_move_exp_nancount_nansum(alpha):
+    # An array with NaNs & 1s should be the same for count & sum
+    array = np.array([1, 1, np.nan, np.nan, 1, 1])
+
+    result = move_exp_nancount(array, alpha=alpha)
+    expected = move_exp_nansum(array, alpha=alpha)
+    assert_allclose(result, expected)
+
+
+def test_move_exp_nanmean_numeric():
+    array = np.array([10, 0, np.nan, 10])
+
+    result = move_exp_nanmean(array, alpha=0.5)
+    expected = np.array([10.0, 3.3333333, 3.3333333, 8.1818182])
+    assert_allclose(result, expected)
+
+    result = move_exp_nanmean(array, alpha=0.25)
+    expected = np.array([10.0, 4.2857143, 4.2857143, 7.1653543])
+    assert_allclose(result, expected)
+
+
+def test_move_exp_nansum_numeric():
+    array = np.array([10, 0, np.nan, 10])
+
+    result = move_exp_nansum(array, alpha=0.5)
+    expected = np.array([10.0, 5.0, 2.5, 11.25])
+    assert_allclose(result, expected)
+
+    result = move_exp_nansum(array, alpha=0.25)
+    expected = np.array([10.0, 7.5, 5.625, 14.21875])
+    assert_allclose(result, expected)
+
+
+def test_move_exp_nancorr_numeric():
+    array1 = np.array([10, 0, 5, 10])
+    array2 = np.array([10, 0, 10, 5])
+
+    result = move_exp_nancorr(array1, array2, alpha=0.5)
+    expected = np.array([np.nan, 1.0, 0.8485281, 0.2274294])
+    assert_allclose(result, expected)
+
+    result = move_exp_nancorr(array1, array2, alpha=0.25)
+    expected = np.array([np.nan, 1.0, 0.85, 0.4789468])
+    assert_allclose(result, expected)
+
+
+def test_move_mean():
+    array = np.arange(100.0)
+    array[::7] = np.nan
+
+    expected = pd.Series(array).rolling(window=5, min_periods=1).mean().values
+    result = move_mean(array, 5, min_count=1)
+    assert_allclose(result, expected)  # type: ignore[arg-type,unused-ignore]
+
+
+def test_move_mean_random(rand_array):
+    array = rand_array[0]
+
+    expected = pd.Series(array).rolling(window=10, min_periods=1).mean().values
+    result = move_mean(array, 10, min_count=1)
+    assert_allclose(result, expected)
+
+    expected = pd.Series(array).rolling(window=3, min_periods=3).mean().values
+    result = move_mean(array, 3, min_count=3)
     assert_allclose(result, expected)
 
 
@@ -45,6 +218,11 @@ def test_move_mean_window(rand_array):
         move_mean(rand_array, window=-1)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=1, min_count=-1)
+
+
+def test_tuple_axis_arg(rand_array):
+    result = move_exp_nanmean(rand_array, alpha=0.1, axis=())
+    assert_equal(result, rand_array)
 
 
 def functions():
@@ -71,7 +249,7 @@ def test_numerical_results_identical(func, func0):
             for window in windows:
                 min_counts = list(range(1, window + 1)) + [None]
                 for min_count in min_counts:
-                    actual = func(a, window=window, min_count=min_count, axis=axis)
+                    actual = func(a, window, min_count, axis=axis)
                     desired_a = a.astype(np.float32) if a.dtype == np.float16 else a
                     desired = func0(desired_a, window, min_count, axis=axis)
                     tup = (
