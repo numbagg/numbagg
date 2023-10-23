@@ -41,20 +41,6 @@ def move_mean(a, window, min_count, out):
 
 
 @ndmoving(
-    [
-        (float32[:], float32[:]),
-        (float64[:], float64[:]),
-    ]
-)
-def ffill(a, out):
-    current = np.nan
-    for i in range(len(a)):
-        if not np.isnan(a[i]):
-            current = a[i]
-        out[i] = current
-
-
-@ndmoving(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_sum(a, window, min_count, out):

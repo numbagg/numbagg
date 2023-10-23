@@ -3,7 +3,9 @@ from importlib.metadata import version as _version
 from .funcs import (
     allnan,
     anynan,
+    bfill,
     count,
+    ffill,
     nanargmax,
     nanargmin,
     nancount,
@@ -32,7 +34,7 @@ from .grouped import (
     group_nansum_of_squares,
     group_nanvar,
 )
-from .moving import ffill, move_corr, move_cov, move_mean, move_std, move_sum, move_var
+from .moving import move_corr, move_cov, move_mean, move_std, move_sum, move_var
 from .moving_exp import (
     move_exp_nancorr,
     move_exp_nancount,
@@ -54,6 +56,7 @@ __all__ = [
     "__version__",
     "allnan",
     "anynan",
+    "bfill",
     "count",
     # "move_count",
     "move_exp_nancorr",

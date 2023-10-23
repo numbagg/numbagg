@@ -11,8 +11,15 @@ from numpy.testing import (
 )
 
 import numbagg
-from numbagg import ffill
+from numbagg import bfill, ffill
 from numbagg.test.util import arrays
+
+
+@pytest.fixture(scope="module")
+def rand_array():
+    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
+    arr[0, 0] = np.nan
+    return np.where(arr > 0.1, arr, np.nan)
 
 
 def functions():
@@ -121,5 +128,13 @@ def test_ffill(rand_array):
     a = rand_array[0]
     expected = pd.Series(a).ffill().values
     result = ffill(a)
+
+    assert_allclose(result, expected)
+
+
+def test_bfill(rand_array):
+    a = rand_array[0]
+    expected = pd.Series(a).bfill().values
+    result = bfill(a)
 
     assert_allclose(result, expected)
