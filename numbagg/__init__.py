@@ -15,8 +15,8 @@ from .funcs import (
     nansum,
     nanvar,
 )
-from .moving import (
-    ffill,
+from .moving import ffill, move_mean
+from .moving_exp import (
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -24,7 +24,6 @@ from .moving import (
     move_exp_nanstd,
     move_exp_nansum,
     move_exp_nanvar,
-    move_mean,
 )
 
 try:
@@ -35,27 +34,27 @@ except Exception:
     __version__ = "9999"
 
 __all__ = [
-    allnan,
-    anynan,
-    count,
-    nanargmax,
-    nanargmin,
-    nanmax,
-    nanmean,
-    nanmin,
-    nanstd,
-    nansum,
-    nanvar,
-    nanquantile,
-    nancount,
-    ffill,
-    move_exp_nanmean,
-    move_exp_nansum,
-    move_exp_nancount,
-    move_exp_nancorr,
-    move_exp_nancov,
-    move_exp_nanvar,
-    move_exp_nanstd,
-    move_mean,
-    __version__,
+    "allnan",
+    "anynan",
+    "count",
+    "nanargmax",
+    "nanargmin",
+    "nanmax",
+    "nanmean",
+    "nanmin",
+    "nanstd",
+    "nansum",
+    "nanvar",
+    "nanquantile",
+    "nancount",
+    "ffill",
+    "move_exp_nanmean",
+    "move_exp_nansum",
+    "move_exp_nancount",
+    "move_exp_nancorr",
+    "move_exp_nancov",
+    "move_exp_nanvar",
+    "move_exp_nanstd",
+    "move_mean",
+    "__version__",
 ]

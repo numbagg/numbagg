@@ -37,6 +37,8 @@ def rand_array():
         move_exp_nanstd,
         move_exp_nansum,
         move_exp_nanvar,
+        move_exp_nancov,
+        move_exp_nancorr,
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
@@ -44,31 +46,11 @@ def test_move_exp_pandas_comp(rand_array, alpha, func):
     c = COMPARISONS[func]
     array = rand_array[:3]
 
-    result = func(array, alpha=alpha)
-    pandas_inputs = c["pandas"]["setup"](array, alpha=alpha)
+    input = c["numbagg"]["setup"](array)
+    result = c["numbagg"]["run"](input, alpha=alpha)
 
-    expected = c["pandas"]["run"](pandas_inputs)
-
-    assert_allclose(result, expected)
-
-
-@pytest.mark.parametrize(
-    "func",
-    [
-        move_exp_nancov,
-        move_exp_nancorr,
-    ],
-)
-@pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp_two_arrays(rand_array, alpha, func):
-    c = COMPARISONS[func]
-    a1 = rand_array[:3]
-    a2 = 0.3 * a1 + rand_array[3:6]
-
-    result = func(a1, a2, alpha=alpha)
-
-    pandas_inputs = c["pandas"]["setup"](a1, a2, alpha=alpha)
-    expected = c["pandas"]["run"](pandas_inputs)
+    input = c["pandas"]["setup"](array, alpha=alpha)
+    expected = c["pandas"]["run"](input)
 
     assert_allclose(result, expected)
 

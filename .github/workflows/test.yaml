@@ -40,7 +40,7 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark
 
       - name: Install numbagg
         run: |
@@ -49,6 +49,32 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest
+
+  benchmark:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: numbagg-tests
+          cache-environment: true
+          create-args: >-
+            python=3.10 numba pandas bottleneck pytest pytest-benchmark
+
+      - name: Install numbagg
+        run: |
+          python -m pip install --no-deps -e .
+
+      - name: Run tests
+        run: |
+          python -m pytest --benchmark-only
 
   mypy:
     runs-on: ubuntu-latest
