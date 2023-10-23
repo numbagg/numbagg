@@ -19,13 +19,15 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = ["numpy", "numba"]
-dev-dependencies = [
-  "pytest",
-  "pytest-benchmark",
-  "tabulate",
-  "jq",
-  "setuptools_scm",
-]
+
+# These aren't used by pyproject, but we could specify them somewhere (poetry?)
+# dev-dependencies = [
+#   "pytest",
+#   "pytest-benchmark",
+#   "tabulate",
+#   "jq",
+#   "setuptools_scm",
+# ]
 
 description = "Fast N-dimensional aggregation functions with Numba"
 dynamic = ["version"]
