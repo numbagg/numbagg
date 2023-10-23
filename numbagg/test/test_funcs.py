@@ -1,10 +1,17 @@
 from functools import partial
 
 import numpy as np
+import pandas as pd
 import pytest
-from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
+from numpy.testing import (
+    assert_allclose,
+    assert_array_almost_equal,
+    assert_array_equal,
+    assert_equal,
+)
 
 import numbagg
+from numbagg import ffill
 from numbagg.test.util import arrays
 
 
@@ -108,3 +115,11 @@ def test_nan_quantile():
     expected = np.nanquantile(arr, quantiles, axis=1)
 
     assert_array_almost_equal(result, expected)
+
+
+def test_ffill(rand_array):
+    a = rand_array[0]
+    expected = pd.Series(a).ffill().values
+    result = ffill(a)
+
+    assert_allclose(result, expected)
