@@ -74,6 +74,9 @@ jobs:
 
       - name: Run benchmarks
         run: |
+          micromamba run -n numbagg-benchmarks pip list
+          micromamba run -n numbagg-benchmarks pip install jq
+          micromamba run -n numbagg-benchmarks pip list
           micromamba run -n numbagg-benchmarks python numbagg/test/run_benchmarks.py
 
   mypy:
