@@ -63,7 +63,7 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-name: numbagg-tests
+          environment-name: numbagg-benchmarks
           cache-environment: true
           create-args: >-
             python=3.10 numba pandas bottleneck pytest pytest-benchmark tabulate jq
