@@ -5,7 +5,14 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from numbagg import move_corr, move_cov, move_mean, move_std, move_sum, move_var
+from numbagg import (
+    move_corr,
+    move_cov,
+    move_mean,
+    move_std,
+    move_sum,
+    move_var,
+)
 
 from .conftest import COMPARISONS
 from .util import array_order, arrays
