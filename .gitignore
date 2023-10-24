@@ -16,4 +16,4 @@ __pycache__
 
 .dmypy.json
 
-benchmark.json
+.benchmarks
