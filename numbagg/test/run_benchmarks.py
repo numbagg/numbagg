@@ -38,6 +38,7 @@ def run():
     )
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
+        .reset_index()
         .assign(ratio=lambda df: df.eval("pandas/numbagg"))
         .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
     )
