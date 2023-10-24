@@ -12,6 +12,7 @@ from tabulate import tabulate
 
 def run():
     json_path = Path(".benchmarks/benchmark.json")
+    json_path.parent.mkdir(exist_ok=True, parents=True)
     subprocess.run(
         [
             "pytest",
