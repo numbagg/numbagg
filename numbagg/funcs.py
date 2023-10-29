@@ -238,8 +238,6 @@ def nanquantile(
 
 @ndfill
 def bfill(a, limit, out):
-    # if limit == -1:
-    #     limit = len(a)
     lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
@@ -258,8 +256,6 @@ def bfill(a, limit, out):
 
 @ndfill
 def ffill(a, limit, out):
-    # if limit == -1:
-    #     limit = len(a)
     lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):
