@@ -9,12 +9,8 @@ import numpy as np
 from .transform import rewrite_ndreduce
 
 
-def _nd_func_maker(cls, arg, **kwargs):
-    if callable(arg) and not kwargs:
-        # TODO: do we ever hit this case?
-        return cls(arg)
-    else:
-        return lambda func: cls(func, signature=arg, **kwargs)
+def _nd_func_maker(cls, *args, **kwargs):
+    return lambda func: cls(func, *args, **kwargs)
 
 
 def ndreduce(*args, **kwargs):
@@ -306,13 +302,32 @@ class NumbaGroupNDReduce:
     def __init__(
         self,
         func,
-        signature,
+        signature: list[tuple] | None = None,
+        *,
         supports_nd=True,
         supports_bool=True,
+        supports_ints=True,
     ):
         self.func = func
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
+        self.supports_ints = supports_ints
+
+        if signature is None:
+            signature = [
+                (numba.float32, numba.int32, numba.float32),
+                (numba.float32, numba.int64, numba.float32),
+                (numba.float64, numba.int32, numba.float64),
+                (numba.float64, numba.int64, numba.float64),
+            ]
+
+            if supports_ints:
+                signature += [
+                    (numba.int32, numba.int32, numba.int32),
+                    (numba.int32, numba.int64, numba.int32),
+                    (numba.int64, numba.int32, numba.int64),
+                    (numba.int64, numba.int64, numba.int64),
+                ]
 
         for sig in signature:
             if not isinstance(sig, tuple):

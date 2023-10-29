@@ -236,7 +236,7 @@ def nanquantile(
     return np.moveaxis(result, -1, 0)
 
 
-@ndfill
+@ndfill()
 def bfill(a, limit, out):
     lives_remaining = limit
     current = np.nan
@@ -254,7 +254,7 @@ def bfill(a, limit, out):
         out[i] = current
 
 
-@ndfill
+@ndfill()
 def ffill(a, limit, out):
     lives_remaining = limit
     current = np.nan

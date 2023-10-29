@@ -1,21 +1,9 @@
 import numpy as np
-from numba import float32, float64, int32, int64
 
 from .decorators import groupndreduce
 
-dtypes = [
-    (int32, int32, int32),
-    (int32, int64, int32),
-    (int64, int32, int64),
-    (int64, int64, int64),
-    (float32, int32, float32),
-    (float32, int64, float32),
-    (float64, int32, float64),
-    (float64, int64, float64),
-]
 
-
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanmean(values, labels, out):
     counts = np.zeros(out.shape, dtype=labels.dtype)
     out[:] = 0.0
@@ -38,7 +26,7 @@ def group_nanmean(values, labels, out):
             out[label] /= count
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nansum(values, labels, out):
     out[:] = 0
     for indices in np.ndindex(values.shape):
@@ -51,7 +39,7 @@ def group_nansum(values, labels, out):
             out[label] += value
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nancount(values, labels, out):
     out[:] = 0
     for indices in np.ndindex(values.shape):
@@ -62,7 +50,7 @@ def group_nancount(values, labels, out):
             out[label] += 1
 
 
-@groupndreduce(dtypes, supports_nd=False)
+@groupndreduce(supports_nd=False)
 def group_nanargmax(values, labels, out):
     max_values = np.full(out.shape, np.nan)
     for i in range(len(values)):
@@ -88,7 +76,7 @@ def group_nanargmax(values, labels, out):
             out[i] = np.nan
 
 
-@groupndreduce(dtypes, supports_nd=False)
+@groupndreduce(supports_nd=False)
 def group_nanargmin(values, labels, out):
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
@@ -107,7 +95,7 @@ def group_nanargmin(values, labels, out):
             out[idx] = np.nan
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanfirst(values, labels, out):
     # Slightly inefficient for floats, for which we could avoid allocationg the
     # `have_seen_values` array, and instead use an array with NaNs from the start. We
@@ -125,7 +113,7 @@ def group_nanfirst(values, labels, out):
         out[~have_seen_value] = np.nan
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanlast(values, labels, out):
     out[:] = np.nan
     for indices in np.ndindex(values.shape):
@@ -136,7 +124,7 @@ def group_nanlast(values, labels, out):
             out[label] = values[indices]
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanprod(values, labels, out):
     out[:] = 1
     for indices in np.ndindex(values.shape):
@@ -147,7 +135,7 @@ def group_nanprod(values, labels, out):
             out[label] *= values[indices]
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nansum_of_squares(values, labels, out):
     out[:] = 0
     for indices in np.ndindex(values.shape):
@@ -158,7 +146,7 @@ def group_nansum_of_squares(values, labels, out):
             out[label] += values[indices] ** 2
 
 
-@groupndreduce(dtypes, supports_bool=False)
+@groupndreduce(supports_bool=False, supports_ints=False)
 def group_nanvar(values, labels, out):
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
@@ -188,7 +176,7 @@ def group_nanvar(values, labels, out):
             )
 
 
-@groupndreduce(dtypes, supports_bool=False)
+@groupndreduce(supports_bool=False, supports_ints=False)
 def group_nanstd(values, labels, out):
     # Copy-pasted from `group_nanvar`
     sums = np.zeros(out.shape, dtype=values.dtype)
@@ -218,7 +206,7 @@ def group_nanstd(values, labels, out):
             )
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanmin(values, labels, out):
     # Floats could save an allocation by writing directly to `out`
     min_values = np.full(out.shape, np.nan)
@@ -236,7 +224,7 @@ def group_nanmin(values, labels, out):
     out[:] = min_values
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanmax(values, labels, out):
     # Floats could save an allocation by writing directly to `out`
     max_values = np.full(out.shape, np.nan)
@@ -254,7 +242,7 @@ def group_nanmax(values, labels, out):
     out[:] = max_values
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanany(values, labels, out):
     out[:] = 0  # assuming 0 is 'False' for the given dtype
 
@@ -267,7 +255,7 @@ def group_nanany(values, labels, out):
             out[label] = 1
 
 
-@groupndreduce(dtypes)
+@groupndreduce()
 def group_nanall(values, labels, out):
     out[:] = 1  # assuming 1 is 'True' for the given dtype
 
