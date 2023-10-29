@@ -124,17 +124,19 @@ def test_nan_quantile():
     assert_array_almost_equal(result, expected)
 
 
-def test_ffill(rand_array):
+@pytest.mark.parametrize("limit", [1, 3, None])
+def test_ffill(rand_array, limit):
     a = rand_array[0]
-    expected = pd.Series(a).ffill().values
-    result = ffill(a)
+    expected = pd.Series(a).ffill(limit=limit).values
+    result = ffill(a, limit=limit)
 
     assert_allclose(result, expected)
 
 
-def test_bfill(rand_array):
+@pytest.mark.parametrize("limit", [1, 3, None])
+def test_bfill(rand_array, limit):
     a = rand_array[0]
-    expected = pd.Series(a).bfill().values
-    result = bfill(a)
+    expected = pd.Series(a).bfill(limit=limit).values
+    result = bfill(a, limit=limit)
 
     assert_allclose(result, expected)
