@@ -198,7 +198,10 @@ class NumbaNDMoving:
     def __init__(
         self,
         func: Callable,
-        signature: tuple = ((numba.float64[:], numba.int64, numba.float64[:]),),
+        signature: list[tuple] = [
+            (numba.float64[:], numba.int64, numba.float64[:]),
+            (numba.float32[:], numba.int32, numba.float32[:]),
+        ],
         window_validator=rolling_validator,
     ):
         self.func = func
@@ -206,7 +209,9 @@ class NumbaNDMoving:
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
         self.signature = signature
 
     @property
@@ -260,7 +265,7 @@ class NumbaNDFill:
     def __init__(
         self,
         func: Callable,
-        signature: tuple = [
+        signature: list[tuple] = [
             (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
@@ -269,7 +274,9 @@ class NumbaNDFill:
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
         self.signature = signature
 
     @property
