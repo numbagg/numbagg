@@ -5,7 +5,7 @@ from collections.abc import Iterable
 import numpy as np
 from numba import bool_, float32, float64, guvectorize, int32, int64
 
-from numbagg.decorators import ndreduce
+from numbagg.decorators import ndfill, ndreduce
 
 
 @ndreduce([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
@@ -236,22 +236,39 @@ def nanquantile(
     return np.moveaxis(result, -1, 0)
 
 
-@guvectorize([(float64[:], float64[:]), (float32[:], float32[:])], "(n)->(n)")
-def bfill(a, out):
+@ndfill
+def bfill(a, limit, out):
+    # if limit == -1:
+    #     limit = len(a)
+    lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
     # `list` will cause a copy.
     for i in range(len(a) - 1, -1, -1):
-        if not np.isnan(a[i]):
-            current = a[i]
+        val = a[i]
+        if np.isnan(val):
+            if lives_remaining <= 0:
+                current = np.nan
+            lives_remaining -= 1
+        else:
+            lives_remaining = limit
+            current = val
         out[i] = current
 
 
-@guvectorize([(float64[:], float64[:]), (float32[:], float32[:])], "(n)->(n)")
-def ffill(a, out):
+@ndfill
+def ffill(a, limit, out):
+    # if limit == -1:
+    #     limit = len(a)
+    lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):
-        if not np.isnan(val):
+        if np.isnan(val):
+            if lives_remaining <= 0:
+                current = np.nan
+            lives_remaining -= 1
+        else:
+            lives_remaining = limit
             current = val
         out[i] = current
 
