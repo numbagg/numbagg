@@ -9,10 +9,6 @@ import numpy as np
 from .transform import rewrite_ndreduce
 
 
-def _nd_func_maker(cls, *args, **kwargs):
-    return lambda func: cls(func, *args, **kwargs)
-
-
 def ndreduce(*args, **kwargs):
     """Create an N-dimensional aggregation function.
 
@@ -35,7 +31,7 @@ def ndreduce(*args, **kwargs):
                 asum += ai
             return asum
     """
-    return _nd_func_maker(NumbaNDReduce, *args, **kwargs)
+    return lambda func: NumbaNDReduce(func, *args, **kwargs)
 
 
 def ndmoving(*args, **kwargs):
@@ -56,21 +52,21 @@ def ndmoving(*args, **kwargs):
                     if i - j > min_count:
                         out[i] += a[i - j]
     """
-    return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
+    return lambda func: NumbaNDMoving(func, *args, **kwargs)
 
 
 def ndmovingexp(*args, **kwargs):
     """N-dimensional exponential moving window function."""
-    return _nd_func_maker(NumbaNDMovingExp, *args, **kwargs)
+    return lambda func: NumbaNDMovingExp(func, *args, **kwargs)
 
 
 def groupndreduce(*args, **kwargs):
     """Create an N-dimensional grouped aggregation function."""
-    return _nd_func_maker(NumbaGroupNDReduce, *args, **kwargs)
+    return lambda func: NumbaGroupNDReduce(func, *args, **kwargs)
 
 
 def ndfill(*args, **kwargs):
-    return _nd_func_maker(NumbaNDFill, *args, **kwargs)
+    return lambda func: NumbaNDFill(func, *args, **kwargs)
 
 
 def ndim(arg):
