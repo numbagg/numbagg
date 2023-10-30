@@ -54,18 +54,8 @@ def array(size):
     return np.where(array > 0.1, array, np.nan)
 
 
-def test_benchmark_small(benchmark, func_callable, size):
+def test_benchmark(benchmark, func_callable, size):
     benchmark.group = f"{func}|{size}"
     benchmark.pedantic(
-        func_callable, warmup_rounds=1, rounds=3, iterations=10_000_000 // size
+        func_callable, warmup_rounds=1, rounds=5, iterations=10_000_000 // size
     )
-
-
-# def setup(self, func, n):
-#     array = np.random.RandomState(0).rand(3, n)
-#     self.array = np.where(array > 0.1, array, np.nan)
-#     self.df_ewm = pd.DataFrame(self.array.T).ewm(alpha=0.5)
-#     # One run for JIT (asv states that it does this before runs, but this still
-#     # seems to make a difference)
-#     func[0](self.array, 0.5)
-#     func[1](self.df_ewm)
