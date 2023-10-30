@@ -51,27 +51,19 @@ def run():
         df.assign(
             pandas_ratio=lambda x: x["pandas_ratio"].map(
                 lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            )
-        )
-        .assign(
+            ),
             bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
                 lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            )
-        )
-        .assign(
+            ),
             numbagg=lambda x: (x.numbagg * 1000).map(
-                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
-            )
-        )
-        .assign(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
             pandas=lambda x: (x.pandas * 1000).map(
-                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
-            )
-        )
-        .assign(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
             bottleneck=lambda x: (x.bottleneck * 1000).map(
-                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
-            )
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
         )
     ).reindex(
         columns=[
