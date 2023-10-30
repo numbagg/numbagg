@@ -114,13 +114,11 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
     pandas_labels = np.where(labels >= 0, labels, np.nan)
     expected = pandas_func(pd.Series(values).groupby(pandas_labels))
     result = numbagg_func(values, labels)
-    if dtype == np.int32:
+    if dtype in [np.int32, np.int64]:
+        if not numbagg_func.supports_ints:
+            pytest.skip(f"{numbagg_func} doesn't support ints")
         if numbagg_func == group_nanprod:
             pytest.skip("group_nanprod result too large")
-        if numbagg_func == group_nanstd:
-            pytest.skip(
-                "group_nanstd returns floats for int inputs (raise issue if this is a problem)"
-            )
         assert_almost_equal(result, expected.values.astype(np.int32))
     elif dtype == np.bool_:
         if not numbagg_func.supports_bool:
@@ -213,6 +211,9 @@ def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
 def test_additional_dim_equivalence(func, values, labels, dtype):
     if dtype == np.bool_ and not func.supports_bool:
         pytest.skip(f"{func} doesn't support bools")
+    if dtype in [np.int32, np.int64]:
+        if not func.supports_ints:
+            pytest.skip(f"{func} doesn't support ints")
     values = values[:10]
     labels = labels[:10]
     expected = func(values, labels)

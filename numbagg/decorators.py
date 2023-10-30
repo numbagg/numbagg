@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import cache, cached_property
 from typing import Callable
 
@@ -5,14 +7,6 @@ import numba
 import numpy as np
 
 from .transform import rewrite_ndreduce
-
-
-def _nd_func_maker(cls, arg, **kwargs):
-    if callable(arg) and not kwargs:
-        # TODO: do we ever hit this case?
-        return cls(arg)
-    else:
-        return lambda func: cls(func, signature=arg, **kwargs)
 
 
 def ndreduce(*args, **kwargs):
@@ -37,7 +31,7 @@ def ndreduce(*args, **kwargs):
                 asum += ai
             return asum
     """
-    return _nd_func_maker(NumbaNDReduce, *args, **kwargs)
+    return lambda func: NumbaNDReduce(func, *args, **kwargs)
 
 
 def ndmoving(*args, **kwargs):
@@ -58,17 +52,21 @@ def ndmoving(*args, **kwargs):
                     if i - j > min_count:
                         out[i] += a[i - j]
     """
-    return _nd_func_maker(NumbaNDMoving, *args, **kwargs)
+    return lambda func: NumbaNDMoving(func, *args, **kwargs)
 
 
 def ndmovingexp(*args, **kwargs):
     """N-dimensional exponential moving window function."""
-    return _nd_func_maker(NumbaNDMovingExp, *args, **kwargs)
+    return lambda func: NumbaNDMovingExp(func, *args, **kwargs)
 
 
 def groupndreduce(*args, **kwargs):
     """Create an N-dimensional grouped aggregation function."""
-    return _nd_func_maker(NumbaGroupNDReduce, *args, **kwargs)
+    return lambda func: NumbaGroupNDReduce(func, *args, **kwargs)
+
+
+def ndfill(*args, **kwargs):
+    return lambda func: NumbaNDFill(func, *args, **kwargs)
 
 
 def ndim(arg):
@@ -124,7 +122,7 @@ class NumbaNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def transformed_func(self):
@@ -164,7 +162,7 @@ class NumbaNDReduce:
         vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
         return vectorize(self.transformed_func)
 
-    def __call__(self, arr, axis=None):
+    def __call__(self, arr, *args, axis=None):
         if axis is None:
             # TODO: switch to using jit_func (it's faster), once numba reliably
             # returns the right dtype
@@ -177,7 +175,7 @@ class NumbaNDReduce:
         else:
             arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
             f = self._create_gufunc(len(axis))
-        return f(arr)
+        return f(arr, *args)
 
 
 MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
@@ -188,14 +186,14 @@ def rolling_validator(arr, window):
         raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[-1], window))
 
 
-DEFAULT_MOVING_SIGNATURE = ((numba.float64[:], numba.int64, numba.float64[:]),)
-
-
 class NumbaNDMoving:
     def __init__(
         self,
         func: Callable,
-        signature: tuple = DEFAULT_MOVING_SIGNATURE,
+        signature: list[tuple] = [
+            (numba.float64[:], numba.int64, numba.float64[:]),
+            (numba.float32[:], numba.int32, numba.float32[:]),
+        ],
         window_validator=rolling_validator,
     ):
         self.func = func
@@ -203,7 +201,9 @@ class NumbaNDMoving:
 
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
         self.signature = signature
 
     @property
@@ -211,7 +211,7 @@ class NumbaNDMoving:
         return self.func.__name__
 
     def __repr__(self):
-        return f"<numbagg.decorators.{type(self).__name__} {self.__name__}>"
+        return f"numbagg.{self.__name__}"
 
     @cached_property
     def gufunc(self):
@@ -221,14 +221,14 @@ class NumbaNDMoving:
         )
         return vectorize(self.func)
 
-    def __call__(self, arr: np.ndarray, window, min_count=None, axis=-1):
+    def __call__(self, *arr: np.ndarray, window, min_count=None, axis=-1):
         if min_count is None:
             min_count = window
-        if not 0 < window < arr.shape[axis]:
+        if not 0 < window < arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        return self.gufunc(arr, window, min_count, axis=axis)
+        return self.gufunc(*arr, window, min_count, axis=axis)
 
 
 class NumbaNDMovingExp(NumbaNDMoving):
@@ -250,17 +250,80 @@ class NumbaNDMovingExp(NumbaNDMoving):
             return self.gufunc(*arr, alpha, min_weight, axis=axis)
 
 
+# TODO: some copypasta from `NumbaNDMoving`; we could have a base class and reduce the duplication.
+
+
+class NumbaNDFill:
+    def __init__(
+        self,
+        func: Callable,
+        signature: list[tuple] = [
+            (numba.float64[:], numba.int64, numba.float64[:]),
+            (numba.float32[:], numba.int32, numba.float32[:]),
+        ],
+    ):
+        self.func = func
+
+        for sig in signature:
+            if not isinstance(sig, tuple):
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
+        self.signature = signature
+
+    @property
+    def __name__(self):
+        return self.func.__name__
+
+    def __repr__(self):
+        return f"numbagg.{self.__name__}"
+
+    @cached_property
+    def gufunc(self):
+        gufunc_sig = gufunc_string_signature(self.signature[0])
+        vectorize = numba.guvectorize(
+            self.signature, gufunc_sig, nopython=True, cache=True
+        )
+        return vectorize(self.func)
+
+    def __call__(self, arr: np.ndarray, *, limit: None | int, axis=-1):
+        if limit is None:
+            limit = arr.shape[axis]
+        if limit < 0:
+            raise ValueError(f"limit must be positive: {limit}")
+        return self.gufunc(arr, limit, axis=axis)
+
+
 class NumbaGroupNDReduce:
     def __init__(
         self,
         func,
-        signature=DEFAULT_MOVING_SIGNATURE,
+        signature: list[tuple] | None = None,
+        *,
         supports_nd=True,
         supports_bool=True,
+        supports_ints=True,
     ):
         self.func = func
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
+        self.supports_ints = supports_ints
+
+        if signature is None:
+            signature = [
+                (numba.float32, numba.int32, numba.float32),
+                (numba.float32, numba.int64, numba.float32),
+                (numba.float64, numba.int32, numba.float64),
+                (numba.float64, numba.int64, numba.float64),
+            ]
+
+            if supports_ints:
+                signature += [
+                    (numba.int32, numba.int32, numba.int32),
+                    (numba.int32, numba.int64, numba.int32),
+                    (numba.int64, numba.int32, numba.int64),
+                    (numba.int64, numba.int64, numba.int64),
+                ]
 
         for sig in signature:
             if not isinstance(sig, tuple):
@@ -281,7 +344,7 @@ class NumbaGroupNDReduce:
         return self.func.__name__
 
     def __repr__(self):
-        return "<numbagg.decorators.NumbaGroupNDReduce %s>" % self.__name__
+        return f"numbagg.{self.__name__}"
 
     @cache
     def _create_gufunc(self, core_ndim):
