@@ -35,13 +35,16 @@ def test_move_pandas_comp(rand_array, func, window, min_count):
     c = COMPARISONS[func]
     array = rand_array[:3]
 
-    input = c["numbagg"]["setup"](array)
-    result = c["numbagg"]["run"](input, window=window, min_count=min_count)
+    result = c["numbagg"](array, window=window, min_count=min_count)()
+    expected_pandas = c["pandas"](array, window=window, min_count=min_count)()
 
-    input = c["pandas"]["setup"](array, window=window, min_count=min_count)
-    expected = c["pandas"]["run"](input)
+    assert_allclose(result, expected_pandas)
 
-    assert_allclose(result, expected)
+    if c.get("bottleneck"):
+        expected_bottleneck = c["bottleneck"](
+            array, window=window, min_count=min_count
+        )()
+        assert_allclose(result, expected_bottleneck)
 
 
 def test_move_mean_window(rand_array):

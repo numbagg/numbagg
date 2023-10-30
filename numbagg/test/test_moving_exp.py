@@ -39,11 +39,8 @@ def test_move_exp_pandas_comp(rand_array, alpha, func):
     c = COMPARISONS[func]
     array = rand_array[:3]
 
-    input = c["numbagg"]["setup"](array)
-    result = c["numbagg"]["run"](input, alpha=alpha)
-
-    input = c["pandas"]["setup"](array, alpha=alpha)
-    expected = c["pandas"]["run"](input)
+    result = c["numbagg"](array, alpha=alpha)()
+    expected = c["pandas"](array, alpha=alpha)()
 
     assert_allclose(result, expected)
 

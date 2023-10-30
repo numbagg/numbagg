@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import jq
+import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
@@ -40,28 +41,52 @@ def run():
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
-        .assign(ratio=lambda df: df.eval("pandas/numbagg"))
+        .assign(pandas_ratio=lambda df: df.eval("pandas/numbagg"))
+        .assign(bottleneck_ratio=lambda df: df.eval("bottleneck/numbagg"))
         .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
     )
 
     # Surprisingly difficult to get pandas to print a nice-looking table...
     df = (
-        df.assign(ratio=lambda x: x["ratio"].map("{:.2f}x".format))
-        .assign(numbagg=lambda x: (x.numbagg * 1000))
-        .assign(pandas=lambda x: (x.pandas * 1000))
+        df.assign(
+            pandas_ratio=lambda x: x["pandas_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            )
+        )
+        .assign(
+            bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            )
+        )
+        .assign(
+            numbagg=lambda x: (x.numbagg * 1000).map(
+                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
+            )
+        )
+        .assign(
+            pandas=lambda x: (x.pandas * 1000).map(
+                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
+            )
+        )
+        .assign(
+            bottleneck=lambda x: (x.bottleneck * 1000).map(
+                lambda x: f"{x:>6.2f}ms" if not np.isnan(x) else "n/a"
+            )
+        )
+    ).reindex(
+        columns=[
+            "func",
+            "size",
+            "numbagg",
+            "pandas",
+            "bottleneck",
+            "pandas_ratio",
+            "bottleneck_ratio",
+        ]
     )
-    full = (
-        df.assign(func=lambda x: x["func"].where(lambda x: ~x.duplicated(), ""))
-        .assign(numbagg=lambda x: (x.numbagg).map("{:>6.2f}ms".format))
-        .assign(pandas=lambda x: (x.pandas).map("{:>6.2f}ms".format))
-    )
+    full = df.assign(func=lambda x: x["func"].where(lambda x: ~x.duplicated(), ""))
 
-    summary = (
-        df.query("size == 10_000_000")
-        .drop(columns="size")
-        .assign(numbagg=lambda x: (x.numbagg).map("{:>6.0f}ms".format))
-        .assign(pandas=lambda x: (x.pandas).map("{:>6.0f}ms".format))
-    )
+    summary = df.query("size == 10_000_000").drop(columns="size")
 
     text = ""
     for df in [full, summary]:
@@ -70,9 +95,7 @@ def run():
             values,
             headers=df.columns,
             disable_numparse=True,
-            colalign=["left"]
-            + (["right"] if "size" in df.columns else [])
-            + ["right", "right", "right"],
+            colalign=["left"] + ["right"] * (len(df.columns) - 1),
             tablefmt="pipe",
         )
         text += markdown_table
