@@ -57,5 +57,5 @@ def array(size):
 def test_benchmark(benchmark, func_callable, size):
     benchmark.group = f"{func}|{size}"
     benchmark.pedantic(
-        func_callable, warmup_rounds=1, rounds=5, iterations=10_000_000 // size
+        func_callable, warmup_rounds=1, rounds=3, iterations=10_000_000 // size
     )
