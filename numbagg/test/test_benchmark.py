@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 
 from .. import (
+    bfill,
+    ffill,
     move_corr,
     move_cov,
     move_exp_nancorr,
@@ -20,6 +22,8 @@ from .. import (
 
 @pytest.fixture(
     params=[
+        bfill,
+        ffill,
         move_corr,
         move_cov,
         move_exp_nancorr,
@@ -50,10 +54,10 @@ def array(size):
     return np.where(array > 0.1, array, np.nan)
 
 
-def test_benchmark_small(benchmark, run, func, obj, size):
+def test_benchmark_small(benchmark, func_callable, size):
     benchmark.group = f"{func}|{size}"
     benchmark.pedantic(
-        run, args=(obj,), warmup_rounds=1, rounds=3, iterations=10_000_000 // size
+        func_callable, warmup_rounds=1, rounds=3, iterations=10_000_000 // size
     )
 
 
