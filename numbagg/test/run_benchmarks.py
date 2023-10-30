@@ -13,15 +13,15 @@ from tabulate import tabulate
 
 def run():
     json_path = Path(".benchmarks/benchmark.json")
-    # json_path.parent.mkdir(exist_ok=True, parents=True)
-    # subprocess.run(
-    #     [
-    #         "pytest",
-    #         "numbagg/test/test_benchmark.py",
-    #         "--benchmark-only",
-    #         f"--benchmark-json={json_path}",
-    #     ]
-    # )
+    json_path.parent.mkdir(exist_ok=True, parents=True)
+    subprocess.run(
+        [
+            "pytest",
+            "numbagg/test/test_benchmark.py",
+            "--benchmark-only",
+            f"--benchmark-json={json_path}",
+        ]
+    )
 
     json = jq.compile(
         '.benchmarks | map(.params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.mean, })'
