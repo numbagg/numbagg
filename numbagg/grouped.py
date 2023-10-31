@@ -97,7 +97,7 @@ def group_nanargmin(values, labels, out):
 
 @groupndreduce()
 def group_nanfirst(values, labels, out):
-    # Slightly inefficient for floats, for which we could avoid allocationg the
+    # Slightly inefficient for floats, for which we could avoid allocating the
     # `have_seen_values` array, and instead use an array with NaNs from the start. We
     # could write separate routines, though I don't think we can use `@overload` with
     # out own gufuncs.

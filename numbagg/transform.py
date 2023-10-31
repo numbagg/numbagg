@@ -25,7 +25,7 @@ def rewrite_ndreduce(func):
 
 
 _OUT_NAME = "__numbagg_out"
-_TRANFORMED_FUNC_NAME = "__numbagg_transformed_func"
+_TRANSFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
 
 def _apply_ast_rewrite(func, node_transformer):
@@ -43,7 +43,7 @@ def _apply_ast_rewrite(func, node_transformer):
     scope: dict = {}
     exec(source, func.__globals__, scope)
     try:
-        return scope[_TRANFORMED_FUNC_NAME]
+        return scope[_TRANSFORMED_FUNC_NAME]
     except KeyError:
         raise TypeError("failed to rewrite function definition:\n%s" % orig_source)
 
@@ -61,7 +61,7 @@ class _NDReduceTransformer(ast.NodeTransformer):
             posonlyargs=[],
         )
         function_def = ast.FunctionDef(
-            name=_TRANFORMED_FUNC_NAME,
+            name=_TRANSFORMED_FUNC_NAME,
             args=arguments,
             body=node.body,
             decorator_list=[],

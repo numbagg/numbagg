@@ -98,8 +98,9 @@ def gufunc_string_signature(numba_args):
 
 
 class NumbaNDReduce:
-    def __init__(self, func, signature):
+    def __init__(self, func, signature, supports_parallel=True):
         self.func = func
+        self.supports_parallel = supports_parallel
 
         for sig in signature:
             if not hasattr(sig, "return_type"):
@@ -158,8 +159,11 @@ class NumbaNDReduce:
             + (first_sig.return_type,)
         )
 
+        target = "parallel" if self.supports_parallel else "cpu"
         # TODO: can't use `cache=True` because of the dynamic ast transformation
-        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True)
+        vectorize = numba.guvectorize(
+            numba_sig, gufunc_sig, nopython=True, target=target
+        )
         return vectorize(self.transformed_func)
 
     def __call__(self, arr, *args, axis=None):
@@ -217,7 +221,7 @@ class NumbaNDMoving:
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
         vectorize = numba.guvectorize(
-            self.signature, gufunc_sig, nopython=True, cache=True
+            self.signature, gufunc_sig, nopython=True, cache=True, target="parallel"
         )
         return vectorize(self.func)
 
@@ -282,7 +286,11 @@ class NumbaNDFill:
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
         vectorize = numba.guvectorize(
-            self.signature, gufunc_sig, nopython=True, cache=True
+            self.signature,
+            gufunc_sig,
+            nopython=True,
+            cache=True,
+            target="parallel",
         )
         return vectorize(self.func)
 
@@ -359,7 +367,9 @@ class NumbaGroupNDReduce:
 
         first_sig = numba_sig[0]
         gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
-        vectorize = numba.guvectorize(numba_sig, gufunc_sig, nopython=True, cache=True)
+        vectorize = numba.guvectorize(
+            numba_sig, gufunc_sig, nopython=True, cache=True, target="parallel"
+        )
         return vectorize(self.func)
 
     def __call__(self, values, labels, axis=None, num_labels=None):
