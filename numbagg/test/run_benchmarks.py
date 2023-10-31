@@ -11,21 +11,15 @@ import pandas as pd
 from tabulate import tabulate
 
 RUN = True
-# RUN = False
 
 
 def _sort_key(x):
-    # The third part of this finds the final number in `shape` and puts bigger
-    # numbers first, so we get the biggest final axis (which favors bottleneck over
-    # numbagg but is probably a better example)
-    print(x[1])
-
-    print(tuple(reversed(x[1].split(" ,", 1))))
     return (
         x[0].rsplit("_", 1),  # func
         x[2],  # size
-        tuple(reversed(x[1].split(" ,", 1))),
-    )  # [:-1] + "Z")
+        x[4],  # ndim
+        x[3],  # length
+    )
 
 
 def run():
@@ -43,22 +37,30 @@ def run():
         )
 
     json = jq.compile(
-        '.benchmarks | map(.params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.mean, })'
+        '.benchmarks | map(.params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, })'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.first())
 
-    df = df.assign(size=lambda x: x["shape"].map(lambda x: np.prod(x))).assign(
-        shape=lambda x: x["shape"].map(lambda x: tuple(x)).astype(str)
+    df = (
+        df.assign(size=lambda x: x["shape"].map(lambda x: np.prod(x)))
+        .assign(length=lambda x: x["shape"].map(lambda x: x[-1]))
+        .assign(ndim=lambda x: x["shape"].map(lambda x: len(x)))
+        .assign(shape=lambda x: x["shape"].map(lambda x: tuple(x)).astype(str))
     )
-    df = df.set_index(["func", "library", "shape", "size"])["time"].unstack("library")
+    df = df.set_index(["func", "library", "shape", "size", "length", "ndim"])[
+        "time"
+    ].unstack("library")
 
     # We want to order all `move_exp` functions together, rather than have them between
     # `move_count` and `move_mean`
 
     # But it's crazy difficult to sort a multiindex with a custom key in pandas...
     sorted_index = sorted(
-        [(func, shape, size) for func, shape, size in df.index],
+        [
+            (func, shape, size, length, ndim)
+            for (func, shape, size, length, ndim) in df.index
+        ],
         # The third part of this finds the final number in `shape` and puts bigger
         # numbers first, so we get the biggest final axis (which favors bottleneck over
         # numbagg but is probably a better example)
@@ -139,7 +141,7 @@ def run():
         )
         text += f"### {title}\n\n"
         if shape:
-            text += f"Arrays of shape `{shape}`\n\n"
+            text += f"Arrays of shape `{shape}`, over the final axis\n\n"
         text += ""
         text += markdown_table
         text += "\n\n"
