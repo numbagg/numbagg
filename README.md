@@ -27,14 +27,15 @@ Currently accelerated functions:
 - About the same speed as bottleneck on a single calculation
 - Much faster than bottleneck when parallelizing with multiple cores (for
   example, calculating over each row on an array with shape `(10, 100_000)`)
-- ...though note that the functions are JIT compiled, so the first time they're
+- ...though numba's functions are JIT compiled, so the first time they're
   run, they will be much slower. The compilation is generally cached.
 
 ### Versatility
 
-- More functions (though also bottleneck has functions we don't have, and pandas' functions
+- More functions (though bottleneck has functions we don't have, and pandas' functions
   have many more parameters)
-- Fast functions work for >3 dimensions. Specify an arbitrary tuple of axes to calculate over
+- Fast functions work for >3 dimensions. Functions take an arbitrary tuple of
+  axes to calculate over
 - Written in numba — way less code, simple to inspect, simple to improve
 
 [^1][^2][^3]
