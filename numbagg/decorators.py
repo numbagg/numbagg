@@ -221,7 +221,11 @@ class NumbaNDMoving:
     def gufunc(self):
         gufunc_sig = gufunc_string_signature(self.signature[0])
         vectorize = numba.guvectorize(
-            self.signature, gufunc_sig, nopython=True, cache=True, target="parallel"
+            self.signature,
+            gufunc_sig,
+            nopython=True,
+            target="parallel",
+            # cache=True,
         )
         return vectorize(self.func)
 
@@ -289,8 +293,8 @@ class NumbaNDFill:
             self.signature,
             gufunc_sig,
             nopython=True,
-            cache=True,
             target="parallel",
+            # cache=True,
         )
         return vectorize(self.func)
 
@@ -368,7 +372,11 @@ class NumbaGroupNDReduce:
         first_sig = numba_sig[0]
         gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, cache=True, target="parallel"
+            numba_sig,
+            gufunc_sig,
+            nopython=True,
+            target="parallel",
+            # cache=True,
         )
         return vectorize(self.func)
 
