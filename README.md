@@ -23,19 +23,22 @@ Currently accelerated functions:
 
 ### Performance
 
-- Much faster than pandas across almost every function — 2-20x
+- Much faster than pandas for almost every function — 2-20x
 - About the same speed as bottleneck on a single calculation
-- Much faster than bottleneck when parallelizing with multiple cores (for
-  example, calculating over each row on an array with shape `(10, 100_000)`) — 4-7x
-- ...though numba's functions are JIT compiled, so the first time they're
-  run, they will be much slower. The compilation is generally cached.
+- Much faster than bottleneck — 4-7x — when parallelizing with multiple cores — for
+  example, calculating over each row on an array with 10 rows.
+- ...though numbagg's functions are JIT compiled, so they're much slower on
+  their first run
+
+<!-- Disabled in #189, hopefully temporarily -->
+<!-- The compilation is generally cached on disk[^4]. -->
 
 ### Versatility
 
-- More functions (though bottleneck has functions we don't have, and pandas' functions
+- More functions (though bottleneck has some functions we don't have, and pandas' functions
   have many more parameters)
-- Fast functions work for >3 dimensions. Functions take an arbitrary tuple of
-  axes to calculate over
+- Fast functions work for >3 dimensions. Functions take an arbitrary axis or
+  tuple of axes to calculate over
 - Written in numba — way less code, simple to inspect, simple to improve
 
 ## Benchmarks
@@ -85,6 +88,22 @@ Array of shape `(100, 1000, 1000)`, over the final axis
 | `move_exp_nanvar`   |   124ms |    n/a |        n/a |          n/a |              n/a |
 
 [^1][^2][^3]
+
+[^1]:
+    Benchmarks were run on a Mac M1 laptop in October 2023 on numbagg's HEAD,
+    pandas 2.1.1, bottleneck 1.3.7. They're also run in CI, though without
+    demonstrating the benefits of parallization given GHA's CPU count.
+
+[^2]:
+    While we separate the setup and the running of the functions, pandas still
+    needs to do some work to create its result dataframe, and numbagg does some
+    checks in python which bottleneck does in C or doesn't do. So we focus on
+    the benchmarks for larger arrays in order to reduce that impact. Any
+    contributions to improve the benchmarks are welcome.
+
+[^3]:
+    Pandas doesn't have an equivalent `move_exp_nancount` function, so this is
+    compared to a function which uses its `sum` function on an array of `1`s.
 
 <details>
 <summary>Full benchmarks</summary>
@@ -169,21 +188,6 @@ Array of shape `(100, 1000, 1000)`, over the final axis
 |                     | (10, 10, 10, 10, 1000) |  10000000 |    11ms |    n/a |        n/a |          n/a |              n/a |
 |                     |      (100, 1000, 1000) | 100000000 |   124ms |    n/a |        n/a |          n/a |              n/a |
 
-[^1]:
-    Benchmarks were run on a Mac M1 in October 2023 on numbagg's HEAD and
-    pandas 2.1.1.
-
-[^2]:
-    While we separate the setup and the running of the functions, pandas still
-    needs to do some work to create its result dataframe, and numbagg does some
-    checks in python which bottleneck does in C or doesn't do. So we focus on
-    the benchmarks for larger arrays in order to reduce that impact. Any
-    contributions to improve the benchmarks are more than welcome.
-
-[^3]:
-    Pandas doesn't have an equivalent `move_exp_nancount` function, so this is
-    compared to a function which uses its `sum` function on an array of `1`s.
-
 </details>
 
 ## Example implementation
@@ -215,19 +219,16 @@ NumPy/Numba:
 - It implements its own cache for functions wrapped by Numba's
   `guvectorize`, because that decorator is rather slow.
 - It does its [own handling of array
-  transposes](https://github.com/numbagg/numbagg/blob/main/numbagg/decorators.py#L69)
-  to handle the `axis` argument, which we hope will [eventually be
-  directly supported](https://github.com/numpy/numpy/issues/5197) by
-  all NumPy gufuncs.
-- It uses some [terrible
-  hacks](https://github.com/numbagg/numbagg/blob/main/numbagg/transform.py) to
-  hide the out-of-bound memory access necessary to write [gufuncs that handle
-  scalar
-  values](https://github.com/numba/numba/blob/main/numba/tests/test_guvectorize_scalar.py)
-  with Numba.
+  transposes](https://github.com/numbagg/numbagg/blob/e166adae94b3be35497dcdc22772026df75af253/numbagg/decorators.py#L170-L181)
+  to handle the `axis` argument in reduction functions.
+- It [rewrites plain functions into
+  gufuncs](https://github.com/numbagg/numbagg/blob/e166adae94b3be35497dcdc22772026df75af253/numbagg/transform.py),
+  to allow writing a traditional function while retaining the multidimensional advantages of
+  gufuncs.
 
-I hope that the need for most of these will eventually go away. In the meantime,
-expect Numbagg to be tightly coupled to Numba and NumPy release cycles.
+Already some of the ideas here have flowed upstream to numba (for example, [an
+axis parameter](https://github.com/numpy/numpy/issues/5197)), and we hope
+that others will follow.
 
 ## License
 
