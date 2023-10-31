@@ -33,14 +33,15 @@ def run():
                 "numbagg/test/test_benchmark.py",
                 "--benchmark-only",
                 f"--benchmark-json={json_path}",
-            ]
+            ],
+            check=True,
         )
 
     json = jq.compile(
-        '.benchmarks | map(.params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, })'
+        '.benchmarks[] | select(.name | index("test_benchmark[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
-    df = pd.DataFrame.from_dict(json.first())
+    df = pd.DataFrame.from_dict(json.all())
 
     df = (
         df.assign(size=lambda x: x["shape"].map(lambda x: np.prod(x)))
@@ -141,7 +142,7 @@ def run():
         )
         text += f"### {title}\n\n"
         if shape:
-            text += f"Arrays of shape `{shape}`, over the final axis\n\n"
+            text += f"Array of shape `{shape}`, over the final axis\n\n"
         text += ""
         text += markdown_table
         text += "\n\n"
