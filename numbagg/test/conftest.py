@@ -211,16 +211,18 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
 }
 
 
-@pytest.fixture(params=["numbagg", "pandas", "bottleneck"])
+@pytest.fixture(params=["numbagg", "pandas", "bottleneck"], scope="module")
 def library(request):
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def func_callable(library, func, array):
     """
     The function post-setup; just needs to be called with `func_callable()`
     """
+    if len(array.shape) > 2 and library == "pandas":
+        pytest.skip("pandas doesn't support array with more than 2 dimensions")
     try:
         return COMPARISONS[func][library](array)
     except KeyError:
@@ -228,7 +230,7 @@ def func_callable(library, func, array):
             pytest.skip(f"Bottleneck doesn't support {func}")
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def obj(array, setup):
     return setup(array)
 

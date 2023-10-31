@@ -87,4 +87,4 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = ["--benchmark-skip"]
+addopts = ["--benchmark-skip", "--benchmark-warmup=on"]

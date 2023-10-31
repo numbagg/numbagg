@@ -27,6 +27,8 @@ def rewrite_ndreduce(func):
 _OUT_NAME = "__numbagg_out"
 _TRANFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
+import astor
+
 
 def _apply_ast_rewrite(func, node_transformer):
     """A hack to make the syntax for writing aggregators more Pythonic.
@@ -38,6 +40,8 @@ def _apply_ast_rewrite(func, node_transformer):
     tree = ast.parse(orig_source)
     tree = node_transformer.visit(tree)
     ast.fix_missing_locations(tree)
+    # print(ast.dump(tree, indent=4))
+    # print(astor.to_source(tree))
     source = compile(tree, filename="<ast>", mode="exec")
 
     scope: dict = {}

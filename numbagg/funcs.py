@@ -106,7 +106,10 @@ def nanvar(a):
         return np.nan
 
 
-@ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
+@ndreduce(
+    [int64(int32), int64(int64), int64(float32), int64(float64)],
+    supports_parallel=False,
+)
 def nanargmax(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
@@ -121,7 +124,10 @@ def nanargmax(a):
     return idx
 
 
-@ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
+@ndreduce(
+    [int64(int32), int64(int64), int64(float32), int64(float64)],
+    supports_parallel=False,
+)
 def nanargmin(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
@@ -136,7 +142,10 @@ def nanargmin(a):
     return idx
 
 
-@ndreduce([int64(int32), int64(int64), float32(float32), float64(float64)])
+@ndreduce(
+    [int64(int32), int64(int64), float32(float32), float64(float64)],
+    supports_parallel=False,
+)
 def nanmax(a):
     if not a.size:
         raise ValueError(
@@ -153,7 +162,10 @@ def nanmax(a):
     return amax
 
 
-@ndreduce([int64(int32), int64(int64), float32(float32), float64(float64)])
+@ndreduce(
+    [int64(int32), int64(int64), float32(float32), float64(float64)],
+    supports_parallel=False,
+)
 def nanmin(a):
     if not a.size:
         raise ValueError(
