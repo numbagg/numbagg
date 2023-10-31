@@ -87,7 +87,7 @@ def move_exp_nansum(a, alpha, min_weight, out):
             weight += alpha
 
         if weight >= min_weight and not zero_count:
-            out[i] = number
+            out[i] = numer
         else:
             out[i] = np.nan
 
