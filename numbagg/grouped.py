@@ -50,7 +50,7 @@ def group_nancount(values, labels, out):
             out[label] += 1
 
 
-@groupndreduce(supports_nd=False)
+@groupndreduce(supports_and=False)
 def group_nanargmax(values, labels, out):
     max_values = np.full(out.shape, np.nan)
     for i in range(len(values)):
@@ -76,7 +76,7 @@ def group_nanargmax(values, labels, out):
             out[i] = np.nan
 
 
-@groupndreduce(supports_nd=False)
+@groupndreduce(supports_and=False)
 def group_nanargmin(values, labels, out):
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
@@ -97,7 +97,7 @@ def group_nanargmin(values, labels, out):
 
 @groupndreduce()
 def group_nanfirst(values, labels, out):
-    # Slightly inefficient for floats, for which we could avoid allocationg the
+    # Slightly inefficient for floats, for which we could avoid allocating the
     # `have_seen_values` array, and instead use an array with NaNs from the start. We
     # could write separate routines, though I don't think we can use `@overload` with
     # out own gufuncs.

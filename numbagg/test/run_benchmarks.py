@@ -46,7 +46,7 @@ def run():
         [(func, shape, size) for func, shape, size in df.index],
         # The third part of this finds the final number in `shape` and puts bigger
         # numbers first, so we get the biggest final axis (which favors bottleneck over
-        # numbagg but is probably a better examlpe)
+        # numbagg but is probably a better example)
         key=lambda x: (x[0].rsplit("_", 1), x[2], x[1].rsplit(" ", 1)[1][:-1] + "Z"),
     )
     df = (
@@ -92,7 +92,7 @@ def run():
 
     # Take the biggest of each of 2D or >2D
     summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]  # type: ignore
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]
         .sort_values(by=["size", "shape"], ascending=False)
         # .groupby(by="func", sort=("size", "shape"))
         .groupby(by="func")
@@ -100,8 +100,8 @@ def run():
         .reset_index()
         .drop(columns=("size"))
     )
-    summary_nd = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) > 1]  # type: ignore
+    summary_and = (
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) > 1]
         .groupby(by="func", sort=("size", "shape"))
         .first()
         .reset_index()
@@ -109,14 +109,14 @@ def run():
     )
 
     text = ""
-    for title, df in (("2D", summary_2d), ("ND", summary_nd), ("All", full)):
+    for title, df in (("2D", summary_2d), ("AND", summary_and), ("All", full)):
         shapes = df["shape"].unique()
         if len(shapes) == 1:
             shape = shapes[0]
             df = df.drop(columns="shape")
         else:
             shape = None
-        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore
+        values = df.to_dict(index=False, orient="split")["data"]
         markdown_table = tabulate(
             values,
             headers=df.columns,

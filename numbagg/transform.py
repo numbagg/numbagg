@@ -21,13 +21,11 @@ def rewrite_ndreduce(func):
     which is the form numba needs for writing a gufunc that returns a scalar
     value.
     """
-    return _apply_ast_rewrite(func, _NDReduceTransformer())
+    return _apply_ast_rewrite(func, _ANDReduceTransformer())
 
 
 _OUT_NAME = "__numbagg_out"
-_TRANFORMED_FUNC_NAME = "__numbagg_transformed_func"
-
-import astor
+_TRANSFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
 
 def _apply_ast_rewrite(func, node_transformer):
@@ -47,12 +45,12 @@ def _apply_ast_rewrite(func, node_transformer):
     scope: dict = {}
     exec(source, func.__globals__, scope)
     try:
-        return scope[_TRANFORMED_FUNC_NAME]
+        return scope[_TRANSFORMED_FUNC_NAME]
     except KeyError:
         raise TypeError("failed to rewrite function definition:\n%s" % orig_source)
 
 
-class _NDReduceTransformer(ast.NodeTransformer):
+class _ANDReduceTransformer(ast.NodeTransformer):
     def visit_FunctionDef(self, node):
         args = node.args.args + [ast.arg(arg=_OUT_NAME, annotation=None)]
         arguments = ast.arguments(
@@ -65,7 +63,7 @@ class _NDReduceTransformer(ast.NodeTransformer):
             posonlyargs=[],
         )
         function_def = ast.FunctionDef(
-            name=_TRANFORMED_FUNC_NAME,
+            name=_TRANSFORMED_FUNC_NAME,
             args=arguments,
             body=node.body,
             decorator_list=[],

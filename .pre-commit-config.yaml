@@ -30,3 +30,13 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-setuptools]
+  - repo: https://github.com/crate-ci/typos
+    rev: typos-dict-v0.11.2
+    hooks:
+      - id: typos
+        # https://github.com/crate-ci/typos/issues/347
+        pass_filenames: false
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.6.26
+    hooks:
+      - id: actionlint
