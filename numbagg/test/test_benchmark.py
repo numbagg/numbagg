@@ -75,3 +75,19 @@ def test_benchmark(benchmark, func, func_callable, shape):
         rounds=3,
         iterations=int(max(10_000_000 // np.prod(shape), 1)),
     )
+
+
+@pytest.mark.parametrize("func", [ffill, bfill], indirect=True)
+@pytest.mark.parametrize("shape", [(10, 10, 10, 10, 1000)], indirect=True)
+@pytest.mark.parametrize("library", ["numbagg"], indirect=True)
+def test_benchmark_f_bfill(benchmark, func, func_callable, shape):
+    """
+    Was seeing some weird results for ffill and bfill — bfill was sometimes much faster
+    than ffill. We can check this if we see this again.
+    """
+    benchmark.pedantic(
+        func_callable,
+        warmup_rounds=1,
+        rounds=100,
+        iterations=10,
+    )

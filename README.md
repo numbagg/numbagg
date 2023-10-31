@@ -26,7 +26,7 @@ Currently accelerated functions:
 - Much faster than pandas across almost every function — 2-20x
 - About the same speed as bottleneck on a single calculation
 - Much faster than bottleneck when parallelizing with multiple cores (for
-  example, calculating over each row on an array with shape `(10, 100_000)`)
+  example, calculating over each row on an array with shape `(10, 100_000)`) — 4-7x
 - ...though numba's functions are JIT compiled, so the first time they're
   run, they will be much slower. The compilation is generally cached.
 
@@ -38,13 +38,11 @@ Currently accelerated functions:
   axes to calculate over
 - Written in numba — way less code, simple to inspect, simple to improve
 
-[^1][^2][^3]
-
 ## Benchmarks
 
 ### 2D
 
-Arrays of shape `(1, 10000000)`
+Array of shape `(1, 10000000)`, over the final axis
 
 | func                | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
 | :------------------ | ------: | -----: | ---------: | -----------: | ---------------: |
@@ -66,9 +64,9 @@ Arrays of shape `(1, 10000000)`
 
 ### ND
 
-Arrays of shape `(100, 1000, 1000)`
+Array of shape `(100, 1000, 1000)`, over the final axis
 
-| func                | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
+| func                | numbagg | pandas | bottleneck | pandas ratio | bottleneck ratio |
 | :------------------ | ------: | -----: | ---------: | -----------: | ---------------: |
 | `bfill`             |    36ms |    n/a |      261ms |          n/a |            7.28x |
 | `ffill`             |    62ms |    n/a |      214ms |          n/a |            3.44x |
@@ -85,6 +83,8 @@ Arrays of shape `(100, 1000, 1000)`
 | `move_exp_nanstd`   |    84ms |    n/a |        n/a |          n/a |              n/a |
 | `move_exp_nansum`   |    58ms |    n/a |        n/a |          n/a |              n/a |
 | `move_exp_nanvar`   |   124ms |    n/a |        n/a |          n/a |              n/a |
+
+[^1][^2][^3]
 
 <details>
 <summary>Full benchmarks</summary>
