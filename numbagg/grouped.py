@@ -50,7 +50,7 @@ def group_nancount(values, labels, out):
             out[label] += 1
 
 
-@groupndreduce(supports_and=False)
+@groupndreduce(supports_nd=False)
 def group_nanargmax(values, labels, out):
     max_values = np.full(out.shape, np.nan)
     for i in range(len(values)):
@@ -76,7 +76,7 @@ def group_nanargmax(values, labels, out):
             out[i] = np.nan
 
 
-@groupndreduce(supports_and=False)
+@groupndreduce(supports_nd=False)
 def group_nanargmin(values, labels, out):
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)

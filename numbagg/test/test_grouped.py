@@ -207,7 +207,7 @@ def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
     assert_almost_equal(result, expected.values)
 
 
-@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS if f[0].supports_and])
+@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS if f[0].supports_nd])
 def test_additional_dim_equivalence(func, values, labels, dtype):
     if dtype == np.bool_ and not func.supports_bool:
         pytest.skip(f"{func} doesn't support bools")

@@ -11,6 +11,21 @@ import pandas as pd
 from tabulate import tabulate
 
 RUN = True
+# RUN = False
+
+
+def _sort_key(x):
+    # The third part of this finds the final number in `shape` and puts bigger
+    # numbers first, so we get the biggest final axis (which favors bottleneck over
+    # numbagg but is probably a better example)
+    print(x[1])
+
+    print(tuple(reversed(x[1].split(" ,", 1))))
+    return (
+        x[0].rsplit("_", 1),  # func
+        x[2],  # size
+        tuple(reversed(x[1].split(" ,", 1))),
+    )  # [:-1] + "Z")
 
 
 def run():
@@ -47,7 +62,7 @@ def run():
         # The third part of this finds the final number in `shape` and puts bigger
         # numbers first, so we get the biggest final axis (which favors bottleneck over
         # numbagg but is probably a better example)
-        key=lambda x: (x[0].rsplit("_", 1), x[2], x[1].rsplit(" ", 1)[1][:-1] + "Z"),
+        key=_sort_key,
     )
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
@@ -93,23 +108,21 @@ def run():
     # Take the biggest of each of 2D or >2D
     summary_2d = (
         df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]
-        .sort_values(by=["size", "shape"], ascending=False)
-        # .groupby(by="func", sort=("size", "shape"))
-        .groupby(by="func")
-        .first()
+        .groupby(by="func", sort=False)
+        .last()
         .reset_index()
         .drop(columns=("size"))
     )
-    summary_and = (
+    summary_nd = (
         df[lambda x: x["shape"].map(lambda x: x.count(",")) > 1]
-        .groupby(by="func", sort=("size", "shape"))
-        .first()
+        .groupby(by="func", sort=False)
+        .last()
         .reset_index()
         .drop(columns="size")
     )
 
     text = ""
-    for title, df in (("2D", summary_2d), ("AND", summary_and), ("All", full)):
+    for title, df in (("2D", summary_2d), ("ND", summary_nd), ("All", full)):
         shapes = df["shape"].unique()
         if len(shapes) == 1:
             shape = shapes[0]

@@ -41,23 +41,23 @@ def move_exp_nancount(a, alpha, min_weight, out):
 def move_exp_nanmean(a, alpha, min_weight, out):
     N = len(a)
 
-    number = denom = weight = 0.0
+    numer = denom = weight = 0.0
     decay = 1.0 - alpha
 
     for i in range(N):
         a_i = a[i]
 
-        number *= decay
+        numer *= decay
         denom *= decay
         weight *= decay
 
         if not np.isnan(a_i):
-            number += a_i
+            numer += a_i
             denom += 1.0
             weight += alpha
 
         if weight >= min_weight:
-            out[i] = number / denom
+            out[i] = numer / denom
         else:
             out[i] = np.nan
 
@@ -71,19 +71,19 @@ def move_exp_nanmean(a, alpha, min_weight, out):
 def move_exp_nansum(a, alpha, min_weight, out):
     N = len(a)
 
-    number = weight = 0.0
+    numer = weight = 0.0
     decay = 1.0 - alpha
     zero_count = True
 
     for i in range(N):
         a_i = a[i]
 
-        number *= decay
+        numer *= decay
         weight *= decay
 
         if not np.isnan(a_i):
             zero_count = False
-            number += a_i
+            numer += a_i
             weight += alpha
 
         if weight >= min_weight and not zero_count:

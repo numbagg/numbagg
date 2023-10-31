@@ -31,7 +31,7 @@ def ndreduce(*args, **kwargs):
                 asum += ai
             return asum
     """
-    return lambda func: NumbaANDReduce(func, *args, **kwargs)
+    return lambda func: NumbaNDReduce(func, *args, **kwargs)
 
 
 def ndmoving(*args, **kwargs):
@@ -52,21 +52,21 @@ def ndmoving(*args, **kwargs):
                     if i - j > min_count:
                         out[i] += a[i - j]
     """
-    return lambda func: NumbaANDMoving(func, *args, **kwargs)
+    return lambda func: NumbaNDMoving(func, *args, **kwargs)
 
 
 def ndmovingexp(*args, **kwargs):
     """N-dimensional exponential moving window function."""
-    return lambda func: NumbaANDMovingExp(func, *args, **kwargs)
+    return lambda func: NumbaNDMovingExp(func, *args, **kwargs)
 
 
 def groupndreduce(*args, **kwargs):
     """Create an N-dimensional grouped aggregation function."""
-    return lambda func: NumbaGroupANDReduce(func, *args, **kwargs)
+    return lambda func: NumbaGroupNDReduce(func, *args, **kwargs)
 
 
 def ndfill(*args, **kwargs):
-    return lambda func: NumbaANDFill(func, *args, **kwargs)
+    return lambda func: NumbaNDFill(func, *args, **kwargs)
 
 
 def ndim(arg):
@@ -97,7 +97,7 @@ def gufunc_string_signature(numba_args):
     )
 
 
-class NumbaANDReduce:
+class NumbaNDReduce:
     def __init__(self, func, signature, supports_parallel=True):
         self.func = func
         self.supports_parallel = supports_parallel
@@ -190,7 +190,7 @@ def rolling_validator(arr, window):
         raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[-1], window))
 
 
-class NumbaANDMoving:
+class NumbaNDMoving:
     def __init__(
         self,
         func: Callable,
@@ -235,7 +235,7 @@ class NumbaANDMoving:
         return self.gufunc(*arr, window, min_count, axis=axis)
 
 
-class NumbaANDMovingExp(NumbaANDMoving):
+class NumbaNDMovingExp(NumbaNDMoving):
     def __call__(self, *arr, alpha, min_weight=0, axis=-1):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
@@ -254,10 +254,10 @@ class NumbaANDMovingExp(NumbaANDMoving):
             return self.gufunc(*arr, alpha, min_weight, axis=axis)
 
 
-# TODO: some copypasta from `NumbaANDMoving`; we could have a base class and reduce the duplication.
+# TODO: some copypasta from `NumbaNDMoving`; we could have a base class and reduce the duplication.
 
 
-class NumbaANDFill:
+class NumbaNDFill:
     def __init__(
         self,
         func: Callable,
@@ -302,18 +302,18 @@ class NumbaANDFill:
         return self.gufunc(arr, limit, axis=axis)
 
 
-class NumbaGroupANDReduce:
+class NumbaGroupNDReduce:
     def __init__(
         self,
         func,
         signature: list[tuple] | None = None,
         *,
-        supports_and=True,
+        supports_nd=True,
         supports_bool=True,
         supports_ints=True,
     ):
         self.func = func
-        self.supports_and = supports_and
+        self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
 
@@ -375,11 +375,11 @@ class NumbaGroupANDReduce:
     def __call__(self, values, labels, axis=None, num_labels=None):
         values = np.asarray(values)
         labels = np.asarray(labels)
-        if not self.supports_and and (values.ndim != 1 or labels.ndim != 1):
+        if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at
             # https://stackoverflow.com/a/66372474/3064736. Or we could have the numba
-            # function return indices for the flattened array, and we stack them into and
+            # function return indices for the flattened array, and we stack them into nd
             # indices.
             raise ValueError(
                 f"values and labels must be 1-dimensional for {self.func.__name__}. "
