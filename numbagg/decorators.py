@@ -304,7 +304,6 @@ class NumbaNDMovingExp(NumbaBaseSimple):
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            print(*arr, alpha, axis, kwargs)
             return self.gufunc(*arr, alpha, min_weight, axis=axis, **kwargs)
 
 
