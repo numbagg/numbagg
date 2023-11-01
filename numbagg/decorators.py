@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cache, cached_property
-from typing import Callable
+from typing import Any, Callable
 
 import numba
 import numpy as np
@@ -56,7 +56,7 @@ def ndmoving(*args, **kwargs):
 
 
 def ndmovingexp(*args, **kwargs):
-    """N-dimensional exponential moving window function."""
+    """Exponential moving window function."""
     return lambda func: NumbaNDMovingExp(func, *args, **kwargs)
 
 
@@ -97,9 +97,56 @@ def gufunc_string_signature(numba_args):
     )
 
 
-class NumbaNDReduce:
+class NumbaBase:
+    func: Callable
+
+    @property
+    def __name__(self):
+        return self.func.__name__
+
+    def __repr__(self):
+        return f"numbagg.{self.__name__}"
+
+
+class NumbaBaseSimple(NumbaBase):
+    """
+    Decorators which don't do any rewriting (all except the reduction functions)
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: list[tuple],
+    ):
+        self.func = func
+
+        for sig in signature:
+            if not isinstance(sig, tuple):
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
+        self.signature = signature
+
+    @cached_property
+    def gufunc(self):
+        gufunc_sig = gufunc_string_signature(self.signature[0])
+        vectorize = numba.guvectorize(
+            self.signature,
+            gufunc_sig,
+            nopython=True,
+            target="parallel",
+            # cache=True,
+        )
+        return vectorize(self.func)
+
+
+class NumbaNDReduce(NumbaBase):
     def __init__(self, func, signature, supports_parallel=True):
         self.func = func
+        # NDReduce uses different types than the other funcs, and they seem difficult to
+        # type, so ignoring for the moment.
+        self.signature: Any = signature
+
         self.supports_parallel = supports_parallel
 
         for sig in signature:
@@ -116,14 +163,6 @@ class NumbaNDReduce:
                 raise ValueError(
                     f"return type for ndreduce must be a scalar: {signature}"
                 )
-        self.signature = signature
-
-    @property
-    def __name__(self):
-        return self.func.__name__
-
-    def __repr__(self):
-        return f"numbagg.{self.__name__}"
 
     @cached_property
     def transformed_func(self):
@@ -182,15 +221,7 @@ class NumbaNDReduce:
         return f(arr, *args)
 
 
-MOVE_WINDOW_ERR_MSG = "invalid window (not between 1 and %d, inclusive): %r"
-
-
-def rolling_validator(arr, window):
-    if (window < 1) or (window > arr.shape[-1]):
-        raise ValueError(MOVE_WINDOW_ERR_MSG % (arr.shape[-1], window))
-
-
-class NumbaNDMoving:
+class NumbaNDMoving(NumbaBaseSimple):
     def __init__(
         self,
         func: Callable,
@@ -198,70 +229,85 @@ class NumbaNDMoving:
             (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
-        window_validator=rolling_validator,
     ):
-        self.func = func
-        self.window_validator = window_validator
+        super().__init__(func, signature)
 
-        for sig in signature:
-            if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for {self.__class__} must be tuples: {signature}"
-                )
-        self.signature = signature
-
-    @property
-    def __name__(self):
-        return self.func.__name__
-
-    def __repr__(self):
-        return f"numbagg.{self.__name__}"
-
-    @cached_property
-    def gufunc(self):
-        gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
-            self.signature,
-            gufunc_sig,
-            nopython=True,
-            target="parallel",
-            # cache=True,
-        )
-        return vectorize(self.func)
-
-    def __call__(self, *arr: np.ndarray, window, min_count=None, axis=-1):
+    def __call__(
+        self,
+        *arr: np.ndarray,
+        window,
+        min_count=None,
+        axis: int | tuple[int, ...] = -1,
+        **kwargs,
+    ):
         if min_count is None:
             min_count = window
+        # If an empty tuple is passed, there's no reduction to do, so we return the
+        # original array.
+        # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
+        if isinstance(axis, tuple):
+            if axis == ():
+                if len(arr) > 1:
+                    raise ValueError(
+                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                    )
+                return arr[0]
+            if len(axis) > 1:
+                raise ValueError(
+                    f"only one axis can be passed to {self.func}; got {axis}"
+                )
+            (axis,) = axis
         if not 0 < window < arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        return self.gufunc(*arr, window, min_count, axis=axis)
+        return self.gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
-class NumbaNDMovingExp(NumbaNDMoving):
-    def __call__(self, *arr, alpha, min_weight=0, axis=-1):
+class NumbaNDMovingExp(NumbaBaseSimple):
+    def __init__(
+        self,
+        func: Callable,
+        signature: list[tuple] = [
+            (numba.float64[:], numba.int64, numba.float64[:]),
+            (numba.float32[:], numba.int32, numba.float32[:]),
+        ],
+    ):
+        super().__init__(func, signature)
+
+    def __call__(
+        self,
+        *arr: np.ndarray,
+        alpha: float,
+        min_weight: float = 0,
+        axis: int | tuple[int, ...] = -1,
+        **kwargs,
+    ):
         if alpha < 0:
             raise ValueError(f"alpha must be positive: {alpha}")
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
-        if axis == ():
-            if len(arr) > 1:
+        if isinstance(axis, tuple):
+            if axis == ():
+                if len(arr) > 1:
+                    raise ValueError(
+                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                    )
+                return arr[0]
+            if len(axis) > 1:
                 raise ValueError(
-                    "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
+                    f"only one axis can be passed to {self.func}; got {axis}"
                 )
-            return arr[0]
+            (axis,) = axis
+
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(*arr, alpha, min_weight, axis=axis)
+            return self.gufunc(*arr, alpha, min_weight, axis=axis, **kwargs)
 
 
-# TODO: some copypasta from `NumbaNDMoving`; we could have a base class and reduce the duplication.
-
-
-class NumbaNDFill:
+class NumbaNDFill(NumbaBaseSimple):
     def __init__(
         self,
         func: Callable,
@@ -270,43 +316,24 @@ class NumbaNDFill:
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
     ):
-        self.func = func
+        super().__init__(func, signature)
 
-        for sig in signature:
-            if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for {self.__class__} must be tuples: {signature}"
-                )
-        self.signature = signature
-
-    @property
-    def __name__(self):
-        return self.func.__name__
-
-    def __repr__(self):
-        return f"numbagg.{self.__name__}"
-
-    @cached_property
-    def gufunc(self):
-        gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
-            self.signature,
-            gufunc_sig,
-            nopython=True,
-            target="parallel",
-            # cache=True,
-        )
-        return vectorize(self.func)
-
-    def __call__(self, arr: np.ndarray, *, limit: None | int, axis=-1):
+    def __call__(
+        self,
+        arr: np.ndarray,
+        *,
+        limit: None | int,
+        axis: int = -1,
+        **kwargs,
+    ):
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:
             raise ValueError(f"limit must be positive: {limit}")
-        return self.gufunc(arr, limit, axis=axis)
+        return self.gufunc(arr, limit, axis=axis, **kwargs)
 
 
-class NumbaGroupNDReduce:
+class NumbaGroupNDReduce(NumbaBase):
     def __init__(
         self,
         func,
@@ -316,10 +343,10 @@ class NumbaGroupNDReduce:
         supports_bool=True,
         supports_ints=True,
     ):
-        self.func = func
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
+        self.func = func
 
         if signature is None:
             signature = [
@@ -349,14 +376,8 @@ class NumbaGroupNDReduce:
                     "all arguments in signature for ndreduce must be scalars: "
                     f" {signature}"
                 )
+
         self.signature = signature
-
-    @property
-    def __name__(self):
-        return self.func.__name__
-
-    def __repr__(self):
-        return f"numbagg.{self.__name__}"
 
     @cache
     def _create_gufunc(self, core_ndim):
@@ -380,7 +401,14 @@ class NumbaGroupNDReduce:
         )
         return vectorize(self.func)
 
-    def __call__(self, values, labels, axis=None, num_labels=None):
+    def __call__(
+        self,
+        values: np.ndarray,
+        labels: np.ndarray,
+        *,
+        num_labels: int | None = None,
+        axis: int | tuple[int, ...] | None = None,
+    ):
         values = np.asarray(values)
         labels = np.asarray(labels)
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
