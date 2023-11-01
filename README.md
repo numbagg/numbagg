@@ -92,7 +92,7 @@ Array of shape `(100, 1000, 1000)`, over the final axis
 [^1]:
     Benchmarks were run on a Mac M1 laptop in October 2023 on numbagg's HEAD,
     pandas 2.1.1, bottleneck 1.3.7. They're also run in CI, though without
-    demonstrating the benefits of parallization given GHA's CPU count.
+    demonstrating the benefits of parallelization given GHA's CPU count.
 
 [^2]:
     While we separate the setup and the running of the functions, pandas still
