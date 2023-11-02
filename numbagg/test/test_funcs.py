@@ -134,12 +134,15 @@ def slow_count(x, axis=None):
     return np.sum(~np.isnan(x), axis=axis)
 
 
-def test_nan_quantile():
+@pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
+@pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
+def test_nan_quantile(axis, quantiles):
     arr = np.random.RandomState(0).rand(2000).reshape(10, 10, -1)
+    arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
-    quantiles = np.array([0.25, 0.75])
-    result = numbagg.nanquantile(arr, quantiles, axis=1)
-    expected = np.nanquantile(arr, quantiles, axis=1)
+    # quantiles = np.array([0.25, 0.75])
+    result = numbagg.nanquantile(arr, quantiles, axis=axis)
+    expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
 
