@@ -7,6 +7,7 @@ from typing import Callable
 import bottleneck as bn
 import pandas as pd
 import pytest
+from numpy import nanquantile
 
 from .. import (
     bfill,
@@ -197,6 +198,12 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1
         ],
+    ),
+    nanquantile: dict(
+        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: pd.DataFrame(a)
+        .T.quantile(quantiles)
+        .T,
+        numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
     )
     # move_count: dict(
     #     pandas=dict(

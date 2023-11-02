@@ -17,6 +17,7 @@ from .. import (
     move_std,
     move_sum,
     move_var,
+    nanquantile,
 )
 
 
@@ -37,6 +38,7 @@ from .. import (
         move_std,
         move_sum,
         move_var,
+        nanquantile,
     ],
     scope="module",
 )

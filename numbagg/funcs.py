@@ -218,34 +218,49 @@ def nanquantile_(arr, quantile, out):
         out[i] = result
 
 
+def move_axes(arr: np.ndarray, axes: tuple[int, ...]):
+    """
+    Move & reshape a tuple of axes to an array's final axis.
+    """
+    moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))
+    new_shape = moved_arr.shape[: -len(axes)] + (-1,)
+    return moved_arr.reshape(new_shape)
+
+
 def nanquantile(
     a: np.ndarray,
-    quantiles: float | list[float] | np.ndarray,
+    quantiles: float | Iterable[float],
     axis: int | tuple[int, ...] | None = None,
     **kwargs,
 ):
-    if kwargs.get("axes"):
-        raise ValueError(
-            "`axes` argument is not supported yet by nanquantile. It's not difficult to add it, but "
-            "requires some testing. Raise an issue on numbagg if it would be helpful, "
-            "in particular if vectorizing over lists of quantiles would be useful."
-        )
-
-    if not isinstance(quantiles, (Iterable, np.ndarray)):
+    # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
+    # then remove a dummy axis.
+    if not isinstance(quantiles, Iterable):
+        squeeze = True
         quantiles = [quantiles]
+    else:
+        squeeze = False
     quantiles = np.asarray(quantiles)
 
     if axis is None:
         axis = tuple(range(a.ndim))
+    elif not isinstance(axis, Iterable):
+        axis = (axis,)
 
-    # The second array is the quantiles array, and is always only a single axis. The
-    # third array is the result array, and returns a final axis for quantiles.
-    axes = [axis, -1, -1]
+    a = move_axes(a, axis)
+
+    # - 1st array is our input; we've moved the axes to the final axis.
+    # - 2nd is the quantiles array, and is always only a single axis.
+    # - 3rd array is the result array, and returns a final axis for quantiles.
+    axes = [-1, -1, -1]
 
     result = nanquantile_(a, quantiles, axes=axes, **kwargs)
 
     # numpy returns quantiles as the first axis, so we move ours to that position too
-    return np.moveaxis(result, -1, 0)
+    result = np.moveaxis(result, -1, 0)
+    if squeeze:
+        result = result.squeeze(axis=0)
+    return result
 
 
 @ndfill()
