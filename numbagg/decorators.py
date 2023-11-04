@@ -186,7 +186,6 @@ class ndreduce(NumbaBase):
         )
         return vectorize(self.transformed_func)
 
-    # @staticmethod
     def __call__(self, arr, *args, axis=None):
         if axis is None:
             # TODO: switch to using jit_func (it's faster), once numba reliably
@@ -232,7 +231,6 @@ class ndmoving(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
-    # @staticmethod
     def __call__(
         self,
         *arr: np.ndarray,
@@ -278,7 +276,6 @@ class ndmovingexp(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
-    # @staticmethod
     def __call__(
         self,
         *arr: np.ndarray,
@@ -322,7 +319,6 @@ class ndfill(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
-    # @staticmethod
     def __call__(
         self,
         arr: np.ndarray,
