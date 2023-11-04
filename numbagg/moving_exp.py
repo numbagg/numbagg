@@ -4,7 +4,7 @@ from numba import float32, float64
 from .decorators import ndmovingexp
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32, float32, float32[:]),
         (float64[:], float64, float64, float64[:]),
@@ -32,7 +32,7 @@ def move_exp_nancount(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32, float32, float32[:]),
         (float64[:], float64, float64, float64[:]),
@@ -62,7 +62,7 @@ def move_exp_nanmean(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32, float32, float32[:]),
         (float64[:], float64, float64, float64[:]),
@@ -92,7 +92,7 @@ def move_exp_nansum(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32, float32, float32[:]),
         (float64[:], float64, float64, float64[:]),
@@ -144,7 +144,7 @@ def move_exp_nanvar(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32, float32, float32[:]),
         (float64[:], float64, float64, float64[:]),
@@ -211,7 +211,7 @@ def move_exp_nanstd(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32[:], float32, float32, float32[:]),
         (float64[:], float64[:], float64, float64, float64[:]),
@@ -259,7 +259,7 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp(
+@ndmovingexp.wrap(
     [
         (float32[:], float32[:], float32, float32, float32[:]),
         (float64[:], float64[:], float64, float64, float64[:]),

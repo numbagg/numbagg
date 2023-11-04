@@ -1,72 +1,15 @@
 from __future__ import annotations
 
+import abc
+from collections.abc import Iterable
 from functools import cache, cached_property
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 
 import numba
 import numpy as np
+from numba import float64
 
 from .transform import rewrite_ndreduce
-
-
-def ndreduce(*args, **kwargs):
-    """Create an N-dimensional aggregation function.
-
-    Functions should have signatures of the form output_type(input_type), where
-    input_type and output_type are numba dtypes. This decorator rewrites them
-    to accept input arrays of arbitrary dimensionality, with an additional
-    optional `axis`, which accepts integers or tuples of integers (defaulting
-    to `axis=None` for all axes).
-
-    For example, to write a simplified version of `np.sum(arr, axis=None)`::
-
-        from numba import float64
-
-        @ndreduce([
-            float64(float64)
-        ])
-        def sum(a):
-            asum = 0.0
-            for ai in a.flat:
-                asum += ai
-            return asum
-    """
-    return lambda func: NumbaNDReduce(func, *args, **kwargs)
-
-
-def ndmoving(*args, **kwargs):
-    """Create an N-dimensional moving window function along one dimension.
-
-    Functions should accept arguments for the input array, a window
-    size and the output array.
-
-    For example, to write a simplified (and naively implemented) moving window
-    sum::
-
-        @ndmoving([
-            (float64[:], int64, int64, float64[:]),
-        ])
-        def move_sum(a, window, min_count, out):
-            for i in range(a.size):
-                for j in range(window):
-                    if i - j > min_count:
-                        out[i] += a[i - j]
-    """
-    return lambda func: NumbaNDMoving(func, *args, **kwargs)
-
-
-def ndmovingexp(*args, **kwargs):
-    """Exponential moving window function."""
-    return lambda func: NumbaNDMovingExp(func, *args, **kwargs)
-
-
-def groupndreduce(*args, **kwargs):
-    """Create an N-dimensional grouped aggregation function."""
-    return lambda func: NumbaGroupNDReduce(func, *args, **kwargs)
-
-
-def ndfill(*args, **kwargs):
-    return lambda func: NumbaNDFill(func, *args, **kwargs)
 
 
 def ndim(arg):
@@ -97,8 +40,14 @@ def gufunc_string_signature(numba_args):
     )
 
 
+T = TypeVar("T", bound="NumbaBase")
+
+
 class NumbaBase:
     func: Callable
+
+    def __init__(self, *args, **kwargs):
+        pass
 
     @property
     def __name__(self):
@@ -107,8 +56,18 @@ class NumbaBase:
     def __repr__(self):
         return f"numbagg.{self.__name__}"
 
+    @classmethod
+    def wrap(cls: type[T], *args, **kwargs) -> Callable[..., T]:
+        """
+        Decorate a function
+        """
+        return lambda func: cls(func, *args, **kwargs)
 
-class NumbaBaseSimple(NumbaBase):
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     """
     Decorators which don't do any rewriting (all except the reduction functions)
     """
@@ -140,7 +99,29 @@ class NumbaBaseSimple(NumbaBase):
         return vectorize(self.func)
 
 
-class NumbaNDReduce(NumbaBase):
+class ndreduce(NumbaBase):
+    """Create an N-dimensional aggregation function.
+
+    Functions should have signatures of the form output_type(input_type), where
+    input_type and output_type are numba dtypes. This decorator rewrites them
+    to accept input arrays of arbitrary dimensionality, with an additional
+    optional `axis`, which accepts integers or tuples of integers (defaulting
+    to `axis=None` for all axes).
+
+    For example, to write a simplified version of `np.sum(arr, axis=None)`::
+
+        from numba import float64
+
+        @ndreduce([
+            float64(float64)
+        ])
+        def sum(a):
+            asum = 0.0
+            for ai in a.flat:
+                asum += ai
+            return asum
+    """
+
     def __init__(self, func, signature, supports_parallel=True):
         self.func = func
         # NDReduce uses different types than the other funcs, and they seem difficult to
@@ -205,6 +186,7 @@ class NumbaNDReduce(NumbaBase):
         )
         return vectorize(self.transformed_func)
 
+    # @staticmethod
     def __call__(self, arr, *args, axis=None):
         if axis is None:
             # TODO: switch to using jit_func (it's faster), once numba reliably
@@ -221,7 +203,25 @@ class NumbaNDReduce(NumbaBase):
         return f(arr, *args)
 
 
-class NumbaNDMoving(NumbaBaseSimple):
+class ndmoving(NumbaBaseSimple):
+    """Create an N-dimensional moving window function along one dimension.
+
+    Functions should accept arguments for the input array, a window
+    size and the output array.
+
+    For example, to write a simplified (and naively implemented) moving window
+    sum::
+
+        @ndmoving([
+            (float64[:], int64, int64, float64[:]),
+        ])
+        def move_sum(a, window, min_count, out):
+            for i in range(a.size):
+                for j in range(window):
+                    if i - j > min_count:
+                        out[i] += a[i - j]
+    """
+
     def __init__(
         self,
         func: Callable,
@@ -232,6 +232,7 @@ class NumbaNDMoving(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
+    # @staticmethod
     def __call__(
         self,
         *arr: np.ndarray,
@@ -264,7 +265,9 @@ class NumbaNDMoving(NumbaBaseSimple):
         return self.gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
-class NumbaNDMovingExp(NumbaBaseSimple):
+class ndmovingexp(NumbaBaseSimple):
+    """Exponential moving window function."""
+
     def __init__(
         self,
         func: Callable,
@@ -275,6 +278,7 @@ class NumbaNDMovingExp(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
+    # @staticmethod
     def __call__(
         self,
         *arr: np.ndarray,
@@ -307,7 +311,7 @@ class NumbaNDMovingExp(NumbaBaseSimple):
             return self.gufunc(*arr, alpha, min_weight, axis=axis, **kwargs)
 
 
-class NumbaNDFill(NumbaBaseSimple):
+class ndfill(NumbaBaseSimple):
     def __init__(
         self,
         func: Callable,
@@ -318,6 +322,7 @@ class NumbaNDFill(NumbaBaseSimple):
     ):
         super().__init__(func, signature)
 
+    # @staticmethod
     def __call__(
         self,
         arr: np.ndarray,
@@ -333,7 +338,9 @@ class NumbaNDFill(NumbaBaseSimple):
         return self.gufunc(arr, limit, axis=axis, **kwargs)
 
 
-class NumbaGroupNDReduce(NumbaBase):
+class groupndreduce(NumbaBase):
+    """Create an N-dimensional grouped aggregation function."""
+
     def __init__(
         self,
         func,
@@ -461,3 +468,72 @@ class NumbaGroupNDReduce(NumbaBase):
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
         gufunc(values, labels, result)
         return result
+
+
+def move_axes(arr: np.ndarray, axes: tuple[int, ...]):
+    """
+    Move & reshape a tuple of axes to an array's final axis.
+    """
+    moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))
+    new_shape = moved_arr.shape[: -len(axes)] + (-1,)
+    return moved_arr.reshape(new_shape)
+
+
+class ndquantile(NumbaBase):
+    def __init__(
+        self,
+        func: Callable,
+        signature=([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"),
+    ):
+        self.signature = signature
+        self.func = func
+        super().__init__(func, signature)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        quantiles: float | Iterable[float],
+        axis: int | tuple[int, ...] | None = None,
+        **kwargs,
+    ):
+        # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
+        # then remove a dummy axis.
+        if not isinstance(quantiles, Iterable):
+            squeeze = True
+            quantiles = [quantiles]
+        else:
+            squeeze = False
+        quantiles = np.asarray(quantiles)
+
+        if axis is None:
+            axis = tuple(range(a.ndim))
+        elif not isinstance(axis, Iterable):
+            axis = (axis,)
+
+        a = move_axes(a, axis)
+
+        # - 1st array is our input; we've moved the axes to the final axis.
+        # - 2nd is the quantiles array, and is always only a single axis.
+        # - 3rd array is the result array, and returns a final axis for quantiles.
+        axes = [-1, -1, -1]
+
+        result = self.gufunc(a, quantiles, axes=axes, **kwargs)
+
+        # numpy returns quantiles as the first axis, so we move ours to that position too
+        result = np.moveaxis(result, -1, 0)
+        if squeeze:
+            result = result.squeeze(axis=0)
+        return result
+
+    @cached_property
+    def gufunc(self):
+        # We don't use `NumbaBaseSimple`'s here, because we need to specify different
+        # core axes for the two inputs, which it doesn't support.
+
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target="parallel",
+            # cache=True,
+        )
+        return vectorize(self.func)
