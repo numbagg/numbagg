@@ -38,7 +38,7 @@ def run():
         )
 
     json = jq.compile(
-        '.benchmarks[] | select(.name | index("test_benchmark[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
+        '.benchmarks[] | select(.name | index("test_benchmark_all[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())

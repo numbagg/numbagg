@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 import numpy as np
-from numba import bool_, float32, float64, guvectorize, int32, int64
+from numba import bool_, float32, float64, int32, int64
 
-from numbagg.decorators import ndfill, ndreduce
+from numbagg.decorators import ndfill, ndquantile, ndreduce
 
 
-@ndreduce([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
+@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
 def allnan(a):
     f = True
     for ai in a.flat:
@@ -18,7 +16,7 @@ def allnan(a):
     return f
 
 
-@ndreduce([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
+@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
 def anynan(a):
     f = False
     for ai in a.flat:
@@ -28,7 +26,7 @@ def anynan(a):
     return f
 
 
-@ndreduce([int64(int32), int64(int64), int64(float32), int64(float64)])
+@ndreduce.wrap([int64(int32), int64(int64), int64(float32), int64(float64)])
 def nancount(a):
     non_missing = 0
     for ai in a.flat:
@@ -37,7 +35,7 @@ def nancount(a):
     return non_missing
 
 
-@ndreduce([int32(int32), int64(int64), float32(float32), float64(float64)])
+@ndreduce.wrap([int32(int32), int64(int64), float32(float32), float64(float64)])
 def nansum(a):
     asum = 0
     for ai in a.flat:
@@ -46,7 +44,7 @@ def nansum(a):
     return asum
 
 
-@ndreduce([float32(float32), float64(float64)])
+@ndreduce.wrap([float32(float32), float64(float64)])
 def nanmean(a):
     asum = 0.0
     count = 0
@@ -60,7 +58,7 @@ def nanmean(a):
         return np.nan
 
 
-@ndreduce([float32(float32), float64(float64)])
+@ndreduce.wrap([float32(float32), float64(float64)])
 def nanstd(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
@@ -83,7 +81,7 @@ def nanstd(a):
         return np.nan
 
 
-@ndreduce([float32(float32), float64(float64)])
+@ndreduce.wrap([float32(float32), float64(float64)])
 def nanvar(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
@@ -106,7 +104,7 @@ def nanvar(a):
         return np.nan
 
 
-@ndreduce(
+@ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
     supports_parallel=False,
 )
@@ -124,7 +122,7 @@ def nanargmax(a):
     return idx
 
 
-@ndreduce(
+@ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
     supports_parallel=False,
 )
@@ -142,7 +140,7 @@ def nanargmin(a):
     return idx
 
 
-@ndreduce(
+@ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
     supports_parallel=False,
 )
@@ -162,7 +160,7 @@ def nanmax(a):
     return amax
 
 
-@ndreduce(
+@ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
     supports_parallel=False,
 )
@@ -182,8 +180,8 @@ def nanmin(a):
     return amin
 
 
-@guvectorize([(float64[:], float64[:], float64[:])], "(n),(m)->(m)")
-def nanquantile_(arr, quantile, out):
+@ndquantile.wrap(signature=([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
+def nanquantile(arr, quantile, out):
     # valid (non NaN) observations
     valid_obs = np.sum(np.isfinite(arr))
     # replace NaN with maximum
@@ -218,52 +216,7 @@ def nanquantile_(arr, quantile, out):
         out[i] = result
 
 
-def move_axes(arr: np.ndarray, axes: tuple[int, ...]):
-    """
-    Move & reshape a tuple of axes to an array's final axis.
-    """
-    moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))
-    new_shape = moved_arr.shape[: -len(axes)] + (-1,)
-    return moved_arr.reshape(new_shape)
-
-
-def nanquantile(
-    a: np.ndarray,
-    quantiles: float | Iterable[float],
-    axis: int | tuple[int, ...] | None = None,
-    **kwargs,
-):
-    # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
-    # then remove a dummy axis.
-    if not isinstance(quantiles, Iterable):
-        squeeze = True
-        quantiles = [quantiles]
-    else:
-        squeeze = False
-    quantiles = np.asarray(quantiles)
-
-    if axis is None:
-        axis = tuple(range(a.ndim))
-    elif not isinstance(axis, Iterable):
-        axis = (axis,)
-
-    a = move_axes(a, axis)
-
-    # - 1st array is our input; we've moved the axes to the final axis.
-    # - 2nd is the quantiles array, and is always only a single axis.
-    # - 3rd array is the result array, and returns a final axis for quantiles.
-    axes = [-1, -1, -1]
-
-    result = nanquantile_(a, quantiles, axes=axes, **kwargs)
-
-    # numpy returns quantiles as the first axis, so we move ours to that position too
-    result = np.moveaxis(result, -1, 0)
-    if squeeze:
-        result = result.squeeze(axis=0)
-    return result
-
-
-@ndfill()
+@ndfill.wrap()
 def bfill(a, limit, out):
     lives_remaining = limit
     current = np.nan
@@ -281,7 +234,7 @@ def bfill(a, limit, out):
         out[i] = current
 
 
-@ndfill()
+@ndfill.wrap()
 def ffill(a, limit, out):
     lives_remaining = limit
     current = np.nan

@@ -233,9 +233,9 @@ def func_callable(library, func, array):
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
     try:
-        callable = COMPARISONS[func][library](array)
-        assert callable(Callable)
-        return callable
+        callable_ = COMPARISONS[func][library](array)
+        assert callable(callable_)
+        return callable_
     except KeyError:
         if library == "bottleneck":
             pytest.skip(f"Bottleneck doesn't support {func}")
