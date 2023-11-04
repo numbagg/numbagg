@@ -5,9 +5,9 @@ from functools import partial
 from typing import Callable
 
 import bottleneck as bn
+import numpy as np
 import pandas as pd
 import pytest
-from numpy import nanquantile
 
 from .. import (
     bfill,
@@ -26,6 +26,7 @@ from .. import (
     move_std,
     move_sum,
     move_var,
+    nanquantile,
 )
 
 # TODO: add these as functions to the dict
@@ -204,6 +205,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         .T.quantile(quantiles)
         .T,
         numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
+        numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
     )
     # move_count: dict(
     #     pandas=dict(
@@ -231,7 +233,9 @@ def func_callable(library, func, array):
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
     try:
-        return COMPARISONS[func][library](array)
+        callable = COMPARISONS[func][library](array)
+        assert isinstance(callable, Callable)
+        return callable
     except KeyError:
         if library == "bottleneck":
             pytest.skip(f"Bottleneck doesn't support {func}")

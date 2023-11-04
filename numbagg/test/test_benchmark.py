@@ -69,7 +69,7 @@ def array(shape):
     return np.where(array > 0.1, array, np.nan)
 
 
-def test_benchmark(benchmark, func, func_callable, shape):
+def test_benchmark_all(benchmark, func, func_callable, shape):
     benchmark.group = f"{func}|{shape}"
     benchmark.pedantic(
         func_callable,
