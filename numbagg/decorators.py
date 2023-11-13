@@ -297,11 +297,11 @@ class ndmovingexp(NumbaBaseSimple):
         *arr: np.ndarray,
         alpha: float,
         min_weight: float = 0,
-        axis: int | tuple[int, ...] = -1,
+        axis: int = -1,
         **kwargs,
     ):
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])  # type: ignore
+            alpha = np.broadcast_to(alpha, arr[0].shape[axis])  # type: ignore[assignment,unused-ignore]
             alpha_axis = -1
         elif alpha.ndim == 1:
             alpha_axis = -1
