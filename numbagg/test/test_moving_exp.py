@@ -179,3 +179,34 @@ def test_move_exp_nancorr_numeric():
     result = move_exp_nancorr(array1, array2, alpha=0.25)
     expected = np.array([np.nan, 1.0, 0.85, 0.4789468])
     assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        move_exp_nancount,
+        move_exp_nanmean,
+        move_exp_nanstd,
+        move_exp_nansum,
+        move_exp_nanvar,
+        move_exp_nancov,
+        move_exp_nancorr,
+    ],
+)
+@pytest.mark.parametrize("alpha", [0.5, 0.1])
+def test_move_exp_alphas(rand_array, alpha, func):
+    c = COMPARISONS[func]
+    array = rand_array[:3]
+
+    # Supply alphas as a 1D array
+    alphas = np.full(array.shape[-1], alpha)
+
+    result = c["numbagg"](array, alpha=alphas)()
+    expected = c["numbagg"](array, alpha=alpha)()
+    assert_allclose(result, expected)
+
+    result = c["numbagg"](array.T, alpha=alphas)(axis=0).T
+    assert_allclose(result, expected)
+
+    result = c["numbagg"](array.T, alpha=alpha)(axis=0).T
+    assert_allclose(result, expected)

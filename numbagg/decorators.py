@@ -264,7 +264,23 @@ class ndmoving(NumbaBaseSimple):
 
 
 class ndmovingexp(NumbaBaseSimple):
-    """Exponential moving window function."""
+    """
+    Exponential moving window function.
+
+    `alpha` supports either:
+    - a scalar (similar to pandas)
+    - a 1D array with the same length as the core dimension on the main array(s)
+    - an ND array with the same shape as the main array(s)
+
+    If a scalar is passed, the same alpha is used to decay each value. Passing an array
+    allows decaying values different amounts.
+
+    The function is designed for alpha values between 0 and 1 inclusive. A value of 0
+    decays the whole value such that `moving_exp_sum` returns the input. A value of 1
+    doesn't decay at all, such that `moving_exp_sum` is equivalent to an accumulating
+    sum. The function doesn't proactively check for valid values.
+
+    """
 
     def __init__(
         self,
@@ -281,11 +297,17 @@ class ndmovingexp(NumbaBaseSimple):
         *arr: np.ndarray,
         alpha: float,
         min_weight: float = 0,
-        axis: int | tuple[int, ...] = -1,
+        axis: int = -1,
         **kwargs,
     ):
-        if alpha < 0:
-            raise ValueError(f"alpha must be positive: {alpha}")
+        if not isinstance(alpha, np.ndarray):
+            alpha = np.broadcast_to(alpha, arr[0].shape[axis])  # type: ignore[assignment,unused-ignore]
+            alpha_axis = -1
+        elif alpha.ndim == 1:
+            alpha_axis = -1
+        else:
+            alpha_axis = axis
+
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
@@ -298,14 +320,18 @@ class ndmovingexp(NumbaBaseSimple):
                 return arr[0]
             if len(axis) > 1:
                 raise ValueError(
-                    f"only one axis can be passed to {self.func}; got {axis}"
+                    f"Only one axis can be passed to {self.func}; got {axis}"
                 )
             (axis,) = axis
 
+        # Axes is `axis` for each array (most often just one array), and then either
+        # `-1` or `axis` for alphas, depending on whether a full array was passed or not.
+        # Then `()` for the min_weight, and `axis` for the output
+        axes = [axis for _ in range(len(arr))] + [alpha_axis, (), axis]
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(*arr, alpha, min_weight, axis=axis, **kwargs)
+            return self.gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
 
 
 class ndfill(NumbaBaseSimple):
@@ -323,14 +349,14 @@ class ndfill(NumbaBaseSimple):
         self,
         arr: np.ndarray,
         *,
-        limit: None | int,
+        limit: None | int = None,
         axis: int = -1,
         **kwargs,
     ):
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:
-            raise ValueError(f"limit must be positive: {limit}")
+            raise ValueError(f"`limit` must be positive: {limit}")
         return self.gufunc(arr, limit, axis=axis, **kwargs)
 
 

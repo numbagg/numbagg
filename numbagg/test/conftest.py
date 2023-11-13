@@ -66,7 +66,7 @@ def pandas_ewm_nancount_setup(a, alpha=0.5):
 
 def pandas_move_setup(func, a, window=20, min_count=None):
     df = pd.DataFrame(a).T.rolling(window=window, min_periods=min_count)
-    return lambda: func(df)
+    return partial(func, df)
 
 
 def pandas_move_2_array_setup(func, a, window=20, min_count=None):
@@ -76,9 +76,9 @@ def pandas_move_2_array_setup(func, a, window=20, min_count=None):
     return lambda: func(df1, df2)
 
 
-def numbagg_two_array_setup(func, a, *args, **kwargs):
+def numbagg_two_array_setup(func, a, **kwargs):
     a1, a2 = two_array_setup(a)
-    return lambda: func(a1, a2, *args, **kwargs)
+    return partial(func, a1, a2, **kwargs)
 
 
 # Parameterization of tests and benchmarks
@@ -116,86 +116,86 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         pandas=lambda a, alpha=0.5: pandas_ewm_2_array_setup(
             lambda df1, df2: df1.corr(df2).T, a, alpha=alpha
         ),
-        numbagg=lambda a, alpha=0.5: numbagg_two_array_setup(
-            move_exp_nancorr, a, alpha=alpha
+        numbagg=lambda a, alpha=0.5, **kwargs: numbagg_two_array_setup(
+            move_exp_nancorr, a, alpha=alpha, **kwargs
         ),
     ),
     move_exp_nancov: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_2_array_setup(
             lambda df1, df2: df1.cov(df2).T, a, alpha=alpha
         ),
-        numbagg=lambda a, alpha=0.5: numbagg_two_array_setup(
-            move_exp_nancov, a, alpha=alpha
+        numbagg=lambda a, alpha=0.5, **kwargs: numbagg_two_array_setup(
+            move_exp_nancov, a, alpha=alpha, **kwargs
         ),
     ),
     move_mean: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_setup(
-            lambda df: df.mean().T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_setup(
+            lambda df: df.mean().T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: partial(
-            move_mean, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_mean, a, window=window, **kwargs
         ),
-        bottleneck=lambda a, window=20, min_count=None: partial(
-            bn.move_mean, a, window=window, min_count=min_count
+        bottleneck=lambda a, window=20, **kwargs: partial(
+            bn.move_mean, a, window=window, **kwargs
         ),
     ),
     move_sum: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_setup(
-            lambda df: df.sum().T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_setup(
+            lambda df: df.sum().T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: partial(
-            move_sum, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_sum, a, window=window, **kwargs
         ),
-        bottleneck=lambda a, window=20, min_count=None: partial(
-            bn.move_sum, a, window=window, min_count=min_count
+        bottleneck=lambda a, window=20, **kwargs: partial(
+            bn.move_sum, a, window=window, **kwargs
         ),
     ),
     move_std: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_setup(
-            lambda df: df.std().T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_setup(
+            lambda df: df.std().T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: partial(
-            move_std, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_std, a, window=window, **kwargs
         ),
-        bottleneck=lambda a, window=20, min_count=None: partial(
-            bn.move_std, a, window=window, min_count=min_count, ddof=1
+        bottleneck=lambda a, window=20, **kwargs: partial(
+            bn.move_std, a, window=window, ddof=1, **kwargs
         ),
     ),
     move_var: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_setup(
-            lambda df: df.var().T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_setup(
+            lambda df: df.var().T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: partial(
-            move_var, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_var, a, window=window, **kwargs
         ),
-        bottleneck=lambda a, window=20, min_count=None: partial(
-            bn.move_var, a, window=window, min_count=min_count, ddof=1
+        bottleneck=lambda a, window=20, **kwargs: partial(
+            bn.move_var, a, window=window, ddof=1, **kwargs
         ),
     ),
     move_corr: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_2_array_setup(
-            lambda df1, df2: df1.corr(df2).T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_2_array_setup(
+            lambda df1, df2: df1.corr(df2).T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: numbagg_two_array_setup(
-            move_corr, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: numbagg_two_array_setup(
+            move_corr, a, window=window, **kwargs
         ),
     ),
     move_cov: dict(
-        pandas=lambda a, window=20, min_count=None: pandas_move_2_array_setup(
-            lambda df1, df2: df1.cov(df2).T, a, window, min_count
+        pandas=lambda a, **kwargs: pandas_move_2_array_setup(
+            lambda df1, df2: df1.cov(df2).T, a, **kwargs
         ),
-        numbagg=lambda a, window=20, min_count=None: numbagg_two_array_setup(
-            move_cov, a, window=window, min_count=min_count
+        numbagg=lambda a, window=20, **kwargs: numbagg_two_array_setup(
+            move_cov, a, window=window, **kwargs
         ),
     ),
     ffill: dict(
         pandas=lambda a, limit=None: lambda: pd.DataFrame(a).T.ffill(limit=limit).T,
-        numbagg=lambda a, limit=None: partial(ffill, a, limit=limit),
+        numbagg=lambda a, **kwargs: partial(ffill, a, **kwargs),
         bottleneck=lambda a, limit=None: partial(bn.push, a, limit),
     ),
     bfill: dict(
-        pandas=lambda a, limit=None: lambda: pd.DataFrame(a).T.bfill(limit=limit).T,
-        numbagg=lambda a, limit=None: partial(bfill, a, limit=limit),
+        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a).T.bfill(**kwargs).T,
+        numbagg=lambda a, **kwargs: partial(bfill, a, **kwargs),
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1
         ],
