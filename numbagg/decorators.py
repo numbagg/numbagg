@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import itertools
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, TypeVar
@@ -378,21 +379,17 @@ class groupndreduce(NumbaBase):
         self.func = func
 
         if signature is None:
-            signature = [
-                (numba.float32, numba.int32, numba.float32),
-                (numba.float32, numba.int64, numba.float32),
-                (numba.float64, numba.int32, numba.float64),
-                (numba.float64, numba.int64, numba.float64),
-            ]
-
+            values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
+            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
             if supports_ints:
-                signature += [
-                    (numba.int32, numba.int32, numba.int32),
-                    (numba.int32, numba.int64, numba.int32),
-                    (numba.int64, numba.int32, numba.int64),
-                    (numba.int64, numba.int64, numba.int64),
-                ]
+                values_dtypes += (numba.int32, numba.int64)
 
+            signature = [
+                (value_type, label_type, value_type)
+                for value_type, label_type in itertools.product(
+                    values_dtypes, labels_dtypes
+                )
+            ]
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")

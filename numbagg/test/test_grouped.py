@@ -222,13 +222,14 @@ def test_additional_dim_equivalence(func, values, labels, dtype):
     assert_almost_equal(result, expected)
 
 
+@pytest.mark.parametrize("labels_type", [np.int8, np.int16, np.int32, np.int64])
 @pytest.mark.parametrize("func, _, npfunc", [f for f in FUNCTIONS_CONSTANT])
-def test_group_func_axis_1d_labels(func, _, npfunc):
+def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     if npfunc is None:
         pytest.skip("No numpy equivalent")
 
     values = np.arange(5.0)
-    labels = np.arange(5)
+    labels = np.arange(5, dtype=labels_type)
     result = func(values, labels)
     assert_almost_equal(result, values)
 
