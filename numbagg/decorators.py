@@ -47,8 +47,8 @@ T = TypeVar("T", bound="NumbaBase")
 class NumbaBase:
     func: Callable
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, *args, supports_parallel=True):
+        self.target = "parallel" if supports_parallel else "cpu"
 
     @property
     def __name__(self):
@@ -74,9 +74,7 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     """
 
     def __init__(
-        self,
-        func: Callable,
-        signature: list[tuple],
+        self, func: Callable, signature: list[tuple], supports_parallel: bool = True
     ):
         self.func = func
 
@@ -86,6 +84,7 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
                     f"signatures for {self.__class__} must be tuples: {signature}"
                 )
         self.signature = signature
+        super().__init__(supports_parallel=supports_parallel)
 
     @cached_property
     def gufunc(self):
@@ -94,7 +93,7 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
             self.signature,
             gufunc_sig,
             nopython=True,
-            target="parallel",
+            target=self.target,
             # cache=True,
         )
         return vectorize(self.func)
@@ -123,13 +122,11 @@ class ndreduce(NumbaBase):
             return asum
     """
 
-    def __init__(self, func, signature, supports_parallel=True):
+    def __init__(self, func, signature, **kwargs):
         self.func = func
         # NDReduce uses different types than the other funcs, and they seem difficult to
         # type, so ignoring for the moment.
         self.signature: Any = signature
-
-        self.supports_parallel = supports_parallel
 
         for sig in signature:
             if not hasattr(sig, "return_type"):
@@ -145,6 +142,8 @@ class ndreduce(NumbaBase):
                 raise ValueError(
                     f"return type for ndreduce must be a scalar: {signature}"
                 )
+
+        super().__init__(func, signature, **kwargs)
 
     @cached_property
     def transformed_func(self):
@@ -180,10 +179,9 @@ class ndreduce(NumbaBase):
             + (first_sig.return_type,)
         )
 
-        target = "parallel" if self.supports_parallel else "cpu"
         # TODO: can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=target
+            numba_sig, gufunc_sig, nopython=True, target=self.target
         )
         return vectorize(self.transformed_func)
 
@@ -229,8 +227,9 @@ class ndmoving(NumbaBaseSimple):
             (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
+        **kwargs,
     ):
-        super().__init__(func, signature)
+        super().__init__(func, signature, **kwargs)
 
     def __call__(
         self,
@@ -290,8 +289,9 @@ class ndmovingexp(NumbaBaseSimple):
             (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
+        **kwargs,
     ):
-        super().__init__(func, signature)
+        super().__init__(func, signature, **kwargs)
 
     def __call__(
         self,
@@ -343,8 +343,9 @@ class ndfill(NumbaBaseSimple):
             (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
+        **kwargs,
     ):
-        super().__init__(func, signature)
+        super().__init__(func, signature, **kwargs)
 
     def __call__(
         self,
@@ -405,6 +406,8 @@ class groupndreduce(NumbaBase):
 
         self.signature = signature
 
+        super().__init__(func, signature)
+
     @cache
     def _create_gufunc(self, core_ndim):
         # compiling gufuncs has some significant overhead (~130ms per function
@@ -422,7 +425,7 @@ class groupndreduce(NumbaBase):
             numba_sig,
             gufunc_sig,
             nopython=True,
-            target="parallel",
+            target=self.target,
             # cache=True,
         )
         return vectorize(self.func)
@@ -503,10 +506,11 @@ class ndquantile(NumbaBase):
         self,
         func: Callable,
         signature=([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"),
+        **kwargs,
     ):
         self.signature = signature
         self.func = func
-        super().__init__(func, signature)
+        super().__init__(func, signature, **kwargs)
 
     def __call__(
         self,
@@ -552,7 +556,7 @@ class ndquantile(NumbaBase):
         vectorize = numba.guvectorize(
             *self.signature,
             nopython=True,
-            target="parallel",
+            target=self.target,
             # cache=True,
         )
         return vectorize(self.func)
