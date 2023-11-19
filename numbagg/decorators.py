@@ -4,7 +4,6 @@ import abc
 import itertools
 from collections.abc import Iterable
 from functools import cache, cached_property
-from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import numba
