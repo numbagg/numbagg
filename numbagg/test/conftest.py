@@ -225,6 +225,25 @@ def library(request):
     return request.param
 
 
+@pytest.fixture(params=COMPARISONS.keys(), scope="module")
+def func(request):
+    return request.param
+
+
+@pytest.fixture(params=[(3, 1_000)], scope="module")
+def shape(request):
+    return request.param
+
+
+# One disadvantage of having this in a fixture is that pytest keeps it around for the
+# whole test session. So we at least use module scoping so it will keep a single one for
+# all tests.
+@pytest.fixture(scope="module")
+def array(shape):
+    array = np.random.RandomState(0).rand(*shape)
+    return np.where(array > 0.1, array, np.nan)
+
+
 @pytest.fixture(scope="module")
 def func_callable(library, func, array):
     """
@@ -239,11 +258,6 @@ def func_callable(library, func, array):
     except KeyError:
         if library == "bottleneck":
             pytest.skip(f"Bottleneck doesn't support {func}")
-
-
-@pytest.fixture(scope="module")
-def obj(array, setup):
-    return setup(array)
 
 
 @pytest.fixture(autouse=True)

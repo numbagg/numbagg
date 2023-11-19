@@ -4,6 +4,7 @@ import abc
 import itertools
 from collections.abc import Iterable
 from functools import cache, cached_property
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import numba
@@ -49,6 +50,8 @@ class NumbaBase:
 
     def __init__(self, *args, supports_parallel=True):
         self.target = "parallel" if supports_parallel else "cpu"
+        # https://github.com/numba/numba/issues/4807
+        self.cache = False
 
     @property
     def __name__(self):
@@ -94,7 +97,7 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
             gufunc_sig,
             nopython=True,
             target=self.target,
-            # cache=True,
+            cache=self.cache,
         )
         return vectorize(self.func)
 
@@ -341,6 +344,8 @@ class ndfill(NumbaBaseSimple):
         func: Callable,
         signature: list[tuple] = [
             (numba.float64[:], numba.int64, numba.float64[:]),
+            (numba.float64[:], numba.int32, numba.float64[:]),
+            (numba.float32[:], numba.int64, numba.float32[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
         **kwargs,
@@ -426,7 +431,7 @@ class groupndreduce(NumbaBase):
             gufunc_sig,
             nopython=True,
             target=self.target,
-            # cache=True,
+            cache=self.cache,
         )
         return vectorize(self.func)
 
@@ -557,6 +562,6 @@ class ndquantile(NumbaBase):
             *self.signature,
             nopython=True,
             target=self.target,
-            # cache=True,
+            cache=self.cache,
         )
         return vectorize(self.func)
