@@ -3,18 +3,6 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pytest
 
-from .conftest import COMPARISONS
-
-
-@pytest.fixture(
-    params=[
-        f for f in COMPARISONS.keys()  # if f   in [move_exp_nanmean, move_exp_nancount]
-    ],
-    scope="module",
-)
-def func(request):
-    return request.param
-
 
 @pytest.mark.parametrize("library", ["numbagg"], indirect=True)
 def test_multithreading(func_callable):
