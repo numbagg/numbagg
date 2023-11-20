@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import abc
 import itertools
+import logging
+import threading
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, TypeVar
@@ -11,6 +13,8 @@ import numpy as np
 from numba import float64
 
 from .transform import rewrite_ndreduce
+
+logger = logging.getLogger(__name__)
 
 
 def ndim(arg):
@@ -46,9 +50,20 @@ T = TypeVar("T", bound="NumbaBase")
 
 class NumbaBase:
     func: Callable
+    signature: list[tuple]
 
-    def __init__(self, *args, supports_parallel=True):
-        self.target = "parallel" if supports_parallel else "cpu"
+    def __init__(self, func: Callable, supports_parallel: bool = True):
+        self.func = func
+
+        if _is_in_thread_pool():
+            logger.debug(
+                "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure numba doesn't abort. "
+                "If this is restricting to you, we could consider adding support for detecting when OpenMP is installed. "
+                "Please raise an issue at numbagg if this would be valuable."
+            )
+        self.target = (
+            "parallel" if supports_parallel and not _is_in_thread_pool() else "cpu"
+        )
         # https://github.com/numba/numba/issues/4807
         self.cache = False
 
@@ -69,6 +84,31 @@ class NumbaBase:
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
+    def _target(self):
+        if self.target == "cpu":
+            pass
+        elif self.target == "parallel":
+            if _is_in_thread_pool():
+                logger.debug(
+                    "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure we don't abort."
+                )
+            self.target = "cpu"
+        else:
+            raise ValueError(f"Invalid target: {self.target}")
+        return self.target
+
+    @cache
+    def _create_gufunc(self, *, target):
+        gufunc_sig = gufunc_string_signature(self.signature[0])
+        vectorize = numba.guvectorize(
+            self.signature,
+            gufunc_sig,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+        )
+        return vectorize(self.func)
+
 
 class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     """
@@ -78,27 +118,13 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     def __init__(
         self, func: Callable, signature: list[tuple], supports_parallel: bool = True
     ):
-        self.func = func
-
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(
                     f"signatures for {self.__class__} must be tuples: {signature}"
                 )
         self.signature = signature
-        super().__init__(supports_parallel=supports_parallel)
-
-    @cached_property
-    def gufunc(self):
-        gufunc_sig = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
-            self.signature,
-            gufunc_sig,
-            nopython=True,
-            target=self.target,
-            cache=self.cache,
-        )
-        return vectorize(self.func)
+        super().__init__(func=func, supports_parallel=supports_parallel)
 
 
 class ndreduce(NumbaBase):
@@ -145,7 +171,7 @@ class ndreduce(NumbaBase):
                     f"return type for ndreduce must be a scalar: {signature}"
                 )
 
-        super().__init__(func, signature, **kwargs)
+        super().__init__(func=func, **kwargs)
 
     @cached_property
     def transformed_func(self):
@@ -262,7 +288,8 @@ class ndmoving(NumbaBaseSimple):
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        return self.gufunc(*arr, window, min_count, axis=axis, **kwargs)
+        gufunc = self._create_gufunc(target=self._target())
+        return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
 class ndmovingexp(NumbaBaseSimple):
@@ -334,7 +361,8 @@ class ndmovingexp(NumbaBaseSimple):
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            return self.gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
+            gufunc = self._create_gufunc(target=self._target())
+            return gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
 
 
 class ndfill(NumbaBaseSimple):
@@ -363,7 +391,8 @@ class ndfill(NumbaBaseSimple):
             limit = arr.shape[axis]
         if limit < 0:
             raise ValueError(f"`limit` must be positive: {limit}")
-        return self.gufunc(arr, limit, axis=axis, **kwargs)
+        gufunc = self._create_gufunc(target=self._target())
+        return gufunc(arr, limit, axis=axis, **kwargs)
 
 
 class groupndreduce(NumbaBase):
@@ -410,7 +439,7 @@ class groupndreduce(NumbaBase):
 
         self.signature = signature
 
-        super().__init__(func, signature)
+        super().__init__(func=func)
 
     @cache
     def _create_gufunc(self, core_ndim):
@@ -544,7 +573,8 @@ class ndquantile(NumbaBase):
         # - 3rd array is the result array, and returns a final axis for quantiles.
         axes = [-1, -1, -1]
 
-        result = self.gufunc(a, quantiles, axes=axes, **kwargs)
+        gufunc = self._create_gufunc(target=self._target())
+        result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
         result = np.moveaxis(result, -1, 0)
@@ -552,15 +582,21 @@ class ndquantile(NumbaBase):
             result = result.squeeze(axis=0)
         return result
 
-    @cached_property
-    def gufunc(self):
+    @cache
+    def _create_gufunc(self, target):
         # We don't use `NumbaBaseSimple`'s here, because we need to specify different
         # core axes for the two inputs, which it doesn't support.
 
         vectorize = numba.guvectorize(
             *self.signature,
             nopython=True,
-            target=self.target,
+            target=target,
             cache=self.cache,
         )
         return vectorize(self.func)
+
+
+def _is_in_thread_pool():
+    current_thread = threading.current_thread()
+    # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
+    return "ThreadPoolExecutor" in current_thread.name
