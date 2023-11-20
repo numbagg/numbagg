@@ -92,7 +92,7 @@ class NumbaBase:
                 logger.debug(
                     "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure we don't abort."
                 )
-            self.target = "cpu"
+                self.target = "cpu"
         else:
             raise ValueError(f"Invalid target: {self.target}")
         return self.target
