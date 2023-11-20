@@ -220,13 +220,31 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
 }
 
 
-@pytest.fixture(params=["numbagg", "pandas", "bottleneck"], scope="module")
+@pytest.fixture(params=["numbagg"], scope="module")
 def library(request):
+    """By default, limits to numbagg. But can be extended to pandas and bottleneck
+
+    ```
+    @pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck"], indirect=True)
+        def test_func():
+            # ...
+    ```
+
+    """
     return request.param
 
 
 @pytest.fixture(params=COMPARISONS.keys(), scope="module")
 def func(request):
+    """By default, all functions here. But can be limited in a test:
+
+    ```
+    @pytest.mark.parametrize("func", [move_mean], indirect=True)
+        def test_func():
+            # ...
+    ```
+    """
+
     return request.param
 
 

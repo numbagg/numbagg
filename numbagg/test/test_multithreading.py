@@ -1,10 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-import pytest
 
 
-@pytest.mark.parametrize("library", ["numbagg"], indirect=True)
 def test_multithreading(func_callable):
     # Test whether the functions work in a multithreaded context
 
