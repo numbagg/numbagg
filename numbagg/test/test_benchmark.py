@@ -20,7 +20,6 @@ def shape(request):
     return request.param
 
 
-@pytest.mark.parametrize("func", [move_mean], indirect=True)
 @pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck"], indirect=True)
 def test_benchmark_all(benchmark, func, func_callable, shape):
     benchmark.group = f"{func}|{shape}"
