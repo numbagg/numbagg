@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
 
-from numbagg.moving import move_mean
-
 from .. import bfill, ffill
 
 
