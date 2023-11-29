@@ -30,7 +30,7 @@ def rand_array():
     [move_mean, move_sum, move_std, move_var, move_cov, move_corr],
 )
 @pytest.mark.parametrize("window", [10, 50])
-@pytest.mark.parametrize("min_count", [3, None])
+@pytest.mark.parametrize("min_count", [None, 0, 1, 3])
 def test_move_pandas_comp(rand_array, func, window, min_count):
     c = COMPARISONS[func]
     array = rand_array[:3]
@@ -41,6 +41,8 @@ def test_move_pandas_comp(rand_array, func, window, min_count):
     assert_allclose(result, expected_pandas)
 
     if c.get("bottleneck"):
+        if min_count == 0:
+            pytest.skip("bottleneck doesn't support min_count=0")
         expected_bottleneck = c["bottleneck"](
             array, window=window, min_count=min_count
         )()
