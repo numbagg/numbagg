@@ -284,7 +284,7 @@ class ndmoving(NumbaBaseSimple):
                     f"only one axis can be passed to {self.func}; got {axis}"
                 )
             (axis,) = axis
-        if not 0 < window < arr[0].shape[axis]:
+        if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
