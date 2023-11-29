@@ -30,10 +30,13 @@ def rand_array():
     [move_mean, move_sum, move_std, move_var, move_cov, move_corr],
 )
 @pytest.mark.parametrize("window", [10, 50])
-@pytest.mark.parametrize("min_count", [None, 0, 1, 3])
+@pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
 def test_move_pandas_comp(rand_array, func, window, min_count):
     c = COMPARISONS[func]
     array = rand_array[:3]
+
+    if min_count == "window":
+        min_count = window
 
     result = c["numbagg"](array, window=window, min_count=min_count)()
     expected_pandas = c["pandas"](array, window=window, min_count=min_count)()
@@ -54,6 +57,8 @@ def test_move_mean_window(rand_array):
         move_mean(rand_array, window=0.5)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=-1)
+    with pytest.raises(ValueError):
+        move_mean(rand_array, window=rand_array.shape[-1] + 1)
     with pytest.raises(ValueError):
         move_mean(rand_array, window=1, min_count=-1)
 
