@@ -55,14 +55,19 @@ class NumbaBase:
     def __init__(self, func: Callable, supports_parallel: bool = True):
         self.func = func
 
-        if _is_in_thread_pool():
+        if _is_in_unsafe_thread_pool():
             logger.debug(
-                "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure numba doesn't abort. "
-                "If this is restricting to you, we could consider adding support for detecting when OpenMP is installed. "
-                "Please raise an issue at numbagg if this would be valuable."
+                "Numbagg detected that we're in a thread pool with workqueue threading. "
+                "As a result, we're turning off parallel support to ensure numba doesn't abort. "
+                "This will result in lower performance on parallelizable arrays on multi-core systems. "
+                "To enable parallel support, run outside a multithreading context, or install TBB or OpenMP. "
+                "Numbagg won't re-check on every call — restart your python session to reset the check. "
+                "For more details, check out https://numba.readthedocs.io/en/stable/developer/threading_implementation.html#caveats"
             )
         self.target = (
-            "parallel" if supports_parallel and not _is_in_thread_pool() else "cpu"
+            "parallel"
+            if supports_parallel and not _is_in_unsafe_thread_pool()
+            else "cpu"
         )
         # https://github.com/numba/numba/issues/4807
         self.cache = False
@@ -88,7 +93,7 @@ class NumbaBase:
         if self.target == "cpu":
             pass
         elif self.target == "parallel":
-            if _is_in_thread_pool():
+            if _is_in_unsafe_thread_pool():
                 logger.debug(
                     "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure we don't abort."
                 )
@@ -596,7 +601,23 @@ class ndquantile(NumbaBase):
         return vectorize(self.func)
 
 
-def _is_in_thread_pool():
+def _is_in_unsafe_thread_pool() -> bool:
     current_thread = threading.current_thread()
     # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
-    return "ThreadPoolExecutor" in current_thread.name
+    return current_thread.name.startswith(
+        "ThreadPoolExecutor"
+    ) and _thread_backend() in ["workqueue" or None]
+
+
+@cache
+def _thread_backend() -> str | None:
+    from importlib.util import find_spec
+
+    # From https://github.com/numbagg/numbagg/issues/209
+    if find_spec("numba.np.ufunc.tbbpool"):
+        return "tbbpool"
+    if find_spec("numba.np.ufunc.omppool"):
+        return "omppool"
+    if find_spec("numba.np.ufunc.workqueue"):
+        return "workqueue"
+    return None
