@@ -419,7 +419,9 @@ class groupndreduce(NumbaBase):
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
+            # TODO: unsure why this is breaking; ref https://github.com/numbagg/numbagg/issues/211
+            # labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
+            labels_dtypes = (numba.int16, numba.int32, numba.int64)
             if supports_ints:
                 values_dtypes += (numba.int32, numba.int64)
 

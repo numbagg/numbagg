@@ -312,3 +312,13 @@ def test_numeric_int_nanprod():
 
     result = group_nanprod(values, labels)
     assert_almost_equal(result, np.array([-6, 20, 6]))
+
+
+@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+@pytest.mark.parametrize("n", [127, 128, 255, 256, 1000])
+def test_int8(n, dtype):
+    data = np.random.randn(n)
+    assert_almost_equal(
+        np.mean(data),
+        group_nanmean(data, np.zeros((n,), dtype=dtype))[0],
+    )
