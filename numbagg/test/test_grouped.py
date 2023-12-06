@@ -322,3 +322,24 @@ def test_int8(n, dtype):
         np.mean(data),
         group_nanmean(data, np.zeros((n,), dtype=dtype))[0],
     )
+
+
+@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+def test_int8_again(dtype):
+    array = np.array(
+        [
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [2, 2, 2, 2, 2, 3, 3, 3, 3, 3],
+            [4, 4, 4, 4, 4, 5, 5, 5, 5, 5],
+            [6, 6, 6, 6, 6, 7, 7, 7, 7, 7],
+            [8, 8, 8, 8, 8, 9, 9, 9, 9, 10],
+        ],
+    )
+    by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
+
+    expected = pd.DataFrame(array.T).groupby(by).sum().T.astype(dtype)
+
+    # https://github.com/numbagg/numbagg/issues/213
+    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    # Amazingly it can also be more incorrect with another run!
+    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
