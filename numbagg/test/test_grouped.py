@@ -337,10 +337,9 @@ def test_int8_again(dtype):
     )
     by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
 
-    # expected = pd.DataFrame(array.T).groupby(pd.Series(by)).mean().T
     expected = pd.DataFrame(array.T).groupby(by).sum().T.astype(dtype)
 
-    # the first run is wrong
+    # https://github.com/numbagg/numbagg/issues/213
     assert_almost_equal(group_nansum(array, by, axis=-1), expected)
-    # the second is totally bizarre
+    # Amazingly it can also be more incorrect with another run!
     assert_almost_equal(group_nansum(array, by, axis=-1), expected)
