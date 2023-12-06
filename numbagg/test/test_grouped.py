@@ -322,3 +322,25 @@ def test_int8(n, dtype):
         np.mean(data),
         group_nanmean(data, np.zeros((n,), dtype=dtype))[0],
     )
+
+
+@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+def test_int8_again(dtype):
+    array = np.array(
+        [
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [2, 2, 2, 2, 2, 3, 3, 3, 3, 3],
+            [4, 4, 4, 4, 4, 5, 5, 5, 5, 5],
+            [6, 6, 6, 6, 6, 7, 7, 7, 7, 7],
+            [8, 8, 8, 8, 8, 9, 9, 9, 9, 10],
+        ],
+    )
+    by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
+
+    # expected = pd.DataFrame(array.T).groupby(pd.Series(by)).mean().T
+    expected = pd.DataFrame(array.T).groupby(by).sum().T.astype(dtype)
+
+    # the first run is wrong
+    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    # the second is totally bizarre
+    assert_almost_equal(group_nansum(array, by, axis=-1), expected)

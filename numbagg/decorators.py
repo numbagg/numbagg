@@ -495,6 +495,10 @@ class groupndreduce(NumbaBase):
         if values.dtype == np.bool_:
             values = values.astype(np.int32)
 
+        # https://github.com/numbagg/numbagg/issues/211
+        if labels.dtype == np.int8:
+            labels = labels.astype(np.int16)
+
         if num_labels is None:
             num_labels = np.max(labels) + 1
 
