@@ -496,7 +496,7 @@ class groupndreduce(NumbaBase):
         # multiple dimensions, we could refine it down.)
         if np.iinfo(labels.dtype).max < values.size:
             for dtype in [np.int16, np.int32, np.int64]:
-                if np.iinfo(dtype).max >= values.size:  # type: ignore
+                if np.iinfo(dtype).max >= values.size:
                     logger.debug(
                         f"values' size {values.size} is greater than the max of {labels.dtype}. "
                         "We're casting the labels array to a larger dtype to avoid the risk of overflow. "
