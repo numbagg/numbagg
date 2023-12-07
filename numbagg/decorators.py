@@ -54,23 +54,9 @@ class NumbaBase:
 
     def __init__(self, func: Callable, supports_parallel: bool = True):
         self.func = func
-
-        if _is_in_unsafe_thread_pool():
-            logger.debug(
-                "Numbagg detected that we're in a thread pool with workqueue threading. "
-                "As a result, we're turning off parallel support to ensure numba doesn't abort. "
-                "This will result in lower performance on parallelizable arrays on multi-core systems. "
-                "To enable parallel support, run outside a multithreading context, or install TBB or OpenMP. "
-                "Numbagg won't re-check on every call — restart your python session to reset the check. "
-                "For more details, check out https://numba.readthedocs.io/en/stable/developer/threading_implementation.html#caveats"
-            )
-        self.target = (
-            "parallel"
-            if supports_parallel and not _is_in_unsafe_thread_pool()
-            else "cpu"
-        )
         # https://github.com/numba/numba/issues/4807
         self.cache = False
+        self._target_cpu = not supports_parallel
 
     @property
     def __name__(self):
@@ -89,21 +75,27 @@ class NumbaBase:
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
 
-    def _target(self):
-        if self.target == "cpu":
-            pass
-        elif self.target == "parallel":
+    @property
+    def target(self):
+        if self._target_cpu:
+            return "cpu"
+        else:
             if _is_in_unsafe_thread_pool():
                 logger.debug(
-                    "Detected that we're in a thread pool. As a result, we're turning off parallel support to ensure we don't abort."
+                    "Numbagg detected that we're in a thread pool with workqueue threading. "
+                    "As a result, we're turning off parallel support to ensure numba doesn't abort. "
+                    "This will result in lower performance on parallelizable arrays on multi-core systems. "
+                    "To enable parallel support, run outside a multithreading context, or install TBB or OpenMP. "
+                    "Numbagg won't re-check on every call — restart your python session to reset the check. "
+                    "For more details, check out https://numba.readthedocs.io/en/stable/developer/threading_implementation.html#caveats"
                 )
-                self.target = "cpu"
-        else:
-            raise ValueError(f"Invalid target: {self.target}")
-        return self.target
+                self._target_cpu = True
+                return "cpu"
+            else:
+                return "parallel"
 
     @cache
-    def _create_gufunc(self, *, target):
+    def gufunc(self, *, target):
         gufunc_sig = gufunc_string_signature(self.signature[0])
         vectorize = numba.guvectorize(
             self.signature,
@@ -188,7 +180,7 @@ class ndreduce(NumbaBase):
         return vectorize(self.func)
 
     @cache
-    def _create_gufunc(self, core_ndim):
+    def gufunc(self, core_ndim, *, target):
         # creating compiling gufunc has some significant overhead (~130ms per
         # function and number of dimensions to aggregate), so do this in a
         # lazy fashion
@@ -224,13 +216,13 @@ class ndreduce(NumbaBase):
             # returns the right dtype
             # see: https://github.com/numba/numba/issues/1087
             # f = self._jit_func
-            f = self._create_gufunc(arr.ndim)
+            f = self.gufunc(arr.ndim, target=self.target)
         elif isinstance(axis, int):
             arr = np.moveaxis(arr, axis, -1)
-            f = self._create_gufunc(1)
+            f = self.gufunc(1, target=self.target)
         else:
             arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
-            f = self._create_gufunc(len(axis))
+            f = self.gufunc(len(axis), target=self.target)
         return f(arr, *args)
 
 
@@ -293,7 +285,7 @@ class ndmoving(NumbaBaseSimple):
             raise ValueError(f"window not in valid range: {window}")
         if min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        gufunc = self._create_gufunc(target=self._target())
+        gufunc = self.gufunc(target=self.target)
         return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
@@ -366,7 +358,7 @@ class ndmovingexp(NumbaBaseSimple):
         # For the sake of speed, we ignore divide-by-zero and NaN warnings, and test for
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
-            gufunc = self._create_gufunc(target=self._target())
+            gufunc = self.gufunc(target=self.target)
             return gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
 
 
@@ -396,7 +388,7 @@ class ndfill(NumbaBaseSimple):
             limit = arr.shape[axis]
         if limit < 0:
             raise ValueError(f"`limit` must be positive: {limit}")
-        gufunc = self._create_gufunc(target=self._target())
+        gufunc = self.gufunc(target=self.target)
         return gufunc(arr, limit, axis=axis, **kwargs)
 
 
@@ -447,7 +439,7 @@ class groupndreduce(NumbaBase):
         super().__init__(func=func)
 
     @cache
-    def _create_gufunc(self, core_ndim):
+    def gufunc(self, core_ndim):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
         numba_sig = []
@@ -519,7 +511,7 @@ class groupndreduce(NumbaBase):
                     "axis required if values and labels have different "
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
-            gufunc = self._create_gufunc(values.ndim)
+            gufunc = self.gufunc(values.ndim)
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -527,7 +519,7 @@ class groupndreduce(NumbaBase):
                     f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self._create_gufunc(1)
+            gufunc = self.gufunc(1)
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -536,7 +528,7 @@ class groupndreduce(NumbaBase):
                     f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self._create_gufunc(len(axis))
+            gufunc = self.gufunc(len(axis))
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
@@ -596,7 +588,7 @@ class ndquantile(NumbaBase):
         # - 3rd array is the result array, and returns a final axis for quantiles.
         axes = [-1, -1, -1]
 
-        gufunc = self._create_gufunc(target=self._target())
+        gufunc = self.gufunc(target=self.target)
         result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
@@ -606,7 +598,7 @@ class ndquantile(NumbaBase):
         return result
 
     @cache
-    def _create_gufunc(self, target):
+    def gufunc(self, target):
         # We don't use `NumbaBaseSimple`'s here, because we need to specify different
         # core axes for the two inputs, which it doesn't support.
 
@@ -629,13 +621,21 @@ def _is_in_unsafe_thread_pool() -> bool:
 
 @cache
 def _thread_backend() -> str | None:
-    from importlib.util import find_spec
+    # Note that `importlib.util.find_spec` doesn't work for these; it will falsely
+    # return True
 
-    # From https://github.com/numbagg/numbagg/issues/209
-    if find_spec("numba.np.ufunc.tbbpool"):
-        return "tbbpool"
-    if find_spec("numba.np.ufunc.omppool"):
-        return "omppool"
-    if find_spec("numba.np.ufunc.workqueue"):
-        return "workqueue"
-    return None
+    try:
+        from numba.np.ufunc import tbbpool  # noqa
+
+        return "tbb"
+    except ImportError:
+        pass
+
+    try:
+        from numba.np.ufunc import omppool  # noqa
+
+        return "omp"
+    except ImportError:
+        pass
+
+    return "workqueue"

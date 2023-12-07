@@ -78,8 +78,6 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
     msg += "\nInput array:\n%s\n"
     for i, arr in enumerate(arrays(numbagg_func.__name__)):
         for axis in list(range(-arr.ndim, arr.ndim)) + [None]:
-            # if numbagg_func == numbagg.nanquantile:
-            #     breakpoint()
             with np.errstate(invalid="ignore"):
                 desiredraised = False
                 desired_arr = arr.copy()
