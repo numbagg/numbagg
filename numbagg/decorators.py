@@ -419,9 +419,7 @@ class groupndreduce(NumbaBase):
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            # TODO: unsure why this is breaking; ref https://github.com/numbagg/numbagg/issues/211
-            # labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
-            labels_dtypes = (numba.int16, numba.int32, numba.int64)
+            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
             if supports_ints:
                 values_dtypes += (numba.int32, numba.int64)
 
@@ -491,6 +489,23 @@ class groupndreduce(NumbaBase):
                 f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
                 "Please raise an issue if this feature would be particularly helpful."
             )
+        # We need to be careful that we don't overflow `counts` in the grouping
+        # function. So the labels need to be a big enough integer type to hold the
+        # maximum possible count, since we generate the counts array based on the labels
+        # dtype. (We're over-estimating a bit here, because `values` might be over
+        # multiple dimensions, we could refine it down.)
+        if np.iinfo(labels.dtype).max < values.size:
+            for dtype in [np.int16, np.int32, np.int64]:
+                if np.iinfo(dtype).max >= values.size:  # type: ignore
+                    logger.debug(
+                        f"values' size {values.size} is greater than the max of {labels.dtype}. "
+                        "We're casting the labels array to a larger dtype to avoid the risk of overflow. "
+                        "It would be possible to implement this differently, so if the copy is a memory or "
+                        "performance issue, please raise an issue in numbagg, and we can "
+                        "consider approaches to avoid this."
+                    )
+                    labels = labels.astype(dtype)
+                    break
 
         if values.dtype == np.bool_:
             values = values.astype(np.int32)
