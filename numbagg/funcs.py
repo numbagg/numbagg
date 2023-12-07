@@ -199,7 +199,8 @@ def nanquantile(arr, quantile, out):
         indexes[i, 0] = int(np.floor(rank))
         indexes[i, 1] = int(np.ceil(rank))
 
-    # partition sorts but only ensures indexes passed to kth are in the correct positions
+    # `partition` is similar to a `sort`, but only ensures that the indexes passed to
+    # kth are in the correct positions
     unique_indices = np.unique(indexes)
     sorted = np.partition(arr, kth=unique_indices)
 

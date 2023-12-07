@@ -419,9 +419,7 @@ class groupndreduce(NumbaBase):
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            # TODO: unsure why this is breaking; ref https://github.com/numbagg/numbagg/issues/211
-            # labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
-            labels_dtypes = (numba.int16, numba.int32, numba.int64)
+            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
             if supports_ints:
                 values_dtypes += (numba.int32, numba.int64)
 
@@ -492,12 +490,25 @@ class groupndreduce(NumbaBase):
                 "Please raise an issue if this feature would be particularly helpful."
             )
 
+        # We need to be careful that we don't overflow `counts` in the grouping
+        # function. So the labels need to be a big enough integer type to hold the
+        # maximum possible count, since we generate the counts array based on the labels
+        # dtype. (We're over-estimating a bit here, because `values` might be over
+        # multiple dimensions, we could refine it down; would need to consider for
+        # axis being None or a tuple, though.)
+        if np.iinfo(labels.dtype).max < values.size:
+            dtype = np.min_scalar_type(values.size)
+            logger.debug(
+                f"values' size {values.size} is greater than the max of {labels.dtype}. "
+                f"We're casting the labels array to a larger dtype {dtype} to avoid the risk of overflow. "
+                "It would be possible to implement this differently, so if the copy is a memory or "
+                "performance issue, please raise an issue in numbagg, and we can "
+                "consider approaches to avoid this."
+            )
+            labels = labels.astype(dtype)
+
         if values.dtype == np.bool_:
             values = values.astype(np.int32)
-
-        # https://github.com/numbagg/numbagg/issues/211
-        if labels.dtype == np.int8:
-            labels = labels.astype(np.int16)
 
         if num_labels is None:
             num_labels = np.max(labels) + 1
@@ -529,8 +540,9 @@ class groupndreduce(NumbaBase):
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
-        # Different functions optimize with different inits — e.g. `sum` uses 0, while
-        # `prod` uses 1. So we don't initialize here, and instead rely on the function to do so.
+        # Different functions initialize with different values — e.g. `sum` uses 0,
+        # while `prod` uses 1. So we don't initialize with a value here, and instead
+        # rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
         gufunc(values, labels, result)
         return result
