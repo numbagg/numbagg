@@ -495,19 +495,15 @@ class groupndreduce(NumbaBase):
         # dtype. (We're over-estimating a bit here, because `values` might be over
         # multiple dimensions, we could refine it down.)
         if np.iinfo(labels.dtype).max < values.size:
-            for dtype in [np.int16, np.int32, np.int64]:
-                # ignore is I think an issue with numpy typing, doesn't trigger unless
-                # numpy is installed
-                if np.iinfo(dtype).max >= values.size:  # type: ignore
-                    logger.debug(
-                        f"values' size {values.size} is greater than the max of {labels.dtype}. "
-                        "We're casting the labels array to a larger dtype to avoid the risk of overflow. "
-                        "It would be possible to implement this differently, so if the copy is a memory or "
-                        "performance issue, please raise an issue in numbagg, and we can "
-                        "consider approaches to avoid this."
-                    )
-                    labels = labels.astype(dtype)
-                    break
+            dtype = np.min_scalar_type(values.size)
+            logger.debug(
+                f"values' size {values.size} is greater than the max of {labels.dtype}. "
+                f"We're casting the labels array to a larger dtype {dtype} to avoid the risk of overflow. "
+                "It would be possible to implement this differently, so if the copy is a memory or "
+                "performance issue, please raise an issue in numbagg, and we can "
+                "consider approaches to avoid this."
+            )
+            labels = labels.astype(dtype)
 
         if values.dtype == np.bool_:
             values = values.astype(np.int32)
