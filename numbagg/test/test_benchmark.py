@@ -1,5 +1,3 @@
-import importlib
-
 import numpy as np
 import pytest
 
@@ -48,8 +46,6 @@ def test_benchmark_f_bfill(benchmark, func_callable):
 
 @pytest.fixture
 def clear_numba_cache(func):
-    import numbagg
-
     func.gufunc.cache_clear()
 
     yield
