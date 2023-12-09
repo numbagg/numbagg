@@ -413,7 +413,7 @@ class groupndreduce(NumbaBase):
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
             # This slows down compile time by ~1 second, from 1.2 to 2.25 seconds. So we
             # exclude small label types for the moment. This will result in
-            # slower runtime performance for those (I think it'll require a copy). If
+            # slower runtime performance for int8 & int16 labels (I think it'll require a copy). If
             # numba does https://github.com/numba/numba/issues/9339, then we'd get this
             # all for free.
             #
