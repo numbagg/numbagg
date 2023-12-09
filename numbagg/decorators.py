@@ -10,7 +10,6 @@ from typing import Any, Callable, TypeVar
 
 import numba
 import numpy as np
-from numba import float64
 
 from .transform import rewrite_ndreduce
 
@@ -50,7 +49,7 @@ T = TypeVar("T", bound="NumbaBase")
 
 class NumbaBase:
     func: Callable
-    signature: list[tuple]
+    signature: Any
 
     def __init__(self, func: Callable, supports_parallel: bool = True):
         self.func = func
@@ -109,8 +108,11 @@ class NumbaBase:
 
 class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     """
-    Decorators which don't do any rewriting (all except the reduction functions)
+    Decorators which don't do any rewriting and all operands share core dims (all except
+    the reduction functions + quantiles)
     """
+
+    signature: list[tuple]
 
     def __init__(
         self, func: Callable, signature: list[tuple], supports_parallel: bool = True
@@ -204,7 +206,7 @@ class ndreduce(NumbaBase):
             + (first_sig.return_type,)
         )
 
-        # TODO: can't use `cache=True` because of the dynamic ast transformation
+        # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
             numba_sig, gufunc_sig, nopython=True, target=self.target
         )
@@ -553,12 +555,11 @@ class ndquantile(NumbaBase):
     def __init__(
         self,
         func: Callable,
-        signature=([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"),
+        signature: tuple[list[tuple], str],
         **kwargs,
     ):
         self.signature = signature
-        self.func = func
-        super().__init__(func, signature, **kwargs)
+        super().__init__(func, **kwargs)
 
     def __call__(
         self,
@@ -603,6 +604,10 @@ class ndquantile(NumbaBase):
         # core axes for the two inputs, which it doesn't support.
 
         vectorize = numba.guvectorize(
+            # For nanquantile, `self.signature` is a tuple of both the "`float64`" and
+            # the "`(n),(m)->(m)`" parts, because it has different core dims for its
+            # operands, so doesn't work with the standard `gufunc_string_signature`
+            # function.
             *self.signature,
             nopython=True,
             target=target,

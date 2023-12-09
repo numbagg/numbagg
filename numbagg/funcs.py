@@ -180,7 +180,7 @@ def nanmin(a):
     return amin
 
 
-@ndquantile.wrap(signature=([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
+@ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
 def nanquantile(arr, quantile, out):
     # valid (non NaN) observations
     valid_obs = np.sum(np.isfinite(arr))

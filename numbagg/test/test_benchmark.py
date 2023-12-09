@@ -42,3 +42,15 @@ def test_benchmark_f_bfill(benchmark, func_callable):
         rounds=100,
         iterations=10,
     )
+
+
+@pytest.fixture
+def clear_numba_cache(func):
+    func.gufunc.cache_clear()
+
+    yield
+
+
+@pytest.mark.parametrize("shape", [(1, 20)], indirect=True)
+def test_benchmark_compile(benchmark, clear_numba_cache, func_callable):
+    benchmark.pedantic(func_callable, warmup_rounds=0, rounds=1, iterations=1)
