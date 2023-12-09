@@ -1,3 +1,5 @@
+import importlib
+
 import numpy as np
 import pytest
 
@@ -42,3 +44,24 @@ def test_benchmark_f_bfill(benchmark, func_callable):
         rounds=100,
         iterations=10,
     )
+
+
+@pytest.fixture
+def clear_numba_cache(func):
+    import numbagg
+
+    func.gufunc.cache_clear()
+    importlib.reload(numbagg)
+
+    yield
+
+
+@pytest.mark.parametrize("shape", [(1, 20)], indirect=True)
+def test_benchmark_compile(benchmark, clear_numba_cache, func_callable):
+    def foo():
+        try:
+            func_callable()
+        except Exception:
+            pass
+
+    benchmark.pedantic(foo, warmup_rounds=0, rounds=1, iterations=1)
