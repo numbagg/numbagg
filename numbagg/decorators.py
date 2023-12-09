@@ -370,8 +370,6 @@ class ndfill(NumbaBaseSimple):
         func: Callable,
         signature: list[tuple] = [
             (numba.float64[:], numba.int64, numba.float64[:]),
-            (numba.float64[:], numba.int32, numba.float64[:]),
-            (numba.float32[:], numba.int64, numba.float32[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
         **kwargs,
@@ -413,7 +411,17 @@ class groupndreduce(NumbaBase):
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
+            # This slows down compile time by ~1 second, from 1.2 to 2.25 seconds. So we
+            # exclude small label types for the moment. This will result in
+            # slower runtime performance for those (I think it'll require a copy). If
+            # numba does https://github.com/numba/numba/issues/9339, then we'd get this
+            # all for free.
+            #
+            # We've done this throughout the library, although only left a lengthy
+            # comment on this function.
+            #
+            # labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
+            labels_dtypes = (numba.int32, numba.int64)
             if supports_ints:
                 values_dtypes += (numba.int32, numba.int64)
 
