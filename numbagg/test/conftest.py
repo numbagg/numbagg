@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from numbagg import group_nanall, group_nanmean
+from numbagg import group_nanmean
 
 from .. import (
     bfill,
