@@ -10,7 +10,6 @@ from typing import Any, Callable, TypeVar
 
 import numba
 import numpy as np
-from numba import float64
 
 from .transform import rewrite_ndreduce
 
