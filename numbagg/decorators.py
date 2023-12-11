@@ -208,7 +208,7 @@ class ndreduce(NumbaBase):
 
         # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=self.target
+            numba_sig, gufunc_sig, nopython=True, target=target
         )
         return vectorize(self.transformed_func)
 
@@ -441,7 +441,7 @@ class groupndreduce(NumbaBase):
         super().__init__(func=func)
 
     @cache
-    def gufunc(self, core_ndim):
+    def gufunc(self, core_ndim, *, target):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
         numba_sig = []
@@ -457,7 +457,7 @@ class groupndreduce(NumbaBase):
             numba_sig,
             gufunc_sig,
             nopython=True,
-            target=self.target,
+            target=target,
             cache=self.cache,
         )
         return vectorize(self.func)
@@ -507,13 +507,15 @@ class groupndreduce(NumbaBase):
         if num_labels is None:
             num_labels = np.max(labels) + 1
 
+        target = self.target
+
         if axis is None:
             if values.shape != labels.shape:
                 raise ValueError(
                     "axis required if values and labels have different "
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
-            gufunc = self.gufunc(values.ndim)
+            gufunc = self.gufunc(values.ndim, target=target)
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -521,7 +523,7 @@ class groupndreduce(NumbaBase):
                     f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(1)
+            gufunc = self.gufunc(1, target=target)
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -530,7 +532,7 @@ class groupndreduce(NumbaBase):
                     f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self.gufunc(len(axis))
+            gufunc = self.gufunc(len(axis), target=target)
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
@@ -599,7 +601,7 @@ class ndquantile(NumbaBase):
         return result
 
     @cache
-    def gufunc(self, target):
+    def gufunc(self, *, target):
         # We don't use `NumbaBaseSimple`'s here, because we need to specify different
         # core axes for the two inputs, which it doesn't support.
 
