@@ -12,6 +12,7 @@ import pytest
 from .. import (
     bfill,
     ffill,
+    group_nanmean,
     move_corr,
     move_cov,
     # move_count,
@@ -206,7 +207,18 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         .T,
         numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
         numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
-    )
+    ),
+    group_nanmean: dict(
+        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a)
+        .T.groupby(np.random.randint(0, 12, a.size))
+        .T,
+        # TODO: make this into a func so we use it for all groupby funcs, and make it unchanging
+        numbagg=lambda a, **kwargs: lambda: group_nanmean(
+            a,
+            np.random.randint(0, 12, size=a.shape),
+            **kwargs,
+        ),
+    ),
     # move_count: dict(
     #     pandas=dict(
     #         setup=pandas_move_setup,
