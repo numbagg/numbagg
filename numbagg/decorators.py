@@ -428,7 +428,7 @@ class groupndreduce(NumbaBase):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
             if len(sig) != 3:
                 raise TypeError(
-                    "signature has wrong number of argument != 3: " f"{signature}"
+                    "signature has wrong number of arguments != 3: " f"{signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
