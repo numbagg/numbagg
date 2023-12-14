@@ -375,7 +375,7 @@ def func_callable(library, func, array):
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
     if (
-        len(array.shape) > 2
+        len(array.shape) > 1
         and library == "numbagg"
         and not getattr(func, "supports_nd", True)
     ):
