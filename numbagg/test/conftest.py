@@ -272,11 +272,11 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numbagg=partial(numbagg_group_setup, group_nanany),
     ),
     group_nanargmax: dict(
-        pandas=partial(pandas_group_setup, "argmax"),
+        pandas=partial(pandas_group_setup, "idxmax"),
         numbagg=partial(numbagg_group_setup, group_nanargmax),
     ),
     group_nanargmin: dict(
-        pandas=partial(pandas_group_setup, "argmin"),
+        pandas=partial(pandas_group_setup, "idxmin"),
         numbagg=partial(numbagg_group_setup, group_nanargmin),
     ),
     group_nancount: dict(
