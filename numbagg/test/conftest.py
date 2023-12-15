@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from functools import partial
+from functools import cache, partial
 from typing import Callable
 
 import bottleneck as bn
@@ -12,7 +12,21 @@ import pytest
 from .. import (
     bfill,
     ffill,
+    group_nanall,
+    group_nanany,
+    group_nanargmax,
+    group_nanargmin,
+    group_nancount,
+    group_nanfirst,
+    group_nanlast,
+    group_nanmax,
     group_nanmean,
+    group_nanmin,
+    group_nanprod,
+    group_nanstd,
+    group_nansum,
+    group_nansum_of_squares,
+    group_nanvar,
     move_corr,
     move_cov,
     # move_count,
@@ -80,6 +94,31 @@ def pandas_move_2_array_setup(func, a, window=20, min_count=None):
 def numbagg_two_array_setup(func, a, **kwargs):
     a1, a2 = two_array_setup(a)
     return partial(func, a1, a2, **kwargs)
+
+
+@cache
+def generate_labels(size):
+    # TODO: could make this a few different settings:
+    # - high cardinality
+    # - low cardinality
+    # - skewed
+    # - missing values
+    np.random.seed(0)
+    return np.random.randint(0, 12, size=size)
+
+
+def numbagg_group_setup(func, a, **kwargs):
+    np.random.seed(0)
+    return partial(func, a, generate_labels(a.shape), **kwargs)
+
+
+def pandas_group_setup(func_name, a, **kwargs):
+    return lambda: (
+        pd.DataFrame(a)
+        .T.groupby(pd.Series(generate_labels(a.shape[-1])))
+        .pipe(lambda x: getattr(x, func_name)())
+        .T
+    )
 
 
 # Parameterization of tests and benchmarks
@@ -209,16 +248,70 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
     ),
     group_nanmean: dict(
-        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a)
-        .T.groupby(np.random.randint(0, 12, a.size))
-        .T,
-        # TODO: make this into a func so we use it for all groupby funcs, and make it unchanging
-        numbagg=lambda a, **kwargs: lambda: group_nanmean(
-            a,
-            np.random.randint(0, 12, size=a.shape),
-            **kwargs,
-        ),
+        pandas=partial(pandas_group_setup, "mean"),
+        numbagg=partial(numbagg_group_setup, group_nanmean),
     ),
+    group_nansum: dict(
+        pandas=partial(pandas_group_setup, "sum"),
+        numbagg=partial(numbagg_group_setup, group_nansum),
+    ),
+    group_nanvar: dict(
+        pandas=partial(pandas_group_setup, "var"),
+        numbagg=partial(numbagg_group_setup, group_nanvar),
+    ),
+    group_nanstd: dict(
+        pandas=partial(pandas_group_setup, "std"),
+        numbagg=partial(numbagg_group_setup, group_nanstd),
+    ),
+    group_nanall: dict(
+        pandas=partial(pandas_group_setup, "all"),
+        numbagg=partial(numbagg_group_setup, group_nanall),
+    ),
+    group_nanany: dict(
+        pandas=partial(pandas_group_setup, "any"),
+        numbagg=partial(numbagg_group_setup, group_nanany),
+    ),
+    group_nanargmax: dict(
+        pandas=partial(pandas_group_setup, "idxmax"),
+        numbagg=partial(numbagg_group_setup, group_nanargmax),
+    ),
+    group_nanargmin: dict(
+        pandas=partial(pandas_group_setup, "idxmin"),
+        numbagg=partial(numbagg_group_setup, group_nanargmin),
+    ),
+    group_nancount: dict(
+        pandas=partial(pandas_group_setup, "count"),
+        numbagg=partial(numbagg_group_setup, group_nancount),
+    ),
+    group_nanfirst: dict(
+        pandas=partial(pandas_group_setup, "first"),
+        numbagg=partial(numbagg_group_setup, group_nanfirst),
+    ),
+    group_nanlast: dict(
+        pandas=partial(pandas_group_setup, "last"),
+        numbagg=partial(numbagg_group_setup, group_nanlast),
+    ),
+    group_nanmax: dict(
+        pandas=partial(pandas_group_setup, "max"),
+        numbagg=partial(numbagg_group_setup, group_nanmax),
+    ),
+    group_nanmin: dict(
+        pandas=partial(pandas_group_setup, "min"),
+        numbagg=partial(numbagg_group_setup, group_nanmin),
+    ),
+    group_nanprod: dict(
+        pandas=partial(pandas_group_setup, "prod"),
+        numbagg=partial(numbagg_group_setup, group_nanprod),
+    ),
+    group_nansum_of_squares: dict(
+        pandas=lambda a: (
+            pd.DataFrame(a)
+            .T.pipe(lambda x: x**2)
+            .groupby(pd.Series(generate_labels(a.shape[-1])))
+            .sum
+        ),
+        numbagg=partial(numbagg_group_setup, group_nansum_of_squares),
+    )
     # move_count: dict(
     #     pandas=dict(
     #         setup=pandas_move_setup,
@@ -281,6 +374,12 @@ def func_callable(library, func, array):
     """
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
+    if (
+        len(array.shape) > 1
+        and library == "numbagg"
+        and not getattr(func, "supports_nd", True)
+    ):
+        pytest.skip(f"{func} doesn't support nd")
     try:
         callable_ = COMPARISONS[func][library](array)
         assert callable(callable_)
