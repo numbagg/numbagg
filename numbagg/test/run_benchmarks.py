@@ -32,6 +32,7 @@ def run():
                 "pytest",
                 "numbagg/test/test_benchmark.py",
                 "-k=test_benchmark_main",
+                "--benchmark-enable",
                 "--benchmark-only",
                 "--run-nightly",
                 f"--benchmark-json={json_path}",
