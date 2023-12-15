@@ -112,14 +112,14 @@ def run():
 
     # Take the biggest of each of 2D or >2D
     summary_1d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 0]  # type: ignore
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 0]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
         .drop(columns=("size"))
     )
     summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]  # type: ignore
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
@@ -134,7 +134,7 @@ def run():
             df = df.drop(columns="shape")
         else:
             shape = None
-        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore
+        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
         markdown_table = tabulate(
             values,
             headers=df.columns,
