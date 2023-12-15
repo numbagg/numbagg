@@ -161,7 +161,7 @@ def test_group_pandas_comp(array, func):
     c = COMPARISONS[func]
 
     result = c["numbagg"](array)()
-    expected_pandas = c["pandas"](array)().squeeze().values
+    expected_pandas = c["pandas"](array)().values
 
     assert_allclose(result, expected_pandas)
 

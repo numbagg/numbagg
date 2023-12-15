@@ -31,7 +31,9 @@ def run():
             [
                 "pytest",
                 "numbagg/test/test_benchmark.py",
+                "-k=test_benchmark_main",
                 "--benchmark-only",
+                "--run-nightly",
                 f"--benchmark-json={json_path}",
             ],
             check=True,
@@ -109,15 +111,15 @@ def run():
     full = df.assign(func=lambda x: x["func"].where(lambda x: ~x.duplicated(), ""))
 
     # Take the biggest of each of 2D or >2D
-    summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]
+    summary_1d = (
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 0]  # type: ignore
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
         .drop(columns=("size"))
     )
-    summary_nd = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) > 1]
+    summary_2d = (
+        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]  # type: ignore
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
@@ -125,14 +127,14 @@ def run():
     )
 
     text = ""
-    for title, df in (("2D", summary_2d), ("ND", summary_nd), ("All", full)):
+    for title, df in (("1D", summary_1d), ("2D", summary_2d), ("All", full)):
         shapes = df["shape"].unique()
         if len(shapes) == 1:
             shape = shapes[0]
             df = df.drop(columns="shape")
         else:
             shape = None
-        values = df.to_dict(index=False, orient="split")["data"]
+        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore
         markdown_table = tabulate(
             values,
             headers=df.columns,

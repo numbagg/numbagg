@@ -472,6 +472,12 @@ class groupndreduce(NumbaBase):
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
+
+        if labels.dtype.kind not in "i":
+            raise TypeError(
+                "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
+            )
+
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at

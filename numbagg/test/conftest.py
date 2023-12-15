@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 from functools import cache, partial
 from typing import Callable
@@ -109,16 +110,43 @@ def generate_labels(size):
 
 def numbagg_group_setup(func, a, **kwargs):
     np.random.seed(0)
-    return partial(func, a, generate_labels(a.shape), **kwargs)
+    # For benchmarking, it's fair to factorize the labels — otherwise pandas has to do
+    # the work but numbagg doesn't.
+    labels = generate_labels(a.shape[-1])
+
+    @functools.wraps(func)
+    def with_factorization(*args, axis=-1, **kwargs):
+        # labels_factorized, _ = pd.factorize(labels=labels)
+        # codes, uniques = pd.factorize(labels)
+        codes, uniques = pd.factorize(labels, sort=True)
+        labels_reshaped = codes  # .reshape(labels.shape).astype(labels.dtype)
+        result = func(
+            *args, **kwargs, labels=labels_reshaped, num_labels=len(uniques), axis=axis
+        )
+        # TODO: what do we do to avoid having `sort=True`?
+        # return uniques[result]
+        return result
+
+    return partial(with_factorization, a, **kwargs)
 
 
-def pandas_group_setup(func_name, a, **kwargs):
-    return lambda: (
-        pd.DataFrame(a)
-        .T.groupby(pd.Series(generate_labels(a.shape[-1])))
-        .pipe(lambda x: getattr(x, func_name)())
-        .T
-    )
+def pandas_group_setup(func_name, a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: (df.groupby(labels).pipe(lambda x: getattr(x, func_name)()).T)
+
+
+def pandas_nan_sum_of_squares_setup(a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: df.pipe(lambda x: x**2).groupby(labels).sum().T
+
+
+def _df_of_array(a):
+    if len(a.shape) == 1:
+        return pd.DataFrame(a)
+    elif len(a.shape) == 2:
+        return pd.DataFrame(a).T
 
 
 # Parameterization of tests and benchmarks
@@ -304,12 +332,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numbagg=partial(numbagg_group_setup, group_nanprod),
     ),
     group_nansum_of_squares: dict(
-        pandas=lambda a: (
-            pd.DataFrame(a)
-            .T.pipe(lambda x: x**2)
-            .groupby(pd.Series(generate_labels(a.shape[-1])))
-            .sum
-        ),
+        pandas=pandas_nan_sum_of_squares_setup,
         numbagg=partial(numbagg_group_setup, group_nansum_of_squares),
     )
     # move_count: dict(
