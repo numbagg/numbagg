@@ -42,7 +42,7 @@ def run():
         )
 
     json = jq.compile(
-        '.benchmarks[] | select(.name | index("test_benchmark_all[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
+        '.benchmarks[] | select(.name | index("test_benchmark_main[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())
@@ -114,14 +114,14 @@ def run():
 
     # Take the biggest of each of 2D or >2D
     summary_1d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 0]  # type: ignore[unused-ignore,call-overload]
+        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 0]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
         .drop(columns=("size"))
     )
     summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]  # type: ignore[unused-ignore,call-overload]
+        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 1]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
