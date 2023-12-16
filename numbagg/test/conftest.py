@@ -66,7 +66,7 @@ def two_array_setup(a):
 
 def pandas_ewm_2_array_setup(func, a, alpha=0.5):
     a1, a2 = two_array_setup(a)
-    df1, df2 = pd.DataFrame(a1).T.ewm(alpha=alpha), pd.DataFrame(a2).T
+    df1, df2 = _df_of_array(a1).ewm(alpha=alpha), _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
