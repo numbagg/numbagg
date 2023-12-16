@@ -259,14 +259,12 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     ffill: dict(
         pandas=lambda a, **kwargs: lambda: _df_of_array(a).ffill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(ffill, a, **kwargs),
-        bottleneck=lambda a, **kwargs: partial(bn.push, a, **kwargs),
+        bottleneck=lambda a, limit: partial(bn.push, a, limit),
     ),
     bfill: dict(
         pandas=lambda a, **kwargs: lambda: _df_of_array(a).bfill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(bfill, a, **kwargs),
-        bottleneck=lambda a, **kwargs: lambda: bn.push(a[..., ::-1], **kwargs)[
-            ..., ::-1
-        ],
+        bottleneck=lambda a, limit: lambda: bn.push(a[..., ::-1], limit)[..., ::-1],
     ),
     nanquantile: dict(
         pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a)
