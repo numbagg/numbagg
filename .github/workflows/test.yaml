@@ -48,7 +48,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest
+          python -m pytest -W error
 
   benchmark:
     runs-on: ubuntu-latest
