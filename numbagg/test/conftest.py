@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 from functools import cache, partial
 from typing import Callable
@@ -54,7 +55,7 @@ from .. import (
 
 
 def pandas_ewm_setup(func, a, alpha=0.5):
-    df = pd.DataFrame(a).T.ewm(alpha=alpha)
+    df = _df_of_array(a).ewm(alpha=alpha)
     return lambda: func(df)
 
 
@@ -65,7 +66,7 @@ def two_array_setup(a):
 
 def pandas_ewm_2_array_setup(func, a, alpha=0.5):
     a1, a2 = two_array_setup(a)
-    df1, df2 = pd.DataFrame(a1).T.ewm(alpha=alpha), pd.DataFrame(a2).T
+    df1, df2 = _df_of_array(a1).ewm(alpha=alpha), _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
@@ -75,19 +76,19 @@ def numbagg_ewm_2_array_setup(func, a, alpha=0.5):
 
 
 def pandas_ewm_nancount_setup(a, alpha=0.5):
-    df = pd.DataFrame(a).T
+    df = _df_of_array(a)
     return lambda: df.notnull().ewm(alpha=alpha).sum().T
 
 
 def pandas_move_setup(func, a, window=20, min_count=None):
-    df = pd.DataFrame(a).T.rolling(window=window, min_periods=min_count)
+    df = _df_of_array(a).rolling(window=window, min_periods=min_count)
     return partial(func, df)
 
 
 def pandas_move_2_array_setup(func, a, window=20, min_count=None):
     a1, a2 = two_array_setup(a)
-    df1 = pd.DataFrame(a1).T.rolling(window=window, min_periods=min_count)
-    df2 = pd.DataFrame(a2).T
+    df1 = _df_of_array(a1).rolling(window=window, min_periods=min_count)
+    df2 = _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
@@ -109,16 +110,39 @@ def generate_labels(size):
 
 def numbagg_group_setup(func, a, **kwargs):
     np.random.seed(0)
-    return partial(func, a, generate_labels(a.shape), **kwargs)
+    # For benchmarking, it's fair to factorize the labels — otherwise pandas has to do
+    # the work but numbagg doesn't.
+    labels = generate_labels(a.shape[-1])
+
+    @functools.wraps(func)
+    def with_factorization(*args, axis=-1, **kwargs):
+        # TODO: is it possible to avoid `sort=True`? I don't think so...
+        # `result.take(uniques, axis=axis)` indexes the wrong way — we want to use the
+        # position of `uniques` in `codes` to index `result`...`
+        codes, uniques = pd.factorize(labels, sort=True)
+        result = func(*args, **kwargs, labels=codes, num_labels=len(uniques), axis=axis)
+        return result
+
+    return partial(with_factorization, a, **kwargs)
 
 
-def pandas_group_setup(func_name, a, **kwargs):
-    return lambda: (
-        pd.DataFrame(a)
-        .T.groupby(pd.Series(generate_labels(a.shape[-1])))
-        .pipe(lambda x: getattr(x, func_name)())
-        .T
-    )
+def pandas_group_setup(func_name, a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: (df.groupby(labels).pipe(lambda x: getattr(x, func_name)()).T)
+
+
+def pandas_nan_sum_of_squares_setup(a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: df.pipe(lambda x: x**2).groupby(labels).sum().T
+
+
+def _df_of_array(a):
+    if len(a.shape) == 1:
+        return pd.DataFrame(a)
+    elif len(a.shape) == 2:
+        return pd.DataFrame(a).T
 
 
 # Parameterization of tests and benchmarks
@@ -229,20 +253,20 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         ),
     ),
     ffill: dict(
-        pandas=lambda a, limit=None: lambda: pd.DataFrame(a).T.ffill(limit=limit).T,
+        pandas=lambda a, **kwargs: lambda: _df_of_array(a).ffill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(ffill, a, **kwargs),
         bottleneck=lambda a, limit=None: partial(bn.push, a, limit),
     ),
     bfill: dict(
-        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a).T.bfill(**kwargs).T,
+        pandas=lambda a, **kwargs: lambda: _df_of_array(a).bfill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(bfill, a, **kwargs),
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1
         ],
     ),
     nanquantile: dict(
-        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: pd.DataFrame(a)
-        .T.quantile(quantiles)
+        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a)
+        .quantile(quantiles)
         .T,
         numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
         numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
@@ -304,12 +328,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numbagg=partial(numbagg_group_setup, group_nanprod),
     ),
     group_nansum_of_squares: dict(
-        pandas=lambda a: (
-            pd.DataFrame(a)
-            .T.pipe(lambda x: x**2)
-            .groupby(pd.Series(generate_labels(a.shape[-1])))
-            .sum
-        ),
+        pandas=pandas_nan_sum_of_squares_setup,
         numbagg=partial(numbagg_group_setup, group_nansum_of_squares),
     )
     # move_count: dict(

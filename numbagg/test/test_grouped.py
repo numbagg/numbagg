@@ -161,7 +161,7 @@ def test_group_pandas_comp(array, func):
     c = COMPARISONS[func]
 
     result = c["numbagg"](array)()
-    expected_pandas = c["pandas"](array)().squeeze().values
+    expected_pandas = c["pandas"](array)().values
 
     assert_allclose(result, expected_pandas)
 
@@ -382,3 +382,37 @@ def test_int8_again(dtype):
     assert_almost_equal(group_nansum(array, by, axis=-1), expected)
     # Amazingly it can also be more incorrect with another run!
     assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+
+
+def test_dimensionality():
+    func = group_nansum
+
+    values = np.arange(6)
+    labels = np.arange(6)
+
+    result = func(values, labels)
+    assert result.shape == (6,)
+
+    result = func(values, labels, axis=-1)
+    assert result.shape == (6,)
+
+    result = func(values.reshape(1, 6), labels, axis=-1)
+    assert result.shape == (1, 6)
+
+    with pytest.raises(ValueError):
+        func(values.reshape(1, 6), labels)
+
+    values = np.arange(24).reshape(6, 4)
+    labels = np.arange(4)
+
+    result = func(values, labels, axis=-1)
+    assert result.shape == (6, 4)
+
+    result = func(values.reshape(1, 6, 4), labels, axis=-1)
+    assert result.shape == (1, 6, 4)
+
+    result = func(values.reshape(1, 6, 2, 2), labels.reshape(2, 2), axis=(-1, -2))
+    assert result.shape == (1, 6, 4)
+
+    with pytest.raises(ValueError):
+        func(values, labels)
