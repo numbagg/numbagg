@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import functools
 import logging
-from functools import partial
+from functools import cache, partial
 from typing import Callable
 
 import bottleneck as bn
@@ -14,6 +15,21 @@ from numbagg import group_nanmean
 from .. import (
     bfill,
     ffill,
+    group_nanall,
+    group_nanany,
+    group_nanargmax,
+    group_nanargmin,
+    group_nancount,
+    group_nanfirst,
+    group_nanlast,
+    group_nanmax,
+    group_nanmean,
+    group_nanmin,
+    group_nanprod,
+    group_nanstd,
+    group_nansum,
+    group_nansum_of_squares,
+    group_nanvar,
     move_corr,
     move_cov,
     # move_count,
@@ -41,7 +57,7 @@ from .. import (
 
 
 def pandas_ewm_setup(func, a, alpha=0.5):
-    df = pd.DataFrame(a).T.ewm(alpha=alpha)
+    df = _df_of_array(a).ewm(alpha=alpha)
     return lambda: func(df)
 
 
@@ -52,7 +68,7 @@ def two_array_setup(a):
 
 def pandas_ewm_2_array_setup(func, a, alpha=0.5):
     a1, a2 = two_array_setup(a)
-    df1, df2 = pd.DataFrame(a1).T.ewm(alpha=alpha), pd.DataFrame(a2).T
+    df1, df2 = _df_of_array(a1).ewm(alpha=alpha), _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
@@ -62,25 +78,75 @@ def numbagg_ewm_2_array_setup(func, a, alpha=0.5):
 
 
 def pandas_ewm_nancount_setup(a, alpha=0.5):
-    df = pd.DataFrame(a).T
+    df = _df_of_array(a)
     return lambda: df.notnull().ewm(alpha=alpha).sum().T
 
 
 def pandas_move_setup(func, a, window=20, min_count=None):
-    df = pd.DataFrame(a).T.rolling(window=window, min_periods=min_count)
+    df = _df_of_array(a).rolling(window=window, min_periods=min_count)
     return partial(func, df)
 
 
 def pandas_move_2_array_setup(func, a, window=20, min_count=None):
     a1, a2 = two_array_setup(a)
-    df1 = pd.DataFrame(a1).T.rolling(window=window, min_periods=min_count)
-    df2 = pd.DataFrame(a2).T
+    df1 = _df_of_array(a1).rolling(window=window, min_periods=min_count)
+    df2 = _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
 def numbagg_two_array_setup(func, a, **kwargs):
     a1, a2 = two_array_setup(a)
     return partial(func, a1, a2, **kwargs)
+
+
+@cache
+def generate_labels(size):
+    # TODO: could make this a few different settings:
+    # - high cardinality
+    # - low cardinality
+    # - skewed
+    # - missing values
+    np.random.seed(0)
+    return np.random.randint(0, 12, size=size)
+
+
+def numbagg_group_setup(func, a, **kwargs):
+    np.random.seed(0)
+    # For benchmarking, it's fair to factorize the labels — otherwise pandas has to do
+    # the work but numbagg doesn't.
+    labels = generate_labels(a.shape[-1])
+
+    @functools.wraps(func)
+    def with_factorization(*args, axis=-1, **kwargs):
+        codes, uniques = pd.factorize(labels, sort=True)
+        labels_reshaped = codes
+        result = func(
+            *args, **kwargs, labels=labels_reshaped, num_labels=len(uniques), axis=axis
+        )
+        # TODO: what do we do to avoid having `sort=True`?
+        # return uniques[result]
+        return result
+
+    return partial(with_factorization, a, **kwargs)
+
+
+def pandas_group_setup(func_name, a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: (df.groupby(labels).pipe(lambda x: getattr(x, func_name)()).T)
+
+
+def pandas_nan_sum_of_squares_setup(a):
+    labels = generate_labels(a.shape[-1])
+    df = _df_of_array(a)
+    return lambda: df.pipe(lambda x: x**2).groupby(labels).sum().T
+
+
+def _df_of_array(a):
+    if len(a.shape) == 1:
+        return pd.DataFrame(a)
+    elif len(a.shape) == 2:
+        return pd.DataFrame(a).T
 
 
 # Parameterization of tests and benchmarks
@@ -191,35 +257,84 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         ),
     ),
     ffill: dict(
-        pandas=lambda a, limit=None: lambda: pd.DataFrame(a).T.ffill(limit=limit).T,
+        pandas=lambda a, **kwargs: lambda: _df_of_array(a).ffill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(ffill, a, **kwargs),
         bottleneck=lambda a, limit=None: partial(bn.push, a, limit),
     ),
     bfill: dict(
-        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a).T.bfill(**kwargs).T,
+        pandas=lambda a, **kwargs: lambda: _df_of_array(a).bfill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(bfill, a, **kwargs),
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1
         ],
     ),
     nanquantile: dict(
-        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: pd.DataFrame(a)
-        .T.quantile(quantiles)
+        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a)
+        .quantile(quantiles)
         .T,
         numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
         numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
     ),
     group_nanmean: dict(
-        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a)
-        .T.groupby(np.random.randint(0, 12, a.size))
-        .T,
-        # TODO: make this into a func so we use it for all groupby funcs, and make it unchanging
-        numbagg=lambda a, **kwargs: lambda: group_nanmean(
-            a,
-            np.random.randint(0, 12, size=a.shape),
-            **kwargs,
-        ),
+        pandas=partial(pandas_group_setup, "mean"),
+        numbagg=partial(numbagg_group_setup, group_nanmean),
     ),
+    group_nansum: dict(
+        pandas=partial(pandas_group_setup, "sum"),
+        numbagg=partial(numbagg_group_setup, group_nansum),
+    ),
+    group_nanvar: dict(
+        pandas=partial(pandas_group_setup, "var"),
+        numbagg=partial(numbagg_group_setup, group_nanvar),
+    ),
+    group_nanstd: dict(
+        pandas=partial(pandas_group_setup, "std"),
+        numbagg=partial(numbagg_group_setup, group_nanstd),
+    ),
+    group_nanall: dict(
+        pandas=partial(pandas_group_setup, "all"),
+        numbagg=partial(numbagg_group_setup, group_nanall),
+    ),
+    group_nanany: dict(
+        pandas=partial(pandas_group_setup, "any"),
+        numbagg=partial(numbagg_group_setup, group_nanany),
+    ),
+    group_nanargmax: dict(
+        pandas=partial(pandas_group_setup, "idxmax"),
+        numbagg=partial(numbagg_group_setup, group_nanargmax),
+    ),
+    group_nanargmin: dict(
+        pandas=partial(pandas_group_setup, "idxmin"),
+        numbagg=partial(numbagg_group_setup, group_nanargmin),
+    ),
+    group_nancount: dict(
+        pandas=partial(pandas_group_setup, "count"),
+        numbagg=partial(numbagg_group_setup, group_nancount),
+    ),
+    group_nanfirst: dict(
+        pandas=partial(pandas_group_setup, "first"),
+        numbagg=partial(numbagg_group_setup, group_nanfirst),
+    ),
+    group_nanlast: dict(
+        pandas=partial(pandas_group_setup, "last"),
+        numbagg=partial(numbagg_group_setup, group_nanlast),
+    ),
+    group_nanmax: dict(
+        pandas=partial(pandas_group_setup, "max"),
+        numbagg=partial(numbagg_group_setup, group_nanmax),
+    ),
+    group_nanmin: dict(
+        pandas=partial(pandas_group_setup, "min"),
+        numbagg=partial(numbagg_group_setup, group_nanmin),
+    ),
+    group_nanprod: dict(
+        pandas=partial(pandas_group_setup, "prod"),
+        numbagg=partial(numbagg_group_setup, group_nanprod),
+    ),
+    group_nansum_of_squares: dict(
+        pandas=pandas_nan_sum_of_squares_setup,
+        numbagg=partial(numbagg_group_setup, group_nansum_of_squares),
+    )
     # move_count: dict(
     #     pandas=dict(
     #         setup=pandas_move_setup,
@@ -282,6 +397,12 @@ def func_callable(library, func, array):
     """
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
+    if (
+        len(array.shape) > 1
+        and library == "numbagg"
+        and not getattr(func, "supports_nd", True)
+    ):
+        pytest.skip(f"{func} doesn't support nd")
     try:
         callable_ = COMPARISONS[func][library](array)
         assert callable(callable_)

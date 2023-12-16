@@ -4,6 +4,7 @@ import abc
 import itertools
 import logging
 import threading
+import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, TypeVar
@@ -208,7 +209,7 @@ class ndreduce(NumbaBase):
 
         # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=self.target
+            numba_sig, gufunc_sig, nopython=True, target=target
         )
         return vectorize(self.transformed_func)
 
@@ -268,6 +269,9 @@ class ndmoving(NumbaBaseSimple):
     ):
         if min_count is None:
             min_count = window
+        elif min_count < 0:
+            raise ValueError(f"min_count must be positive: {min_count}")
+
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
@@ -278,15 +282,13 @@ class ndmoving(NumbaBaseSimple):
                         "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
                     )
                 return arr[0]
-            if len(axis) > 1:
+            elif len(axis) > 1:
                 raise ValueError(
                     f"only one axis can be passed to {self.func}; got {axis}"
                 )
             (axis,) = axis
         if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
-        if min_count < 0:
-            raise ValueError(f"min_count must be positive: {min_count}")
         gufunc = self.gufunc(target=self.target)
         return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
@@ -436,7 +438,7 @@ class groupndreduce(NumbaBase):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
             if len(sig) != 3:
                 raise TypeError(
-                    "signature has wrong number of argument != 3: " f"{signature}"
+                    "signature has wrong number of arguments != 3: " f"{signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
@@ -449,7 +451,7 @@ class groupndreduce(NumbaBase):
         super().__init__(func=func)
 
     @cache
-    def gufunc(self, core_ndim):
+    def gufunc(self, core_ndim, *, target):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
         numba_sig = []
@@ -465,7 +467,7 @@ class groupndreduce(NumbaBase):
             numba_sig,
             gufunc_sig,
             nopython=True,
-            target=self.target,
+            target=target,
             cache=self.cache,
         )
         return vectorize(self.func)
@@ -480,6 +482,12 @@ class groupndreduce(NumbaBase):
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
+
+        if labels.dtype.kind not in "i":
+            raise TypeError(
+                "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
+            )
+
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at
@@ -515,13 +523,15 @@ class groupndreduce(NumbaBase):
         if num_labels is None:
             num_labels = np.max(labels) + 1
 
+        target = self.target
+
         if axis is None:
             if values.shape != labels.shape:
                 raise ValueError(
                     "axis required if values and labels have different "
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
-            gufunc = self.gufunc(values.ndim)
+            gufunc = self.gufunc(values.ndim, target=target)
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -529,7 +539,7 @@ class groupndreduce(NumbaBase):
                     f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(1)
+            gufunc = self.gufunc(1, target=target)
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -538,7 +548,7 @@ class groupndreduce(NumbaBase):
                     f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self.gufunc(len(axis))
+            gufunc = self.gufunc(len(axis), target=target)
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
@@ -598,16 +608,23 @@ class ndquantile(NumbaBase):
         axes = [-1, -1, -1]
 
         gufunc = self.gufunc(target=self.target)
-        result = gufunc(a, quantiles, axes=axes, **kwargs)
+        with warnings.catch_warnings():
+            # TODO: `nanquantile` raises a warning here for the default test fixture; I
+            # can't figure out where it's coming from, and can't reproduce it locally.
+            # So I'm ignoring so that we can still raise errors on other warnings.
+            warnings.simplefilter("ignore")
+
+            result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
         result = np.moveaxis(result, -1, 0)
         if squeeze:
             result = result.squeeze(axis=0)
+
         return result
 
     @cache
-    def gufunc(self, target):
+    def gufunc(self, *, target):
         # We don't use `NumbaBaseSimple`'s here, because we need to specify different
         # core axes for the two inputs, which it doesn't support.
 

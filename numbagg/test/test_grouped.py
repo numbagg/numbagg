@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from numbagg.grouped import (
     group_nanall,
@@ -22,6 +22,7 @@ from numbagg.grouped import (
     group_nansum_of_squares,
     group_nanvar,
 )
+from numbagg.test.conftest import COMPARISONS
 
 FUNCTIONS = [
     (group_nanall, lambda x: x.all(), None),
@@ -110,6 +111,10 @@ def values(rs, labels, dtype):
 
 @pytest.mark.parametrize("numbagg_func, pandas_func, _", FUNCTIONS)
 def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, dtype):
+    """
+    Old test approach, directly parametrizing over functions. Can be removed once we're
+    confident the new approach covers everything.
+    """
     # Pandas uses `NaN` rather than `-1` for missing labels
     pandas_labels = np.where(labels >= 0, labels, np.nan)
     expected = pandas_func(pd.Series(values).groupby(pandas_labels))
@@ -125,6 +130,40 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
             pytest.skip(f"{numbagg_func} doesn't support bools")
     else:
         assert_almost_equal(result, expected.values)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        # TODO: add these in; requires ensuring we're handling dimensionality and types correctly
+        # group_nanall,
+        # group_nanany,
+        # group_nanargmax,
+        # group_nanargmin,
+        group_nancount,
+        group_nanfirst,
+        group_nanlast,
+        group_nanmax,
+        group_nanmean,
+        group_nanmin,
+        group_nanprod,
+        group_nanstd,
+        group_nansum,
+        group_nansum_of_squares,
+        group_nanvar,
+    ],
+)
+@pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
+def test_group_pandas_comp(array, func):
+    """
+    New test approach, using `COMPARISONS`
+    """
+    c = COMPARISONS[func]
+
+    result = c["numbagg"](array)()
+    expected_pandas = c["pandas"](array)().values
+
+    assert_allclose(result, expected_pandas)
 
 
 @pytest.mark.parametrize("numbagg_func, pandas_func, _", FUNCTIONS)

@@ -184,6 +184,11 @@ def nanmin(a):
 def nanquantile(arr, quantile, out):
     # valid (non NaN) observations
     valid_obs = np.sum(np.isfinite(arr))
+
+    if valid_obs == 0:
+        out[:] = np.nan
+        return
+
     # replace NaN with maximum
     max_val = np.nanmax(arr)
     arr[np.isnan(arr)] = max_val
@@ -194,10 +199,11 @@ def nanquantile(arr, quantile, out):
     ranks = np.zeros(len(quantile), dtype=np.float64)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            continue
         rank = (valid_obs - 1) * quantile[i]
         ranks[i] = rank
-        indexes[i, 0] = int(np.floor(rank))
-        indexes[i, 1] = int(np.ceil(rank))
+        indexes[i] = [int(np.floor(rank)), int(np.ceil(rank))]
 
     # `partition` is similar to a `sort`, but only ensures that the indexes passed to
     # kth are in the correct positions
@@ -205,12 +211,14 @@ def nanquantile(arr, quantile, out):
     sorted = np.partition(arr, kth=unique_indices)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            out[i] = np.nan
+            continue
         # linear interpolation (like numpy percentile) takes the fractional part of
         # desired position
         proportion = ranks[i] - indexes[i, 0]
 
-        floor_val = sorted[indexes[i, 0]]
-        ceil_val = sorted[indexes[i, 1]]
+        floor_val, ceil_val = sorted[indexes[i]]
 
         result = floor_val + proportion * (ceil_val - floor_val)
 
