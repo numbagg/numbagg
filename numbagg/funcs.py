@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from math import isnan
-
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
