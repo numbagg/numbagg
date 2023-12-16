@@ -10,6 +10,7 @@ from .decorators import ndmoving
 def move_mean(a, window, min_count, out):
     asum = 0.0
     count = 0
+    min_count = max(min_count, 1)
 
     # We previously had an initial loop which filled NaNs before `min_count`, but it
     # didn't have a discernible effect on performance.
@@ -104,6 +105,7 @@ def move_std(a, window, min_count, out):
     asum = 0.0
     asum_sq = 0.0
     count = 0
+    min_count = max(min_count, 1)
 
     for i in range(window):
         ai = a[i]
@@ -148,6 +150,7 @@ def move_var(a, window, min_count, out):
     asum = 0.0
     asum_sq = 0.0
     count = 0
+    min_count = max(min_count, 1)
 
     for i in range(window):
         ai = a[i]
@@ -194,6 +197,7 @@ def move_cov(a, b, window, min_count, out):
         0.0  # This will store the sum of products of corresponding values in a and b
     )
     count = 0
+    min_count = max(min_count, 1)
 
     for i in range(window):
         ai = a[i]
@@ -245,6 +249,8 @@ def move_corr(a, b, window, min_count, out):
     asum_sq = 0.0
     bsum_sq = 0.0
     count = 0
+
+    min_count = max(min_count, 1)
 
     for i in range(len(a)):
         ai = a[i]

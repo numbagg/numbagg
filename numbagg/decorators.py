@@ -268,6 +268,9 @@ class ndmoving(NumbaBaseSimple):
     ):
         if min_count is None:
             min_count = window
+        elif min_count < 0:
+            raise ValueError(f"min_count must be positive: {min_count}")
+
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
@@ -278,15 +281,13 @@ class ndmoving(NumbaBaseSimple):
                         "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
                     )
                 return arr[0]
-            if len(axis) > 1:
+            elif len(axis) > 1:
                 raise ValueError(
                     f"only one axis can be passed to {self.func}; got {axis}"
                 )
             (axis,) = axis
         if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
-        if min_count < 0:
-            raise ValueError(f"min_count must be positive: {min_count}")
         gufunc = self.gufunc(target=self.target)
         return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
