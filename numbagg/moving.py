@@ -246,33 +246,20 @@ def move_corr(a, b, window, min_count, out):
     bsum_sq = 0.0
     count = 0
 
-    for i in range(window):
+    for i in range(len(a)):
         ai = a[i]
         bi = b[i]
-        if not (np.isnan(ai) or np.isnan(bi)):
-            asum += ai
-            bsum += bi
-            prodsum += ai * bi
-            asum_sq += ai * ai
-            bsum_sq += bi * bi
-            count += 1
 
-        if count >= min_count:
-            count_reciprocal = 1.0 / count
-            avg_a = asum * count_reciprocal
-            avg_b = bsum * count_reciprocal
-            var_a = asum_sq * count_reciprocal - avg_a**2
-            var_b = bsum_sq * count_reciprocal - avg_b**2
-            cov_ab = prodsum * count_reciprocal - avg_a * avg_b
-            out[i] = cov_ab / np.sqrt(var_a * var_b)
-        else:
-            out[i] = np.nan
-
-    for i in range(window, len(a)):
-        ai = a[i]
-        bi = b[i]
-        aold = a[i - window]
-        bold = b[i - window]
+        if i >= window:
+            aold = a[i - window]
+            bold = b[i - window]
+            if not (np.isnan(aold) or np.isnan(bold)):
+                asum -= aold
+                bsum -= bold
+                prodsum -= aold * bold
+                asum_sq -= aold * aold
+                bsum_sq -= bold * bold
+                count -= 1
 
         if not (np.isnan(ai) or np.isnan(bi)):
             asum += ai
@@ -281,14 +268,6 @@ def move_corr(a, b, window, min_count, out):
             asum_sq += ai * ai
             bsum_sq += bi * bi
             count += 1
-        if not (np.isnan(aold) or np.isnan(bold)):
-            asum -= aold
-            bsum -= bold
-            prodsum -= aold * bold
-            asum_sq -= aold * aold
-            bsum_sq -= bold * bold
-            count -= 1
-
         if count >= min_count:
             count_reciprocal = 1.0 / count
             avg_a = asum * count_reciprocal
@@ -296,7 +275,11 @@ def move_corr(a, b, window, min_count, out):
             var_a = asum_sq * count_reciprocal - avg_a**2
             var_b = bsum_sq * count_reciprocal - avg_b**2
             cov_ab = prodsum * count_reciprocal - avg_a * avg_b
-            out[i] = cov_ab / np.sqrt(var_a * var_b)
+            var_a_var_b = var_a * var_b
+            if var_a_var_b > 0:
+                out[i] = cov_ab / np.sqrt(var_a_var_b)
+            else:
+                out[i] = np.nan
 
         else:
             out[i] = np.nan
