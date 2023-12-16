@@ -87,8 +87,8 @@ def pandas_move_setup(func, a, window=20, min_count=None):
 
 def pandas_move_2_array_setup(func, a, window=20, min_count=None):
     a1, a2 = two_array_setup(a)
-    df1 = pd.DataFrame(a1).T.rolling(window=window, min_periods=min_count)
-    df2 = pd.DataFrame(a2).T
+    df1 = _df_of_array(a1).rolling(window=window, min_periods=min_count)
+    df2 = _df_of_array(a2)
     return lambda: func(df1, df2)
 
 
@@ -269,8 +269,8 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         ],
     ),
     nanquantile: dict(
-        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: pd.DataFrame(a)
-        .T.quantile(quantiles)
+        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a)
+        .quantile(quantiles)
         .T,
         numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
         numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
