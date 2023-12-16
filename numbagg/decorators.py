@@ -372,8 +372,6 @@ class ndfill(NumbaBaseSimple):
         func: Callable,
         signature: list[tuple] = [
             (numba.float64[:], numba.int64, numba.float64[:]),
-            (numba.float64[:], numba.int32, numba.float64[:]),
-            (numba.float32[:], numba.int64, numba.float32[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
         ],
         **kwargs,
