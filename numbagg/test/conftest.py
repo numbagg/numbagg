@@ -116,13 +116,11 @@ def numbagg_group_setup(func, a, **kwargs):
 
     @functools.wraps(func)
     def with_factorization(*args, axis=-1, **kwargs):
+        # TODO: is it possible to avoid `sort=True`? I don't think so...
+        # `result.take(uniques, axis=axis)` indexes the wrong way — we want to use the
+        # position of `uniques` in `codes` to index `result`...`
         codes, uniques = pd.factorize(labels, sort=True)
-        labels_reshaped = codes
-        result = func(
-            *args, **kwargs, labels=labels_reshaped, num_labels=len(uniques), axis=axis
-        )
-        # TODO: what do we do to avoid having `sort=True`?
-        # return uniques[result]
+        result = func(*args, **kwargs, labels=codes, num_labels=len(uniques), axis=axis)
         return result
 
     return partial(with_factorization, a, **kwargs)
