@@ -1,4 +1,3 @@
-import warnings
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
