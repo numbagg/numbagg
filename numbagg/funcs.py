@@ -203,8 +203,7 @@ def nanquantile(arr, quantile, out):
             continue
         rank = (valid_obs - 1) * quantile[i]
         ranks[i] = rank
-        indexes[i, 0] = int(np.floor(rank))
-        indexes[i, 1] = int(np.ceil(rank))
+        indexes[i] = [int(np.floor(rank)), int(np.ceil(rank))]
 
     # `partition` is similar to a `sort`, but only ensures that the indexes passed to
     # kth are in the correct positions
@@ -219,8 +218,7 @@ def nanquantile(arr, quantile, out):
         # desired position
         proportion = ranks[i] - indexes[i, 0]
 
-        floor_val = sorted[indexes[i, 0]]
-        ceil_val = sorted[indexes[i, 1]]
+        floor_val, ceil_val = sorted[indexes[i]]
 
         result = floor_val + proportion * (ceil_val - floor_val)
 
