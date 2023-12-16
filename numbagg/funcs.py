@@ -184,6 +184,11 @@ def nanmin(a):
 def nanquantile(arr, quantile, out):
     # valid (non NaN) observations
     valid_obs = np.sum(np.isfinite(arr))
+
+    if valid_obs == 0:
+        out[:] = np.nan
+        return
+
     # replace NaN with maximum
     max_val = np.nanmax(arr)
     arr[np.isnan(arr)] = max_val
