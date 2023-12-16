@@ -601,9 +601,9 @@ class ndquantile(NumbaBase):
 
         gufunc = self.gufunc(target=self.target)
         with warnings.catch_warnings():
-            # TODO: `nanquantile` raises a warning here (and not in other testes...); I
-            # can't figure out where it's coming from, and can't reproduce it locally. So
-            # I'm ignoring so that we can still raise errors on other warnings.
+            # TODO: `nanquantile` raises a warning here for the default test fixture; I
+            # can't figure out where it's coming from, and can't reproduce it locally.
+            # So I'm ignoring so that we can still raise errors on other warnings.
             warnings.simplefilter("ignore")
 
             result = gufunc(a, quantiles, axes=axes, **kwargs)
