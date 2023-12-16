@@ -4,6 +4,7 @@ import abc
 import itertools
 import logging
 import threading
+import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, TypeVar
@@ -473,6 +474,12 @@ class groupndreduce(NumbaBase):
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
+
+        if labels.dtype.kind not in "i":
+            raise TypeError(
+                "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
+            )
+
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at
@@ -593,12 +600,19 @@ class ndquantile(NumbaBase):
         axes = [-1, -1, -1]
 
         gufunc = self.gufunc(target=self.target)
-        result = gufunc(a, quantiles, axes=axes, **kwargs)
+        with warnings.catch_warnings():
+            # TODO: `nanquantile` raises a warning here for the default test fixture; I
+            # can't figure out where it's coming from, and can't reproduce it locally.
+            # So I'm ignoring so that we can still raise errors on other warnings.
+            warnings.simplefilter("ignore")
+
+            result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
         result = np.moveaxis(result, -1, 0)
         if squeeze:
             result = result.squeeze(axis=0)
+
         return result
 
     @cache

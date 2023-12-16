@@ -87,4 +87,8 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = ["--benchmark-skip", "--benchmark-warmup=on"]
+addopts = ["--benchmark-disable", "--benchmark-warmup=on"]
+markers = [
+  "nightly: Tests not to be run on each commit", #
+  "slow: Tests not to be run on each loop",
+]

@@ -30,15 +30,19 @@ def run():
         subprocess.run(
             [
                 "pytest",
+                "-vv",
                 "numbagg/test/test_benchmark.py",
+                "-k=test_benchmark_main",
+                "--benchmark-enable",
                 "--benchmark-only",
+                "--run-nightly",
                 f"--benchmark-json={json_path}",
             ],
             check=True,
         )
 
     json = jq.compile(
-        '.benchmarks[] | select(.name | index("test_benchmark_all[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
+        '.benchmarks[] | select(.name | index("test_benchmark_main[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())
@@ -109,15 +113,15 @@ def run():
     full = df.assign(func=lambda x: x["func"].where(lambda x: ~x.duplicated(), ""))
 
     # Take the biggest of each of 2D or >2D
-    summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) == 1]
+    summary_1d = (
+        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 0]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
         .drop(columns=("size"))
     )
-    summary_nd = (
-        df[lambda x: x["shape"].map(lambda x: x.count(",")) > 1]
+    summary_2d = (
+        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 1]  # type: ignore[unused-ignore,call-overload]
         .groupby(by="func", sort=False)
         .last()
         .reset_index()
@@ -125,14 +129,14 @@ def run():
     )
 
     text = ""
-    for title, df in (("2D", summary_2d), ("ND", summary_nd), ("All", full)):
+    for title, df in (("1D", summary_1d), ("2D", summary_2d), ("All", full)):
         shapes = df["shape"].unique()
         if len(shapes) == 1:
             shape = shapes[0]
             df = df.drop(columns="shape")
         else:
             shape = None
-        values = df.to_dict(index=False, orient="split")["data"]
+        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
         markdown_table = tabulate(
             values,
             headers=df.columns,
