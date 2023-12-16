@@ -55,7 +55,7 @@ from .. import (
 
 
 def pandas_ewm_setup(func, a, alpha=0.5):
-    df = pd.DataFrame(a).T.ewm(alpha=alpha)
+    df = _df_of_array(a).ewm(alpha=alpha)
     return lambda: func(df)
 
 
@@ -76,12 +76,12 @@ def numbagg_ewm_2_array_setup(func, a, alpha=0.5):
 
 
 def pandas_ewm_nancount_setup(a, alpha=0.5):
-    df = pd.DataFrame(a).T
+    df = _df_of_array(a)
     return lambda: df.notnull().ewm(alpha=alpha).sum().T
 
 
 def pandas_move_setup(func, a, window=20, min_count=None):
-    df = pd.DataFrame(a).T.rolling(window=window, min_periods=min_count)
+    df = _df_of_array(a).rolling(window=window, min_periods=min_count)
     return partial(func, df)
 
 
@@ -257,12 +257,12 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         ),
     ),
     ffill: dict(
-        pandas=lambda a, limit=None: lambda: pd.DataFrame(a).T.ffill(limit=limit).T,
+        pandas=lambda a, limit=None: lambda: _df_of_array(a).ffill(limit=limit).T,
         numbagg=lambda a, **kwargs: partial(ffill, a, **kwargs),
         bottleneck=lambda a, limit=None: partial(bn.push, a, limit),
     ),
     bfill: dict(
-        pandas=lambda a, **kwargs: lambda: pd.DataFrame(a).T.bfill(**kwargs).T,
+        pandas=lambda a, **kwargs: lambda: _df_of_array(a).bfill(**kwargs).T,
         numbagg=lambda a, **kwargs: partial(bfill, a, **kwargs),
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1

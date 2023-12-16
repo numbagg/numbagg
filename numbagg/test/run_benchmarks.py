@@ -30,7 +30,7 @@ def run():
         subprocess.run(
             [
                 "pytest",
-                "-v",
+                "-vv",
                 "numbagg/test/test_benchmark.py",
                 "-k=test_benchmark_main",
                 "--benchmark-enable",
