@@ -116,10 +116,8 @@ def numbagg_group_setup(func, a, **kwargs):
 
     @functools.wraps(func)
     def with_factorization(*args, axis=-1, **kwargs):
-        # labels_factorized, _ = pd.factorize(labels=labels)
-        # codes, uniques = pd.factorize(labels)
         codes, uniques = pd.factorize(labels, sort=True)
-        labels_reshaped = codes  # .reshape(labels.shape).astype(labels.dtype)
+        labels_reshaped = codes
         result = func(
             *args, **kwargs, labels=labels_reshaped, num_labels=len(uniques), axis=axis
         )
