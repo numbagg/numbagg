@@ -270,10 +270,7 @@ class ndmoving(NumbaBaseSimple):
             min_count = window
         elif min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
-        elif min_count == 0:
-            # min_count being 0 can cause divide-by-zero errors, and is functionally the
-            # same as 1
-            min_count = 1
+
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
