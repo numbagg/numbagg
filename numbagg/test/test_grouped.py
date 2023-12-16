@@ -75,11 +75,6 @@ def silence_pandas_idx_warnings():
         yield
 
 
-@pytest.fixture(scope="module")
-def rs():
-    return np.random.RandomState(0)
-
-
 @pytest.fixture(params=[np.float64, np.int32, np.bool_], scope="module")
 def dtype(request):
     return request.param

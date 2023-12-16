@@ -16,8 +16,8 @@ from .conftest import COMPARISONS
 
 
 @pytest.fixture(scope="module")
-def rand_array():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
+def rand_array(rs):
+    arr = rs.rand(2000).reshape(10, -1)
     arr[0, 0] = np.nan
     return np.where(arr > 0.1, arr, np.nan)
 
