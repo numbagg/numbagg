@@ -214,6 +214,7 @@ def nanquantile(arr, quantile, out):
     for i in range(len(quantile)):
         if np.isnan(quantile[i]):
             out[i] = np.nan
+            continue
         # linear interpolation (like numpy percentile) takes the fractional part of
         # desired position
         proportion = ranks[i] - indexes[i, 0]
