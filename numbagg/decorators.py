@@ -478,6 +478,7 @@ class groupndreduce(NumbaBase):
                 "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
             )
 
+        # TODO: I think we can remove this, now that every function supports ND...
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at
