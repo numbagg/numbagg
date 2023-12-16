@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import isnan
+
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
@@ -199,6 +201,8 @@ def nanquantile(arr, quantile, out):
     ranks = np.zeros(len(quantile), dtype=np.float64)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            continue
         rank = (valid_obs - 1) * quantile[i]
         ranks[i] = rank
         indexes[i, 0] = int(np.floor(rank))
@@ -210,6 +214,8 @@ def nanquantile(arr, quantile, out):
     sorted = np.partition(arr, kth=unique_indices)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            out[i] = np.nan
         # linear interpolation (like numpy percentile) takes the fractional part of
         # desired position
         proportion = ranks[i] - indexes[i, 0]
