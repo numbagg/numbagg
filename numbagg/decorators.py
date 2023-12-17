@@ -235,9 +235,10 @@ class ndreduce(NumbaBase):
                     and np.prod([arr.shape[axis] for axis in axis])
                 )
                 or (isinstance(axis, int) and arr.shape[axis] == 0)
+                or (arr.shape == () and np.isnan(arr))
             ):
                 raise ValueError(
-                    "Array is empty along axis, and function doesn't support empty arrays"
+                    f"Array is empty along axis, {self.func.__name__} doesn't support empty arrays"
                 )
 
         # if not self.supports_empty and arr.shape[axis] == 0:
