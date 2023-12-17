@@ -153,12 +153,13 @@ def nanmax(a):
         raise ValueError(
             "zero-size array to reduction operation fmax which has no identity"
         )
-    amax = -np.infty
-    all_missing = 1
+    # Doesn't matter what this is set to, just needs to be initalized
+    amax: float = 0
+    all_missing = True
     for ai in a.flat:
-        if not np.isnan(ai) and ai >= amax:
+        if not np.isnan(ai) and (ai >= amax or all_missing):
             amax = ai
-            all_missing = 0
+            all_missing = False
     if all_missing:
         amax = np.nan
     return amax
