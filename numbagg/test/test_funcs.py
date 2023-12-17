@@ -115,6 +115,7 @@ def functions():
 @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
 @pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
+@pytest.mark.filterwarnings("ignore:invalid value encountered")
 @pytest.mark.parametrize("numbagg_func,comp_func,decimal", functions())
 def test_numerical_results_identical(numbagg_func, comp_func, decimal):
     "Test that bn.xxx gives the same output as bn.slow.xxx."
