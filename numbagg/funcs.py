@@ -118,7 +118,7 @@ def nanargmax(a):
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai > amax or (idx == -1 and not np.isnan(ai)):
+        if not np.isnan(ai) and (ai > amax or idx == -1):
             amax = ai
             idx = i
     if idx == -1:
@@ -136,7 +136,7 @@ def nanargmin(a):
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai < amin or (idx == -1 and not np.isnan(ai)):
+        if not np.isnan(ai) and (ai < amin or idx == -1):
             amin = ai
             idx = i
     if idx == -1:
@@ -156,7 +156,7 @@ def nanmax(a):
     amax = -np.infty
     all_missing = 1
     for ai in a.flat:
-        if ai >= amax:
+        if not np.isnan(ai) and ai >= amax:
             amax = ai
             all_missing = 0
     if all_missing:
@@ -176,7 +176,7 @@ def nanmin(a):
     amin = np.infty
     all_missing = 1
     for ai in a.flat:
-        if ai <= amin:
+        if not np.isnan(ai) and ai <= amin:
             amin = ai
             all_missing = 0
     if all_missing:
