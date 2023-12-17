@@ -27,8 +27,11 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
         pytest.skip(
             "We're currently skipping the huge arrays with `group` functions, as they're quite slow"
         )
+    if func.__name__ in ["allnan", "anynan"]:
+        pytest.skip(
+            "These functions need a different approach to benchmarking; so we're currently excluding them"
+        )
     benchmark.group = f"{func}|{shape}"
-
     benchmark.pedantic(
         func_callable,
         warmup_rounds=1,
