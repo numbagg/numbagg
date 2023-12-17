@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 
 import numpy as np
@@ -29,6 +30,8 @@ from numbagg import (
 from numbagg.test.util import arrays
 
 from .conftest import COMPARISONS
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -121,6 +124,7 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
     msg = "\nfunc %s | input %s (%s) | shape %s | axis %s\n"
     msg += "\nInput array:\n%s\n"
     for i, arr in enumerate(arrays(numbagg_func.__name__)):
+        logger.debug(f"Using array {arr}")
         for axis in list(range(-arr.ndim, arr.ndim)) + [None]:
             with np.errstate(invalid="ignore"):
                 desiredraised = False
@@ -147,8 +151,6 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                 # there are no array values, so don't worry about not raising
                 pass
             else:
-                assert actualraised == desiredraised
-
                 actual = np.asarray(actual)
                 desired = np.asarray(desired)
 
@@ -161,6 +163,7 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                     arr,
                 )
                 err_msg = msg % tup
+                assert actualraised == desiredraised, err_msg
                 if (decimal < np.inf) and (np.isfinite(arr).sum() > 0):
                     assert_array_almost_equal(actual, desired, decimal, err_msg)
                 else:
