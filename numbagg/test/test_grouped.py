@@ -130,11 +130,10 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
 @pytest.mark.parametrize(
     "func",
     [
-        # TODO: add these in; requires ensuring we're handling dimensionality and types correctly
-        # group_nanall,
-        # group_nanany,
-        # group_nanargmax,
-        # group_nanargmin,
+        group_nanall,
+        group_nanany,
+        group_nanargmax,
+        group_nanargmin,
         group_nancount,
         group_nanfirst,
         group_nanlast,

@@ -11,6 +11,8 @@ import pandas as pd
 import pytest
 
 from .. import (
+    allnan,
+    anynan,
     bfill,
     ffill,
     group_nanall,
@@ -42,16 +44,17 @@ from .. import (
     move_std,
     move_sum,
     move_var,
+    nanargmax,
+    nanargmin,
+    nancount,
+    nanmax,
+    nanmean,
+    nanmin,
     nanquantile,
+    nanstd,
+    nansum,
+    nanvar,
 )
-
-# TODO: add these as functions to the dict
-# nanargmax,
-# nanargmin,
-# nanmax,
-# nanmean,
-# nanmin,
-# nanstd,
 
 
 def pandas_ewm_setup(func, a, alpha=0.5):
@@ -155,6 +158,60 @@ def _df_of_array(a):
 #   parameters.
 
 COMPARISONS: dict[Callable, dict[str, Callable]] = {
+    nansum: dict(
+        numbagg=lambda a, axis=-1: partial(nansum, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).sum().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nansum, a, axis=axis),
+    ),
+    nanargmax: dict(
+        numbagg=lambda a, axis=-1: partial(nanargmax, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).idxmax().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanargmax, a, axis=axis),
+    ),
+    nanargmin: dict(
+        numbagg=lambda a, axis=-1: partial(nanargmin, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).idxmin().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanargmin, a, axis=axis),
+    ),
+    nancount: dict(
+        numbagg=lambda a, axis=-1: partial(nancount, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).count().T,
+    ),
+    nanmax: dict(
+        numbagg=lambda a, axis=-1: partial(nanmax, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).max().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanmax, a, axis=axis),
+    ),
+    nanmean: dict(
+        numbagg=lambda a, axis=-1: partial(nanmean, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).mean().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanmean, a, axis=axis),
+    ),
+    nanmin: dict(
+        numbagg=lambda a, axis=-1: partial(nanmin, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).min().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanmin, a, axis=axis),
+    ),
+    nanstd: dict(
+        numbagg=lambda a, axis=-1: partial(nanstd, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).std().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanstd, a, axis=axis, ddof=1),
+    ),
+    nanvar: dict(
+        numbagg=lambda a, axis=-1: partial(nanvar, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).var().T,
+        bottleneck=lambda a, axis=-1: partial(bn.nanvar, a, axis=axis, ddof=1),
+    ),
+    anynan: dict(
+        numbagg=lambda a, axis=-1: partial(anynan, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).isna().any(),
+        bottleneck=lambda a, axis=-1: partial(bn.anynan, a, axis=axis),
+    ),
+    allnan: dict(
+        numbagg=lambda a, axis=-1: partial(allnan, a, axis=axis),
+        pandas=lambda a: lambda: _df_of_array(a).isna().all(),
+        bottleneck=lambda a, axis=-1: partial(bn.allnan, a, axis=axis),
+    ),
     move_exp_nanvar: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_setup(lambda df: df.var().T, a, alpha),
         numbagg=lambda a, alpha=0.5: partial(move_exp_nanvar, a, alpha=alpha),
@@ -405,6 +462,8 @@ def func_callable(library, func, array):
     except KeyError:
         if library == "bottleneck":
             pytest.skip(f"Bottleneck doesn't support {func}")
+        else:
+            raise
 
 
 @pytest.fixture(autouse=True)
