@@ -59,47 +59,51 @@ def nanmean(a):
 
 
 @ndreduce.wrap([float32(float32), float64(float64)])
-def nanstd(a):
+def nanvar(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
     ddof = 1
-    asum = 0
     count = 0
+    mean = 0.0
+    M2 = 0.0
+
+    # Welford's algorithm, which is more numerically stable than the simpler sum of
+    # squares approach.
     for ai in a.flat:
         if not np.isnan(ai):
-            asum += ai
             count += 1
+            delta = ai - mean
+            mean += delta / count
+            delta2 = ai - mean
+            M2 += delta * delta2
+
     if count > ddof:
-        amean = asum / count
-        asum = 0
-        for ai in a.flat:
-            if not np.isnan(ai):
-                ai -= amean
-                asum += ai * ai
-        return np.sqrt(asum / (count - ddof))
+        variance = M2 / (count - ddof)
+        return variance
     else:
         return np.nan
 
 
 @ndreduce.wrap([float32(float32), float64(float64)])
-def nanvar(a):
+def nanstd(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
     ddof = 1
-    asum = 0
     count = 0
+    mean = 0.0
+    M2 = 0.0
+
     for ai in a.flat:
         if not np.isnan(ai):
-            asum += ai
             count += 1
+            delta = ai - mean
+            mean += delta / count
+            delta2 = ai - mean
+            M2 += delta * delta2
+
     if count > ddof:
-        amean = asum / count
-        asum = 0
-        for ai in a.flat:
-            if not np.isnan(ai):
-                ai -= amean
-                asum += ai * ai
-        return asum / (count - ddof)
+        variance = M2 / (count - ddof)
+        return np.sqrt(variance)
     else:
         return np.nan
 
@@ -114,7 +118,7 @@ def nanargmax(a):
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai > amax or (idx == -1 and not np.isnan(ai)):
+        if not np.isnan(ai) and (ai > amax or idx == -1):
             amax = ai
             idx = i
     if idx == -1:
@@ -132,7 +136,7 @@ def nanargmin(a):
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if ai < amin or (idx == -1 and not np.isnan(ai)):
+        if not np.isnan(ai) and (ai < amin or idx == -1):
             amin = ai
             idx = i
     if idx == -1:
@@ -150,11 +154,11 @@ def nanmax(a):
             "zero-size array to reduction operation fmax which has no identity"
         )
     amax = -np.infty
-    all_missing = 1
+    all_missing = True
     for ai in a.flat:
-        if ai >= amax:
+        if not np.isnan(ai) and ai >= amax:
             amax = ai
-            all_missing = 0
+            all_missing = False
     if all_missing:
         amax = np.nan
     return amax
@@ -170,11 +174,11 @@ def nanmin(a):
             "zero-size array to reduction operation fmin which has no identity"
         )
     amin = np.infty
-    all_missing = 1
+    all_missing = True
     for ai in a.flat:
-        if ai <= amin:
+        if not np.isnan(ai) and ai <= amin:
             amin = ai
-            all_missing = 0
+            all_missing = False
     if all_missing:
         amin = np.nan
     return amin

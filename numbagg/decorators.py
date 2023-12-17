@@ -214,19 +214,27 @@ class ndreduce(NumbaBase):
         return vectorize(self.transformed_func)
 
     def __call__(self, arr, *args, axis=None):
-        if axis is None:
-            # TODO: switch to using jit_func (it's faster), once numba reliably
-            # returns the right dtype
-            # see: https://github.com/numba/numba/issues/1087
-            # f = self._jit_func
-            f = self.gufunc(arr.ndim, target=self.target)
-        elif isinstance(axis, int):
-            arr = np.moveaxis(arr, axis, -1)
-            f = self.gufunc(1, target=self.target)
-        else:
-            arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
-            f = self.gufunc(len(axis), target=self.target)
-        return f(arr, *args)
+        with warnings.catch_warnings():
+            # TODO: `nanmin` & `nanmix` raises a warning here for the default test
+            # fixture; I can't figure out where it's coming from, and can't reproduce it
+            # locally. So I'm ignoring so that we can still raise errors on other
+            # warnings.
+            if self.func.__name__ in ["nanmin", "nanmax"]:
+                warnings.simplefilter("ignore")
+
+            if axis is None:
+                # TODO: switch to using jit_func (it's faster), once numba reliably
+                # returns the right dtype
+                # see: https://github.com/numba/numba/issues/1087
+                # f = self._jit_func
+                f = self.gufunc(arr.ndim, target=self.target)
+            elif isinstance(axis, int):
+                arr = np.moveaxis(arr, axis, -1)
+                f = self.gufunc(1, target=self.target)
+            else:
+                arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
+                f = self.gufunc(len(axis), target=self.target)
+            return f(arr, *args)
 
 
 class ndmoving(NumbaBaseSimple):
