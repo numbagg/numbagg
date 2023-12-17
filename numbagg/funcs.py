@@ -110,7 +110,7 @@ def nanstd(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
-    # supports_parallel=False,
+    supports_empty=False,
 )
 def nanargmax(a):
     if not a.size:
@@ -128,7 +128,7 @@ def nanargmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
-    # supports_parallel=False,
+    supports_empty=False,
 )
 def nanargmin(a):
     if not a.size:
@@ -146,7 +146,7 @@ def nanargmin(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
-    # supports_parallel=False,
+    supports_empty=False,
 )
 def nanmax(a):
     if not a.size:
@@ -166,7 +166,7 @@ def nanmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
-    # supports_parallel=False,
+    supports_empty=False,
 )
 def nanmin(a):
     if not a.size:

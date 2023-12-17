@@ -149,11 +149,12 @@ class ndreduce(NumbaBase):
             return asum
     """
 
-    def __init__(self, func, signature, **kwargs):
+    def __init__(self, func, signature, supports_empty=True, **kwargs):
         self.func = func
         # NDReduce uses different types than the other funcs, and they seem difficult to
         # type, so ignoring for the moment.
         self.signature: Any = signature
+        self.supports_empty = supports_empty
 
         for sig in signature:
             if not hasattr(sig, "return_type"):
@@ -221,6 +222,28 @@ class ndreduce(NumbaBase):
             warn: Literal["ignore", "warn"] = "ignore"
         else:
             warn = "warn"
+
+        # Some functions don't support empty arrays, and if an empty array is passed to
+        # a function that is compiled with target="parallel", numba won't run anything,
+        # which means the error check within the function won't be run. So we need to
+        # check for those here and raise when that's the case.
+        if not self.supports_empty:
+            if (
+                (axis is None and arr.size == 0)
+                or (
+                    isinstance(axis, tuple)
+                    and np.prod([arr.shape[axis] for axis in axis])
+                )
+                or (isinstance(axis, int) and arr.shape[axis] == 0)
+            ):
+                raise ValueError(
+                    "Array is empty along axis, and function doesn't support empty arrays"
+                )
+
+        # if not self.supports_empty and arr.shape[axis] == 0:
+        #     raise ValueError(
+        #         "zero-size array to reduction operation which has no identity"
+        #     )
 
         with np.errstate(invalid=warn):
             if axis is None:
