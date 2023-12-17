@@ -64,19 +64,20 @@ def nanstd(a):
     # discussion of whether to add an option.
     ddof = 1
     asum = 0
+    asq_sum = 0  # Sum of squares
     count = 0
+
     for ai in a.flat:
         if not np.isnan(ai):
             asum += ai
+            asq_sum += ai * ai
             count += 1
+
     if count > ddof:
         amean = asum / count
-        asum = 0
-        for ai in a.flat:
-            if not np.isnan(ai):
-                ai -= amean
-                asum += ai * ai
-        return np.sqrt(asum / (count - ddof))
+        # Standard deviation calculation using the sum and sum of squares
+        variance = (asq_sum - 2 * amean * asum + count * amean**2) / (count - ddof)
+        return np.sqrt(variance)
     else:
         return np.nan
 
@@ -87,19 +88,18 @@ def nanvar(a):
     # discussion of whether to add an option.
     ddof = 1
     asum = 0
+    asq_sum = 0  # Sum of squares
     count = 0
+
     for ai in a.flat:
         if not np.isnan(ai):
             asum += ai
+            asq_sum += ai * ai
             count += 1
+
     if count > ddof:
         amean = asum / count
-        asum = 0
-        for ai in a.flat:
-            if not np.isnan(ai):
-                ai -= amean
-                asum += ai * ai
-        return asum / (count - ddof)
+        return (asq_sum - 2 * amean * asum + count * amean**2) / (count - ddof)
     else:
         return np.nan
 

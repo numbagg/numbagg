@@ -10,8 +10,22 @@ from numpy.testing import (
     assert_equal,
 )
 
-import numbagg
-from numbagg import bfill, ffill
+from numbagg import (
+    allnan,
+    anynan,
+    bfill,
+    ffill,
+    nanargmax,
+    nanargmin,
+    nancount,
+    nanmax,
+    nanmean,
+    nanmin,
+    nanquantile,
+    nanstd,
+    nansum,
+    nanvar,
+)
 from numbagg.test.util import arrays
 
 from .conftest import COMPARISONS
@@ -35,8 +49,38 @@ def test_fill_pandas_comp(rand_array, limit, func):
 
     result = c["numbagg"](array, limit=limit)()
     expected = c["pandas"](array, limit=limit)()
+    assert_allclose(result, expected)
+
     if c.get("bottleneck"):
         expected_bottleneck = c["bottleneck"](array, limit=limit)()
+        assert_allclose(result, expected_bottleneck)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        nansum,
+        nanargmax,
+        nanargmin,
+        anynan,
+        allnan,
+        nancount,
+        nanmax,
+        nanmean,
+        nanmin,
+        nanstd,
+        nansum,
+        nanvar,
+    ],
+)
+def test_aggregation_pandas_comp(rand_array, func):
+    c = COMPARISONS[func]
+    array = rand_array[:3]
+
+    result = c["numbagg"](array)()
+    expected = c["pandas"](array)()
+    if c.get("bottleneck"):
+        expected_bottleneck = c["bottleneck"](array)()
         assert_allclose(result, expected_bottleneck)
 
     assert_allclose(result, expected)
@@ -44,25 +88,25 @@ def test_fill_pandas_comp(rand_array, limit, func):
 
 def functions():
     # TODO: test tuple axes
-    yield numbagg.nansum, np.nansum, np.inf
-    yield numbagg.nanmax, np.nanmax, np.inf
-    yield numbagg.nanargmin, np.nanargmin, np.inf
-    yield numbagg.nanargmax, np.nanargmax, np.inf
-    yield numbagg.nanmin, np.nanmin, np.inf
-    yield numbagg.nanmean, np.nanmean, 5
-    yield numbagg.nanmean, np.nanmean, True
-    yield numbagg.nanstd, partial(np.nanstd, ddof=1), 5
-    yield numbagg.nanvar, partial(np.nanvar, ddof=1), 5
-    # yield numbagg.anynan, bn.anynan, np.inf
-    # yield numbagg.allnan, bn.allnan, np.inf
-    yield numbagg.nancount, slow_count, np.inf
+    yield nansum, np.nansum, np.inf
+    yield nanmax, np.nanmax, np.inf
+    yield nanargmin, np.nanargmin, np.inf
+    yield nanargmax, np.nanargmax, np.inf
+    yield nanmin, np.nanmin, np.inf
+    yield nanmean, np.nanmean, 5
+    yield nanmean, np.nanmean, True
+    yield nanstd, partial(np.nanstd, ddof=1), 5
+    yield nanvar, partial(np.nanvar, ddof=1), 5
+    # yield anynan, bn.anynan, np.inf
+    # yield allnan, bn.allnan, np.inf
+    yield nancount, slow_count, np.inf
     yield (
-        lambda x: numbagg.nanquantile(x, [0.25, 0.75]),
+        lambda x: nanquantile(x, [0.25, 0.75]),
         lambda x: np.nanquantile(x, [0.25, 0.75]),
         5,
     )
     yield (
-        lambda x: numbagg.nanquantile(x, 0.5),
+        lambda x: nanquantile(x, 0.5),
         lambda x: np.nanquantile(x, 0.5),
         5,
     )
@@ -139,7 +183,7 @@ def test_nan_quantile(axis, quantiles, rs):
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
     # quantiles = np.array([0.25, 0.75])
-    result = numbagg.nanquantile(arr, quantiles, axis=axis)
+    result = nanquantile(arr, quantiles, axis=axis)
     expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
