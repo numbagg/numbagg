@@ -118,7 +118,6 @@ def functions():
 @pytest.mark.filterwarnings("ignore:invalid value encountered")
 @pytest.mark.parametrize("numbagg_func,comp_func,decimal", functions())
 def test_numerical_results_identical(numbagg_func, comp_func, decimal):
-    "Test that bn.xxx gives the same output as bn.slow.xxx."
     msg = "\nfunc %s | input %s (%s) | shape %s | axis %s\n"
     msg += "\nInput array:\n%s\n"
     for i, arr in enumerate(arrays(numbagg_func.__name__)):
