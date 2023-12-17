@@ -21,7 +21,7 @@ Currently accelerated functions:
 
 ### Performance
 
-- Much faster than pandas for almost every function — 2-20x
+- Faster than pandas for most functions — 2-20x
 - About the same speed as bottleneck on a single calculation
 - Much faster than bottleneck — 4-7x — when parallelizing with multiple cores — for
   example, calculating over each row on an array with 10 rows.
