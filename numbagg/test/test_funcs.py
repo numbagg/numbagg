@@ -18,8 +18,8 @@ from .conftest import COMPARISONS
 
 
 @pytest.fixture(scope="module")
-def rand_array():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
+def rand_array(rs):
+    arr = rs.rand(2000).reshape(10, -1)
     arr[0, 0] = np.nan
     return np.where(arr > 0.1, arr, np.nan)
 
@@ -134,8 +134,8 @@ def slow_count(x, axis=None):
 
 @pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
 @pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
-def test_nan_quantile(axis, quantiles):
-    arr = np.random.RandomState(0).rand(2000).reshape(10, 10, -1)
+def test_nan_quantile(axis, quantiles, rs):
+    arr = rs.rand(2000).reshape(10, 10, -1)
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
     # quantiles = np.array([0.25, 0.75])

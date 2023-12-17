@@ -109,7 +109,6 @@ def generate_labels(size):
 
 
 def numbagg_group_setup(func, a, **kwargs):
-    np.random.seed(0)
     # For benchmarking, it's fair to factorize the labels — otherwise pandas has to do
     # the work but numbagg doesn't.
     labels = generate_labels(a.shape[-1])
@@ -414,3 +413,8 @@ def numba_logger():
     # be occasionally useful.
     numba_logger = logging.getLogger("numba")
     numba_logger.setLevel(logging.WARNING)
+
+
+@pytest.fixture(scope="module")
+def rs():
+    return np.random.RandomState(0)

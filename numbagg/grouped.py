@@ -50,7 +50,7 @@ def group_nancount(values, labels, out):
             out[label] += 1
 
 
-@groupndreduce.wrap(supports_nd=False)
+@groupndreduce.wrap()
 def group_nanargmax(values, labels, out):
     max_values = np.full(out.shape, np.nan)
     for i in range(len(values)):
@@ -67,7 +67,7 @@ def group_nanargmax(values, labels, out):
     # If the max value for any label is still NaN (no valid data points), set it to NaN
     # We could instead set the array at the start to be `NaN` — would need to benchmark
     # which is faster.
-    #
+
     # I'm quite confused why, but this raises a warning, so we do the full_loop instead.
     #
     #   out[np.isnan(max_values)] = np.nan
@@ -76,7 +76,7 @@ def group_nanargmax(values, labels, out):
             out[i] = np.nan
 
 
-@groupndreduce.wrap(supports_nd=False)
+@groupndreduce.wrap()
 def group_nanargmin(values, labels, out):
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
