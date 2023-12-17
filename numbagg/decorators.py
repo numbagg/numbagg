@@ -4,7 +4,6 @@ import abc
 import itertools
 import logging
 import threading
-import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, Literal, TypeVar
