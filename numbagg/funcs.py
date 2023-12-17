@@ -110,6 +110,7 @@ def nanstd(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanargmax(a):
@@ -128,6 +129,7 @@ def nanargmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanargmin(a):
@@ -146,6 +148,7 @@ def nanargmin(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanmax(a):
@@ -166,6 +169,7 @@ def nanmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanmin(a):
