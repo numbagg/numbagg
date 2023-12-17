@@ -59,47 +59,51 @@ def nanmean(a):
 
 
 @ndreduce.wrap([float32(float32), float64(float64)])
-def nanstd(a):
+def nanvar(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
     ddof = 1
-    asum = 0
-    asq_sum = 0  # Sum of squares
     count = 0
+    mean = 0.0
+    M2 = 0.0
 
+    # Welford's algorithm, which is more numerically stable than the simpler sum of
+    # squares approach.
     for ai in a.flat:
         if not np.isnan(ai):
-            asum += ai
-            asq_sum += ai * ai
             count += 1
+            delta = ai - mean
+            mean += delta / count
+            delta2 = ai - mean
+            M2 += delta * delta2
 
     if count > ddof:
-        amean = asum / count
-        # Standard deviation calculation using the sum and sum of squares
-        variance = (asq_sum - 2 * amean * asum + count * amean**2) / (count - ddof)
-        return np.sqrt(variance)
+        variance = M2 / (count - ddof)
+        return variance
     else:
         return np.nan
 
 
 @ndreduce.wrap([float32(float32), float64(float64)])
-def nanvar(a):
+def nanstd(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
     ddof = 1
-    asum = 0
-    asq_sum = 0  # Sum of squares
     count = 0
+    mean = 0.0
+    M2 = 0.0
 
     for ai in a.flat:
         if not np.isnan(ai):
-            asum += ai
-            asq_sum += ai * ai
             count += 1
+            delta = ai - mean
+            mean += delta / count
+            delta2 = ai - mean
+            M2 += delta * delta2
 
     if count > ddof:
-        amean = asum / count
-        return (asq_sum - 2 * amean * asum + count * amean**2) / (count - ddof)
+        variance = M2 / (count - ddof)
+        return np.sqrt(variance)
     else:
         return np.nan
 
