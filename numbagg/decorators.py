@@ -4,10 +4,9 @@ import abc
 import itertools
 import logging
 import threading
-import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 
 import numba
 import numpy as np
@@ -214,14 +213,16 @@ class ndreduce(NumbaBase):
         return vectorize(self.transformed_func)
 
     def __call__(self, arr, *args, axis=None):
-        with warnings.catch_warnings():
-            # TODO: `nanmin` & `nanmix` raises a warning here for the default test
-            # fixture; I can't figure out where it's coming from, and can't reproduce it
-            # locally. So I'm ignoring so that we can still raise errors on other
-            # warnings.
-            if self.func.__name__ in ["nanmin", "nanmax"]:
-                warnings.simplefilter("ignore")
+        # TODO: `nanmin` & `nanmix` raises a warning here for the default test
+        # fixture; I can't figure out where it's coming from, and can't reproduce it
+        # locally. So I'm ignoring so that we can still raise errors on other
+        # warnings.
+        if self.func.__name__ in ["nanmin", "nanmax"]:
+            warn: Literal["ignore", "warn"] = "ignore"
+        else:
+            warn = "warn"
 
+        with np.errstate(invalid=warn):
             if axis is None:
                 # TODO: switch to using jit_func (it's faster), once numba reliably
                 # returns the right dtype
@@ -607,12 +608,16 @@ class ndquantile(NumbaBase):
         axes = [-1, -1, -1]
 
         gufunc = self.gufunc(target=self.target)
-        with warnings.catch_warnings():
-            # TODO: `nanquantile` raises a warning here for the default test fixture; I
-            # can't figure out where it's coming from, and can't reproduce it locally.
-            # So I'm ignoring so that we can still raise errors on other warnings.
-            warnings.simplefilter("ignore")
+        # TODO: `nanquantile` raises a warning here for the default test
+        # fixture; I can't figure out where it's coming from, and can't reproduce it
+        # locally. So I'm ignoring so that we can still raise errors on other
+        # warnings.
+        if self.func.__name__ in ["nanquantile"]:
+            warn: Literal["ignore", "warn"] = "ignore"
+        else:
+            warn = "warn"
 
+        with np.errstate(invalid=warn):
             result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
