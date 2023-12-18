@@ -2,6 +2,7 @@
 Run the benchmarks and write the results to a markdown file at `.benchmarks/benchmark-output.md`.
 """
 
+import argparse
 import subprocess
 from pathlib import Path
 
@@ -9,8 +10,6 @@ import jq
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
-
-RUN = True
 
 
 def _sort_key(x):
@@ -22,19 +21,17 @@ def _sort_key(x):
     )
 
 
-def run():
+def run(k_filter, run_tests):
     json_path = Path(".benchmarks/benchmark.json")
     json_path.parent.mkdir(exist_ok=True, parents=True)
-    if RUN:
+    if run_tests:
         # pytest numbagg/test/test_benchmark.py --benchmark-only --benchmark-json=.benchmarks/benchmark.json
         subprocess.run(
             [
                 "pytest",
                 "-vv",
                 "numbagg/test/test_benchmark.py",
-                # If iterating on a single function, adding this will filter to a functions
-                # "-k=test_benchmark_main[nanargmin",
-                "-k=test_benchmark_main",
+                f"-k={k_filter}",
                 "--benchmark-enable",
                 "--benchmark-only",
                 "--run-nightly",
@@ -73,7 +70,11 @@ def run():
         # numbagg but is probably a better example)
         key=_sort_key,
     )
-    libraries = {"pandas", "bottleneck", "numpy", "numbagg"}.intersection(df.columns)
+    # Do numbagg last, so the division works below
+    libraries = list({"pandas", "bottleneck", "numpy"}.intersection(df.columns)) + [
+        "numbagg"
+    ]
+
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
@@ -88,7 +89,6 @@ def run():
             lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
         )
 
-    print(df)
     # Surprisingly difficult to get pandas to print a nice-looking table...
     df = df.reset_index(drop=True)[
         [
@@ -101,7 +101,8 @@ def run():
     ].rename_axis(columns=None)
 
     def make_summary_df(df, nd: int):
-        # Take the biggest of a dimension
+        # Take the biggest of a dimension (could have done this with `ndim` which we
+        # made but then discarded above!)
         shape = (
             df[lambda x: x["shape"].astype(str).map(lambda x: x.count(" ")) == (nd - 1)]
             .sort_values(by="size")["shape"]
@@ -181,4 +182,27 @@ higher means numbagg is faster.)
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(
+        description="Run main benchmarks and output results."
+    )
+    parser.add_argument(
+        "-k",
+        "--filter",
+        default="test_benchmark_main",
+        help="Filter for pytest -k option; for example `test_benchmark_main and group_nanmean and numbagg`",
+    )
+    parser.add_argument(
+        "--run-tests",
+        action="store_true",
+        default=True,
+        help="Run the tests (default: True)",
+    )
+    parser.add_argument(
+        "--no-run-tests",
+        action="store_false",
+        dest="run_tests",
+        help="Do not run the tests",
+    )
+    args = parser.parse_args()
+
+    run(args.filter, args.run_tests)
