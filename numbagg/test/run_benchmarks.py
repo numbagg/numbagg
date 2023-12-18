@@ -32,6 +32,8 @@ def run():
                 "pytest",
                 "-vv",
                 "numbagg/test/test_benchmark.py",
+                # If iterating on a single function, adding this will filter to a functions
+                # "-k=test_benchmark_main[nanargmin",
                 "-k=test_benchmark_main",
                 "--benchmark-enable",
                 "--benchmark-only",
@@ -74,6 +76,7 @@ def run():
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
+        .assign(numbagg_ratio=lambda df: df.eval("numbagg/numbagg"))
         .assign(pandas_ratio=lambda df: df.eval("pandas/numbagg"))
         .assign(bottleneck_ratio=lambda df: df.eval("bottleneck/numbagg"))
         .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
@@ -81,75 +84,109 @@ def run():
 
     # Surprisingly difficult to get pandas to print a nice-looking table...
     df = (
-        df.assign(
-            pandas_ratio=lambda x: x["pandas_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            numbagg=lambda x: (x.numbagg * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-            pandas=lambda x: (x.pandas * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-            bottleneck=lambda x: (x.bottleneck * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-        )
-    ).reindex(
-        columns=[
-            "func",
-            "shape",
-            "size",
-            "numbagg",
-            "pandas",
-            "bottleneck",
-            "pandas_ratio",
-            "bottleneck_ratio",
+        (
+            df.assign(
+                numbagg_ratio=lambda x: x["numbagg_ratio"].map(
+                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+                ),
+                pandas_ratio=lambda x: x["pandas_ratio"].map(
+                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+                ),
+                bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
+                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+                ),
+                numbagg=lambda x: (x.numbagg * 1000).map(
+                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+                ),
+                pandas=lambda x: (x.pandas * 1000).map(
+                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+                ),
+                bottleneck=lambda x: (x.bottleneck * 1000).map(
+                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+                ),
+            )
+        ).reset_index(drop=True)[
+            [
+                "func",
+                "shape",
+                "size",
+                "numbagg",
+                "pandas",
+                "bottleneck",
+                # "numbagg_ratio",
+                "pandas_ratio",
+                "bottleneck_ratio",
+            ]
         ]
-    )
-    full = df.assign(func=lambda x: x["func"].where(lambda x: ~x.duplicated(), ""))
-
-    # Take the biggest of each of 2D or >2D
-    summary_1d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 0]  # type: ignore[unused-ignore,call-overload]
-        .groupby(by="func", sort=False)
-        .last()
-        .reset_index()
-        .drop(columns=("size"))
-    )
-    summary_2d = (
-        df[lambda x: x["shape"].map(lambda x: x.count(" ")) == 1]  # type: ignore[unused-ignore,call-overload]
-        .groupby(by="func", sort=False)
-        .last()
-        .reset_index()
-        .drop(columns="size")
+        # .set_index(["func", "shape", "size"])
+        .rename_axis(columns=None)
     )
 
-    text = ""
-    for title, df in (("1D", summary_1d), ("2D", summary_2d), ("All", full)):
-        shapes = df["shape"].unique()
-        if len(shapes) == 1:
-            shape = shapes[0]
-            df = df.drop(columns="shape")
-        else:
-            shape = None
-        values = df.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
-        markdown_table = tabulate(
-            values,
-            headers=df.columns,
-            disable_numparse=True,
-            colalign=["left"] + ["right"] * (len(df.columns) - 1),
-            tablefmt="pipe",
+    def make_summary_df(df, nd: int):
+        # Take the biggest of a dimension
+        shape = (
+            df[lambda x: x["shape"].astype(str).map(lambda x: x.count(" ")) == (nd - 1)]
+            .sort_values(by="size")["shape"]
+            .iloc[-1]
         )
-        text += f"### {title}\n\n"
-        if shape:
-            text += f"Array of shape `{shape}`, over the final axis\n\n"
-        text += ""
-        text += markdown_table
-        text += "\n\n"
+
+        return (
+            df.query(f"shape == '{shape}'")
+            .reset_index()
+            .set_index(["func", "shape"])
+            .unstack("shape")
+            .pipe(lambda x: x[[c for c in x.columns if c[0].endswith("ratio")]])
+        )
+
+    summary_1d = make_summary_df(df, 1)
+    summary_2d = make_summary_df(df, 2)
+    summary = pd.concat([summary_1d, summary_2d], axis=1).fillna("n/a")
+    summary = summary.reset_index()
+
+    values = summary.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
+    summary_markdown = tabulate(
+        values,
+        headers=["func"]
+        + [f"{c[0].removesuffix('_ratio')}, `{c[1]}`" for c in summary.columns[1:]],
+        disable_numparse=True,
+        colalign=["left"] + ["right"] * (len(summary.columns) - 1),
+        tablefmt="pipe",
+    )
+
+    full = df.assign(
+        func=lambda x: x.reset_index()["func"].where(lambda x: ~x.duplicated(), "")
+    )
+    values = full.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
+    full_markdown = tabulate(
+        values,
+        headers=full.columns,
+        disable_numparse=True,
+        colalign=["left"] + ["right"] * (len(full.columns) - 1),
+        tablefmt="pipe",
+    )
+
+    text = f"""
+### Benchmark summary
+
+Two benchmarks summarize numbagg's performance — one with a 1D array with no
+parallelization, and one with a 2D array with the potential for parallelization.
+Numbagg's relative performance is much higher where parallelization is possible.
+
+The values in the table are numbagg's performance as a multiple of other libraries for a
+given shaped array, calculated over the final axis. (so 1.0x means equal to numbagg,
+higher means slower than numbagg.)
+
+{summary_markdown}
+
+### Full benchmarks
+
+<details>
+
+{full_markdown}
+
+</details>
+
+    """
     Path(".benchmarks/benchmark-output.md").write_text(text)
     print(text)
 

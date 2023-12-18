@@ -62,24 +62,26 @@ def nanmean(a):
 def nanvar(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
-    ddof = 1
-    count = 0
-    mean = 0.0
-    M2 = 0.0
 
-    # Welford's algorithm, which is more numerically stable than the simpler sum of
-    # squares approach.
+    # Running two loops might seem inefficient, but it's 3x faster than a Welford's
+    # algorithm. And if we don't compute the mean first, we get numerical instability
+    # (which our tests capture so is easy to observe).
+
+    ddof = 1
+    asum = 0
+    count = 0
     for ai in a.flat:
         if not np.isnan(ai):
+            asum += ai
             count += 1
-            delta = ai - mean
-            mean += delta / count
-            delta2 = ai - mean
-            M2 += delta * delta2
-
     if count > ddof:
-        variance = M2 / (count - ddof)
-        return variance
+        amean = asum / count
+        asum = 0
+        for ai in a.flat:
+            if not np.isnan(ai):
+                ai -= amean
+                asum += ai * ai
+        return asum / (count - ddof)
     else:
         return np.nan
 
@@ -88,22 +90,22 @@ def nanvar(a):
 def nanstd(a):
     # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
     # discussion of whether to add an option.
-    ddof = 1
-    count = 0
-    mean = 0.0
-    M2 = 0.0
 
+    ddof = 1
+    asum = 0
+    count = 0
     for ai in a.flat:
         if not np.isnan(ai):
+            asum += ai
             count += 1
-            delta = ai - mean
-            mean += delta / count
-            delta2 = ai - mean
-            M2 += delta * delta2
-
     if count > ddof:
-        variance = M2 / (count - ddof)
-        return np.sqrt(variance)
+        amean = asum / count
+        asum = 0
+        for ai in a.flat:
+            if not np.isnan(ai):
+                ai -= amean
+                asum += ai * ai
+        return np.sqrt(asum / (count - ddof))
     else:
         return np.nan
 
@@ -119,7 +121,9 @@ def nanargmax(a):
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if not np.isnan(ai) and (ai > amax or idx == -1):
+        # Much slower, by 3-4x to use this construction:
+        # if not np.isnan(ai) and (ai > ammax or idx == -1):
+        if ai > amax or (idx == -1 and not np.isnan(ai)):
             amax = ai
             idx = i
     if idx == -1:
@@ -138,7 +142,7 @@ def nanargmin(a):
     amin = np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
-        if not np.isnan(ai) and (ai < amin or idx == -1):
+        if ai < amin or (idx == -1 and not np.isnan(ai)):
             amin = ai
             idx = i
     if idx == -1:
@@ -159,7 +163,8 @@ def nanmax(a):
     amax = -np.infty
     all_missing = True
     for ai in a.flat:
-        if not np.isnan(ai) and ai >= amax:
+        # If we check for `isnan` here, the function becomes much slower (by about 4x!)
+        if ai >= amax:
             amax = ai
             all_missing = False
     if all_missing:
@@ -180,7 +185,7 @@ def nanmin(a):
     amin = np.infty
     all_missing = True
     for ai in a.flat:
-        if not np.isnan(ai) and ai <= amin:
+        if ai <= amin:
             amin = ai
             all_missing = False
     if all_missing:
