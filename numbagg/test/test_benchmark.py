@@ -22,8 +22,8 @@ def shape(request):
     "library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True
 )
 @pytest.mark.benchmark(
-    min_time=0.1,
-    max_time=5,
+    # Can increase this if we're comparing code changes
+    max_time=2,
     warmup=True,
     warmup_iterations=1,
     # We care more about accuracy than deviations, so we set this high
