@@ -28,6 +28,7 @@ dtypes_counts = [
 @groupndreduce.wrap(signature=dtypes_counts)
 def group_nanmean(values, labels, counts, out):
     out[:] = 0.0
+    counts[:] = 0
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]

@@ -567,7 +567,7 @@ class groupndreduce(NumbaBase):
         # rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
         if self.needs_count:
-            counts = np.zeros(result.shape, dtype=np.int64)
+            counts = np.empty(result.shape, dtype=np.int64)
             gufunc(values, labels, counts, result)
         else:
             gufunc(values, labels, result)
