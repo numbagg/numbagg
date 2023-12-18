@@ -348,17 +348,19 @@ def test_numeric_int_nanprod():
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+@pytest.mark.parametrize("func", [group_nanmean, group_nansum])
 @pytest.mark.parametrize("n", [127, 128, 255, 256, 1000])
-def test_int8(n, dtype):
+def test_int8(n, func, dtype):
     data = np.random.randn(n)
     assert_almost_equal(
-        np.mean(data),
-        group_nanmean(data, np.zeros((n,), dtype=dtype))[0],
+        getattr(np, func.__name__.removeprefix("group_nan"))(data),
+        func(data, np.zeros((n,), dtype=dtype))[0],
     )
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
-def test_int8_again(dtype):
+@pytest.mark.parametrize("func", [group_nanmean, group_nansum])
+def test_int8_again(dtype, func):
     array = np.array(
         [
             [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
@@ -370,12 +372,14 @@ def test_int8_again(dtype):
     )
     by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
 
-    expected = pd.DataFrame(array.T).groupby(by).sum().T.astype(dtype)
+    expected = getattr(
+        pd.DataFrame(array.T).groupby(by), func.__name__.removeprefix("group_nan")
+    )().T.astype(dtype)
 
     # https://github.com/numbagg/numbagg/issues/213
-    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    assert_almost_equal(func(array, by, axis=-1), expected)
     # Amazingly it can also be more incorrect with another run!
-    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    assert_almost_equal(func(array, by, axis=-1), expected)
 
 
 def test_dimensionality():
