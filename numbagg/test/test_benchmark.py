@@ -18,7 +18,9 @@ def shape(request):
     return request.param
 
 
-@pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck"], indirect=True)
+@pytest.mark.parametrize(
+    "library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True
+)
 def test_benchmark_main(benchmark, func, func_callable, shape):
     """
     Main func that benchmarks how fast functions are.
