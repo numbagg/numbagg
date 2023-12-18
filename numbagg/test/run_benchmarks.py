@@ -178,8 +178,9 @@ means slower than numbagg.)
 
 {summary_markdown}
 
+### Full benchmarks
 
-<details> <summary>Full benchmarks</summary>
+<details>
 
 {full_markdown}
 

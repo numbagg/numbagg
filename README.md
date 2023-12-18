@@ -41,85 +41,252 @@ Currently accelerated functions:
 
 ## Benchmarks
 
-We have two high-level benchmarks — with a 1D array with no parallelization, and
-with a 2D array with the potential for parallelization. Numbagg's relative performance is
-much higher where parallelization is possible.
+### Summary
 
-### 1D
+Two benchmarks summarize numbagg's performance — one with a 1D array with no
+parallelization, and one with a 2D array with the potential for parallelization.
+Numbagg's relative performance is much higher where parallelization is possible.
 
-Array of shape `(10000000,)`, over the final axis
+The values in the table are numbagg's performance as a multiple of other libraries for a
+given shaped array, calculated over the final axis. (so 1.0x means equal to numbagg,
+higher means slower than numbagg.)
 
-| func                      | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
-| :------------------------ | ------: | -----: | ---------: | -----------: | ---------------: |
-| `bfill`                   |    17ms |   19ms |       20ms |        1.11x |            1.15x |
-| `ffill`                   |    17ms |   20ms |       20ms |        1.16x |            1.15x |
-| `group_nanall`            |    52ms |   71ms |        n/a |        1.38x |              n/a |
-| `group_nanany`            |    57ms |   70ms |        n/a |        1.23x |              n/a |
-| `group_nanargmax`         |    63ms |  169ms |        n/a |        2.69x |              n/a |
-| `group_nanargmin`         |    60ms |  179ms |        n/a |        2.98x |              n/a |
-| `group_nancount`          |    57ms |   59ms |        n/a |        1.03x |              n/a |
-| `group_nanfirst`          |    47ms |   71ms |        n/a |        1.52x |              n/a |
-| `group_nanlast`           |    62ms |   71ms |        n/a |        1.15x |              n/a |
-| `group_nanmax`            |    59ms |   71ms |        n/a |        1.20x |              n/a |
-| `group_nanmean`           |    60ms |   72ms |        n/a |        1.21x |              n/a |
-| `group_nanmin`            |    66ms |   73ms |        n/a |        1.11x |              n/a |
-| `group_nanprod`           |    58ms |   67ms |        n/a |        1.15x |              n/a |
-| `group_nanstd`            |    60ms |   70ms |        n/a |        1.17x |              n/a |
-| `group_nansum`            |    61ms |   72ms |        n/a |        1.18x |              n/a |
-| `group_nanvar`            |    64ms |   80ms |        n/a |        1.25x |              n/a |
-| `group_nansum_of_squares` |    66ms |   80ms |        n/a |        1.21x |              n/a |
-| `move_corr`               |    51ms |  955ms |        n/a |       18.65x |              n/a |
-| `move_cov`                |    44ms |  661ms |        n/a |       14.94x |              n/a |
-| `move_mean`               |    33ms |  119ms |       26ms |        3.62x |            0.79x |
-| `move_std`                |    29ms |  179ms |       33ms |        6.26x |            1.15x |
-| `move_sum`                |    31ms |  114ms |       24ms |        3.64x |            0.78x |
-| `move_var`                |    30ms |  174ms |       32ms |        5.88x |            1.07x |
-| `move_exp_nancorr`        |    68ms |  472ms |        n/a |        6.98x |              n/a |
-| `move_exp_nancount`       |    36ms |   83ms |        n/a |        2.33x |              n/a |
-| `move_exp_nancov`         |    51ms |  298ms |        n/a |        5.85x |              n/a |
-| `move_exp_nanmean`        |    33ms |   69ms |        n/a |        2.09x |              n/a |
-| `move_exp_nanstd`         |    46ms |   94ms |        n/a |        2.05x |              n/a |
-| `move_exp_nansum`         |    31ms |   65ms |        n/a |        2.13x |              n/a |
-| `move_exp_nanvar`         |    47ms |   82ms |        n/a |        1.75x |              n/a |
-| `nanquantile`             |   212ms |  187ms |        n/a |        0.88x |              n/a |
+| func                      | pandas, `(10000000,)` | bottleneck, `(10000000,)` | pandas, `(100, 100000)` | bottleneck, `(100, 100000)` |
+| :------------------------ | --------------------: | ------------------------: | ----------------------: | --------------------------: |
+| `bfill`                   |                 1.18x |                     1.21x |                  12.35x |                       4.28x |
+| `ffill`                   |                 1.14x |                     1.16x |                  14.24x |                       4.53x |
+| `group_nanall`            |                 1.56x |                       n/a |                   7.49x |                         n/a |
+| `group_nanany`            |                 1.25x |                       n/a |                   4.61x |                         n/a |
+| `group_nanargmax`         |                 3.03x |                       n/a |                   8.38x |                         n/a |
+| `group_nanargmin`         |                 2.92x |                       n/a |                   9.28x |                         n/a |
+| `group_nancount`          |                 1.06x |                       n/a |                   3.98x |                         n/a |
+| `group_nanfirst`          |                 1.42x |                       n/a |                   8.35x |                         n/a |
+| `group_nanlast`           |                 1.21x |                       n/a |                   4.61x |                         n/a |
+| `group_nanmax`            |                 1.12x |                       n/a |                   3.81x |                         n/a |
+| `group_nanmean`           |                 1.23x |                       n/a |                   4.90x |                         n/a |
+| `group_nanmin`            |                 1.18x |                       n/a |                   3.88x |                         n/a |
+| `group_nanprod`           |                 1.21x |                       n/a |                   4.18x |                         n/a |
+| `group_nanstd`            |                 1.33x |                       n/a |                   4.25x |                         n/a |
+| `group_nansum_of_squares` |                 1.42x |                       n/a |                   6.95x |                         n/a |
+| `group_nansum`            |                 1.29x |                       n/a |                   4.86x |                         n/a |
+| `group_nanvar`            |                 1.21x |                       n/a |                   4.52x |                         n/a |
+| `move_corr`               |                17.37x |                       n/a |                  80.76x |                         n/a |
+| `move_cov`                |                15.06x |                       n/a |                  71.25x |                         n/a |
+| `move_exp_nancorr`        |                 6.68x |                       n/a |                  32.74x |                         n/a |
+| `move_exp_nancount`       |                 2.59x |                       n/a |                   8.08x |                         n/a |
+| `move_exp_nancov`         |                 6.03x |                       n/a |                  30.65x |                         n/a |
+| `move_exp_nanmean`        |                 2.11x |                       n/a |                  11.79x |                         n/a |
+| `move_exp_nanstd`         |                 1.86x |                       n/a |                   9.70x |                         n/a |
+| `move_exp_nansum`         |                 2.03x |                       n/a |                   8.46x |                         n/a |
+| `move_exp_nanvar`         |                 1.94x |                       n/a |                   9.67x |                         n/a |
+| `move_mean`               |                 4.07x |                     0.89x |                  12.33x |                       3.21x |
+| `move_std`                |                 6.11x |                     1.12x |                  22.54x |                       4.65x |
+| `move_sum`                |                 4.22x |                     0.87x |                  15.50x |                       3.50x |
+| `move_var`                |                 5.76x |                     1.07x |                  26.96x |                       5.32x |
+| `nanargmax`               |                 2.42x |                     1.09x |                   2.13x |                       0.97x |
+| `nanargmin`               |                 2.39x |                     1.06x |                   2.25x |                       1.01x |
+| `nancount`                |                 1.63x |                       n/a |                   8.67x |                         n/a |
+| `nanmax`                  |                 0.97x |                     0.91x |                   1.43x |                       0.99x |
+| `nanmean`                 |                 2.54x |                     0.98x |                  12.29x |                       4.48x |
+| `nanmin`                  |                 1.03x |                     1.03x |                   1.39x |                       1.00x |
+| `nanquantile`             |                 0.91x |                       n/a |                   0.98x |                         n/a |
+| `nanstd`                  |                 1.47x |                     1.51x |                   7.92x |                       6.91x |
+| `nansum`                  |                 2.17x |                     0.98x |                  13.85x |                       4.19x |
+| `nanvar`                  |                 1.63x |                     1.48x |                   7.34x |                       5.90x |
 
-### 2D
+### Full benchmarks
 
-Array of shape `(100, 100000)`, over the final axis
+<details>
 
-| func                      | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
-| :------------------------ | ------: | -----: | ---------: | -----------: | ---------------: |
-| `bfill`                   |     5ms |   57ms |       19ms |       12.48x |            4.23x |
-| `ffill`                   |     5ms |   60ms |       20ms |       12.27x |            4.10x |
-| `group_nanall`            |     2ms |   18ms |        n/a |       10.04x |              n/a |
-| `group_nanany`            |     4ms |   19ms |        n/a |        5.20x |              n/a |
-| `group_nanargmax`         |     n/a |   43ms |        n/a |          n/a |              n/a |
-| `group_nanargmin`         |     n/a |   39ms |        n/a |          n/a |              n/a |
-| `group_nancount`          |     4ms |   16ms |        n/a |        4.02x |              n/a |
-| `group_nanfirst`          |     2ms |   16ms |        n/a |       10.64x |              n/a |
-| `group_nanlast`           |     4ms |   16ms |        n/a |        4.08x |              n/a |
-| `group_nanmax`            |     4ms |   18ms |        n/a |        4.17x |              n/a |
-| `group_nanmean`           |     4ms |   19ms |        n/a |        5.44x |              n/a |
-| `group_nanmin`            |     4ms |   18ms |        n/a |        4.10x |              n/a |
-| `group_nanprod`           |     4ms |   16ms |        n/a |        4.25x |              n/a |
-| `group_nanstd`            |     4ms |   20ms |        n/a |        5.51x |              n/a |
-| `group_nansum`            |     4ms |   19ms |        n/a |        5.22x |              n/a |
-| `group_nanvar`            |     4ms |   20ms |        n/a |        5.49x |              n/a |
-| `group_nansum_of_squares` |     4ms |   28ms |        n/a |        7.47x |              n/a |
-| `move_corr`               |    10ms |  919ms |        n/a |       90.69x |              n/a |
-| `move_cov`                |     9ms |  622ms |        n/a |       69.62x |              n/a |
-| `move_mean`               |     6ms |  122ms |       26ms |       18.98x |            4.07x |
-| `move_std`                |     5ms |  172ms |       33ms |       32.21x |            6.18x |
-| `move_sum`                |     5ms |  112ms |       25ms |       21.28x |            4.68x |
-| `move_var`                |     6ms |  158ms |       32ms |       24.87x |            5.11x |
-| `move_exp_nancorr`        |    15ms |  482ms |        n/a |       32.83x |              n/a |
-| `move_exp_nancount`       |     7ms |   73ms |        n/a |        9.95x |              n/a |
-| `move_exp_nancov`         |    10ms |  332ms |        n/a |       33.19x |              n/a |
-| `move_exp_nanmean`        |     6ms |   78ms |        n/a |       12.12x |              n/a |
-| `move_exp_nanstd`         |     9ms |   98ms |        n/a |       11.40x |              n/a |
-| `move_exp_nansum`         |     7ms |   68ms |        n/a |        9.32x |              n/a |
-| `move_exp_nanvar`         |     8ms |   88ms |        n/a |       10.74x |              n/a |
-| `nanquantile`             |   213ms |  196ms |        n/a |        0.92x |              n/a |
+| func                      |                  shape |      size | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
+| :------------------------ | ---------------------: | --------: | ------: | -----: | ---------: | -----------: | ---------------: |
+| `bfill`                   |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.51x |            0.01x |
+|                           |            (10000000,) |  10000000 |    18ms |   21ms |       22ms |        1.18x |            1.21x |
+|                           |          (100, 100000) |  10000000 |     5ms |   64ms |       22ms |       12.35x |            4.28x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |       23ms |          n/a |            5.36x |
+|                           |      (100, 1000, 1000) | 100000000 |    53ms |    n/a |      278ms |          n/a |            5.22x |
+| `ffill`                   |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.51x |            0.01x |
+|                           |            (10000000,) |  10000000 |    18ms |   21ms |       21ms |        1.14x |            1.16x |
+|                           |          (100, 100000) |  10000000 |     4ms |   64ms |       20ms |       14.24x |            4.53x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |       20ms |          n/a |            3.94x |
+|                           |      (100, 1000, 1000) | 100000000 |    54ms |    n/a |      255ms |          n/a |            4.68x |
+| `group_nanall`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.65x |              n/a |
+|                           |            (10000000,) |  10000000 |    52ms |   81ms |        n/a |        1.56x |              n/a |
+|                           |          (100, 100000) |  10000000 |     3ms |   19ms |        n/a |        7.49x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     1ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanany`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.63x |              n/a |
+|                           |            (10000000,) |  10000000 |    62ms |   77ms |        n/a |        1.25x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   21ms |        n/a |        4.61x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanargmax`         |                (1000,) |      1000 |     0ms |    1ms |        n/a |        6.48x |              n/a |
+|                           |            (10000000,) |  10000000 |    68ms |  205ms |        n/a |        3.03x |              n/a |
+|                           |          (100, 100000) |  10000000 |     6ms |   48ms |        n/a |        8.38x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanargmin`         |                (1000,) |      1000 |     0ms |    1ms |        n/a |        6.68x |              n/a |
+|                           |            (10000000,) |  10000000 |    64ms |  187ms |        n/a |        2.92x |              n/a |
+|                           |          (100, 100000) |  10000000 |     5ms |   46ms |        n/a |        9.28x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nancount`          |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.61x |              n/a |
+|                           |            (10000000,) |  10000000 |    63ms |   67ms |        n/a |        1.06x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   17ms |        n/a |        3.98x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanfirst`          |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.83x |              n/a |
+|                           |            (10000000,) |  10000000 |    53ms |   75ms |        n/a |        1.42x |              n/a |
+|                           |          (100, 100000) |  10000000 |     2ms |   17ms |        n/a |        8.35x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     2ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanlast`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.83x |              n/a |
+|                           |            (10000000,) |  10000000 |    61ms |   74ms |        n/a |        1.21x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   17ms |        n/a |        4.61x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanmax`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.68x |              n/a |
+|                           |            (10000000,) |  10000000 |    65ms |   72ms |        n/a |        1.12x |              n/a |
+|                           |          (100, 100000) |  10000000 |     5ms |   19ms |        n/a |        3.81x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanmean`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.79x |              n/a |
+|                           |            (10000000,) |  10000000 |    64ms |   79ms |        n/a |        1.23x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   22ms |        n/a |        4.90x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanmin`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.84x |              n/a |
+|                           |            (10000000,) |  10000000 |    66ms |   77ms |        n/a |        1.18x |              n/a |
+|                           |          (100, 100000) |  10000000 |     5ms |   19ms |        n/a |        3.88x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanprod`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.82x |              n/a |
+|                           |            (10000000,) |  10000000 |    62ms |   76ms |        n/a |        1.21x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   18ms |        n/a |        4.18x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanstd`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.66x |              n/a |
+|                           |            (10000000,) |  10000000 |    64ms |   85ms |        n/a |        1.33x |              n/a |
+|                           |          (100, 100000) |  10000000 |     5ms |   22ms |        n/a |        4.25x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nansum`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.81x |              n/a |
+|                           |            (10000000,) |  10000000 |    63ms |   81ms |        n/a |        1.29x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   20ms |        n/a |        4.86x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nanvar`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.73x |              n/a |
+|                           |            (10000000,) |  10000000 |    66ms |   79ms |        n/a |        1.21x |              n/a |
+|                           |          (100, 100000) |  10000000 |     5ms |   22ms |        n/a |        4.52x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
+| `group_nansum_of_squares` |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.86x |              n/a |
+|                           |            (10000000,) |  10000000 |    61ms |   87ms |        n/a |        1.42x |              n/a |
+|                           |          (100, 100000) |  10000000 |     4ms |   31ms |        n/a |        6.95x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
+| `move_corr`               |                (1000,) |      1000 |     0ms |    1ms |        n/a |        3.54x |              n/a |
+|                           |            (10000000,) |  10000000 |    58ms | 1013ms |        n/a |       17.37x |              n/a |
+|                           |          (100, 100000) |  10000000 |    12ms |  948ms |        n/a |       80.76x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    10ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   208ms |    n/a |        n/a |          n/a |              n/a |
+| `move_cov`                |                (1000,) |      1000 |     0ms |    0ms |        n/a |        3.09x |              n/a |
+|                           |            (10000000,) |  10000000 |    46ms |  700ms |        n/a |       15.06x |              n/a |
+|                           |          (100, 100000) |  10000000 |     9ms |  634ms |        n/a |       71.25x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     9ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   185ms |    n/a |        n/a |          n/a |              n/a |
+| `move_mean`               |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.61x |            0.01x |
+|                           |            (10000000,) |  10000000 |    32ms |  132ms |       29ms |        4.07x |            0.89x |
+|                           |          (100, 100000) |  10000000 |    10ms |  118ms |       31ms |       12.33x |            3.21x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |       28ms |          n/a |            4.14x |
+|                           |      (100, 1000, 1000) | 100000000 |   107ms |    n/a |      355ms |          n/a |            3.33x |
+| `move_std`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.71x |            0.02x |
+|                           |            (10000000,) |  10000000 |    32ms |  198ms |       36ms |        6.11x |            1.12x |
+|                           |          (100, 100000) |  10000000 |     8ms |  181ms |       37ms |       22.54x |            4.65x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     8ms |    n/a |       36ms |          n/a |            4.75x |
+|                           |      (100, 1000, 1000) | 100000000 |    81ms |    n/a |      404ms |          n/a |            4.96x |
+| `move_sum`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.78x |            0.01x |
+|                           |            (10000000,) |  10000000 |    32ms |  135ms |       28ms |        4.22x |            0.87x |
+|                           |          (100, 100000) |  10000000 |     8ms |  116ms |       26ms |       15.50x |            3.50x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |       26ms |          n/a |            3.74x |
+|                           |      (100, 1000, 1000) | 100000000 |    76ms |    n/a |      302ms |          n/a |            3.97x |
+| `move_var`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.63x |            0.02x |
+|                           |            (10000000,) |  10000000 |    32ms |  183ms |       34ms |        5.76x |            1.07x |
+|                           |          (100, 100000) |  10000000 |     6ms |  175ms |       35ms |       26.96x |            5.32x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |       34ms |          n/a |            5.15x |
+|                           |      (100, 1000, 1000) | 100000000 |   107ms |    n/a |      432ms |          n/a |            4.03x |
+| `move_exp_nancorr`        |                (1000,) |      1000 |     0ms |    0ms |        n/a |        2.82x |              n/a |
+|                           |            (10000000,) |  10000000 |    74ms |  492ms |        n/a |        6.68x |              n/a |
+|                           |          (100, 100000) |  10000000 |    15ms |  478ms |        n/a |       32.74x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    15ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   145ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nancount`       |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.83x |              n/a |
+|                           |            (10000000,) |  10000000 |    35ms |   90ms |        n/a |        2.59x |              n/a |
+|                           |          (100, 100000) |  10000000 |    10ms |   79ms |        n/a |        8.08x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |    85ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nancov`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        2.49x |              n/a |
+|                           |            (10000000,) |  10000000 |    55ms |  329ms |        n/a |        6.03x |              n/a |
+|                           |          (100, 100000) |  10000000 |    11ms |  342ms |        n/a |       30.65x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    13ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   202ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nanmean`        |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.60x |              n/a |
+|                           |            (10000000,) |  10000000 |    36ms |   76ms |        n/a |        2.11x |              n/a |
+|                           |          (100, 100000) |  10000000 |     8ms |   88ms |        n/a |       11.79x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     9ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   174ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nanstd`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.87x |              n/a |
+|                           |            (10000000,) |  10000000 |    50ms |   94ms |        n/a |        1.86x |              n/a |
+|                           |          (100, 100000) |  10000000 |    10ms |  100ms |        n/a |        9.70x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    10ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   117ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nansum`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.60x |              n/a |
+|                           |            (10000000,) |  10000000 |    34ms |   69ms |        n/a |        2.03x |              n/a |
+|                           |          (100, 100000) |  10000000 |     9ms |   73ms |        n/a |        8.46x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     6ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   127ms |    n/a |        n/a |          n/a |              n/a |
+| `move_exp_nanvar`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.49x |              n/a |
+|                           |            (10000000,) |  10000000 |    46ms |   89ms |        n/a |        1.94x |              n/a |
+|                           |          (100, 100000) |  10000000 |     9ms |   91ms |        n/a |        9.67x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     9ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |   113ms |    n/a |        n/a |          n/a |              n/a |
+| `nanargmax`               |                (1000,) |      1000 |     0ms |    0ms |        0ms |       15.10x |            0.22x |
+|                           |            (10000000,) |  10000000 |    13ms |   32ms |       14ms |        2.42x |            1.09x |
+|                           |          (100, 100000) |  10000000 |    14ms |   30ms |       13ms |        2.13x |            0.97x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    13ms |    n/a |       15ms |          n/a |            1.11x |
+|                           |      (100, 1000, 1000) | 100000000 |   138ms |    n/a |      147ms |          n/a |            1.06x |
+| `nanargmin`               |                (1000,) |      1000 |     0ms |    0ms |        0ms |       13.05x |            0.20x |
+|                           |            (10000000,) |  10000000 |    13ms |   32ms |       14ms |        2.39x |            1.06x |
+|                           |          (100, 100000) |  10000000 |    13ms |   30ms |       14ms |        2.25x |            1.01x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    14ms |    n/a |       15ms |          n/a |            1.04x |
+|                           |      (100, 1000, 1000) | 100000000 |   142ms |    n/a |      145ms |          n/a |            1.02x |
+| `nancount`                |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.73x |              n/a |
+|                           |            (10000000,) |  10000000 |     4ms |    6ms |        n/a |        1.63x |              n/a |
+|                           |          (100, 100000) |  10000000 |     1ms |   10ms |        n/a |        8.67x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     1ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |     8ms |    n/a |        n/a |          n/a |              n/a |
+| `nanmax`                  |                (1000,) |      1000 |     0ms |    0ms |        0ms |        8.06x |            0.20x |
+|                           |            (10000000,) |  10000000 |    15ms |   14ms |       13ms |        0.97x |            0.91x |
+|                           |          (100, 100000) |  10000000 |    14ms |   19ms |       14ms |        1.43x |            0.99x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    13ms |    n/a |       13ms |          n/a |            1.00x |
+|                           |      (100, 1000, 1000) | 100000000 |   130ms |    n/a |      130ms |          n/a |            1.01x |
+| `nanmean`                 |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.45x |            0.01x |
+|                           |            (10000000,) |  10000000 |    10ms |   26ms |       10ms |        2.54x |            0.98x |
+|                           |          (100, 100000) |  10000000 |     2ms |   30ms |       11ms |       12.29x |            4.48x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     2ms |    n/a |       11ms |          n/a |            5.15x |
+|                           |      (100, 1000, 1000) | 100000000 |    27ms |    n/a |       95ms |          n/a |            3.51x |
+| `nanmin`                  |                (1000,) |      1000 |     0ms |    0ms |        0ms |        7.99x |            0.22x |
+|                           |            (10000000,) |  10000000 |    14ms |   14ms |       14ms |        1.03x |            1.03x |
+|                           |          (100, 100000) |  10000000 |    14ms |   19ms |       14ms |        1.39x |            1.00x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |    13ms |    n/a |       12ms |          n/a |            0.97x |
+|                           |      (100, 1000, 1000) | 100000000 |   130ms |    n/a |      133ms |          n/a |            1.03x |
+| `nanquantile`             |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.93x |              n/a |
+|                           |            (10000000,) |  10000000 |   228ms |  207ms |        n/a |        0.91x |              n/a |
+|                           |          (100, 100000) |  10000000 |   224ms |  220ms |        n/a |        0.98x |              n/a |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |   230ms |    n/a |        n/a |          n/a |              n/a |
+|                           |      (100, 1000, 1000) | 100000000 |  2208ms |    n/a |        n/a |          n/a |              n/a |
+| `nanstd`                  |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.37x |            0.02x |
+|                           |            (10000000,) |  10000000 |    20ms |   29ms |       30ms |        1.47x |            1.51x |
+|                           |          (100, 100000) |  10000000 |     4ms |   34ms |       30ms |        7.92x |            6.91x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |       31ms |          n/a |            6.42x |
+|                           |      (100, 1000, 1000) | 100000000 |    41ms |    n/a |      296ms |          n/a |            7.18x |
+| `nansum`                  |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.85x |            0.01x |
+|                           |            (10000000,) |  10000000 |    11ms |   24ms |       11ms |        2.17x |            0.98x |
+|                           |          (100, 100000) |  10000000 |     2ms |   32ms |       10ms |       13.85x |            4.19x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     2ms |    n/a |       10ms |          n/a |            4.49x |
+|                           |      (100, 1000, 1000) | 100000000 |    18ms |    n/a |      101ms |          n/a |            5.50x |
+| `nanvar`                  |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.48x |            0.02x |
+|                           |            (10000000,) |  10000000 |    20ms |   33ms |       30ms |        1.63x |            1.48x |
+|                           |          (100, 100000) |  10000000 |     5ms |   36ms |       29ms |        7.34x |            5.90x |
+|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |       29ms |          n/a |            6.00x |
+|                           |      (100, 1000, 1000) | 100000000 |    44ms |    n/a |      295ms |          n/a |            6.70x |
+
+</details>
 
 [^1][^2][^3]
 
@@ -141,153 +308,13 @@ Array of shape `(100, 100000)`, over the final axis
     Similarly for `group_nansum_of_squares`, this requires two separate
     operations in pandas.
 
-<details>
-<summary>Full benchmarks</summary>
+[^4]:
+    `anynan` & `allnan` are also functions in numbagg, but not listed here as they
+    require a different benchmark setup.
 
-### All
-
-| func                      |                  shape |      size | numbagg | pandas | bottleneck | pandas_ratio | bottleneck_ratio |
-| :------------------------ | ---------------------: | --------: | ------: | -----: | ---------: | -----------: | ---------------: |
-| `bfill`                   |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.62x |            0.01x |
-|                           |            (10000000,) |  10000000 |    17ms |   19ms |       20ms |        1.11x |            1.15x |
-|                           |          (100, 100000) |  10000000 |     5ms |   57ms |       19ms |       12.48x |            4.23x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |       22ms |          n/a |            4.75x |
-|                           |      (100, 1000, 1000) | 100000000 |    37ms |    n/a |      262ms |          n/a |            7.04x |
-| `ffill`                   |                (1000,) |      1000 |     0ms |    0ms |        0ms |        0.60x |            0.01x |
-|                           |            (10000000,) |  10000000 |    17ms |   20ms |       20ms |        1.16x |            1.15x |
-|                           |          (100, 100000) |  10000000 |     5ms |   60ms |       20ms |       12.27x |            4.10x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |       19ms |          n/a |            4.59x |
-|                           |      (100, 1000, 1000) | 100000000 |    38ms |    n/a |      225ms |          n/a |            5.86x |
-| `group_nanall`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.73x |              n/a |
-|                           |            (10000000,) |  10000000 |    52ms |   71ms |        n/a |        1.38x |              n/a |
-|                           |          (100, 100000) |  10000000 |     2ms |   18ms |        n/a |       10.04x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     1ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanany`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.75x |              n/a |
-|                           |            (10000000,) |  10000000 |    57ms |   70ms |        n/a |        1.23x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   19ms |        n/a |        5.20x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanargmax`         |                (1000,) |      1000 |     0ms |    1ms |        n/a |        7.85x |              n/a |
-|                           |            (10000000,) |  10000000 |    63ms |  169ms |        n/a |        2.69x |              n/a |
-|                           |          (100, 100000) |  10000000 |     n/a |   43ms |        n/a |          n/a |              n/a |
-| `group_nanargmin`         |                (1000,) |      1000 |     0ms |    1ms |        n/a |        7.62x |              n/a |
-|                           |            (10000000,) |  10000000 |    60ms |  179ms |        n/a |        2.98x |              n/a |
-|                           |          (100, 100000) |  10000000 |     n/a |   39ms |        n/a |          n/a |              n/a |
-| `group_nancount`          |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.73x |              n/a |
-|                           |            (10000000,) |  10000000 |    57ms |   59ms |        n/a |        1.03x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   16ms |        n/a |        4.02x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanfirst`          |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.87x |              n/a |
-|                           |            (10000000,) |  10000000 |    47ms |   71ms |        n/a |        1.52x |              n/a |
-|                           |          (100, 100000) |  10000000 |     2ms |   16ms |        n/a |       10.64x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     1ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanlast`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.73x |              n/a |
-|                           |            (10000000,) |  10000000 |    62ms |   71ms |        n/a |        1.15x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   16ms |        n/a |        4.08x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanmax`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.80x |              n/a |
-|                           |            (10000000,) |  10000000 |    59ms |   71ms |        n/a |        1.20x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   18ms |        n/a |        4.17x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanmean`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.92x |              n/a |
-|                           |            (10000000,) |  10000000 |    60ms |   72ms |        n/a |        1.21x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   19ms |        n/a |        5.44x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanmin`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.77x |              n/a |
-|                           |            (10000000,) |  10000000 |    66ms |   73ms |        n/a |        1.11x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   18ms |        n/a |        4.10x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanprod`           |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.76x |              n/a |
-|                           |            (10000000,) |  10000000 |    58ms |   67ms |        n/a |        1.15x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   16ms |        n/a |        4.25x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanstd`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.90x |              n/a |
-|                           |            (10000000,) |  10000000 |    60ms |   70ms |        n/a |        1.17x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   20ms |        n/a |        5.51x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nansum`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.94x |              n/a |
-|                           |            (10000000,) |  10000000 |    61ms |   72ms |        n/a |        1.18x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   19ms |        n/a |        5.22x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nanvar`            |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.86x |              n/a |
-|                           |            (10000000,) |  10000000 |    64ms |   80ms |        n/a |        1.25x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   20ms |        n/a |        5.49x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     4ms |    n/a |        n/a |          n/a |              n/a |
-| `group_nansum_of_squares` |                (1000,) |      1000 |     0ms |    0ms |        n/a |        1.21x |              n/a |
-|                           |            (10000000,) |  10000000 |    66ms |   80ms |        n/a |        1.21x |              n/a |
-|                           |          (100, 100000) |  10000000 |     4ms |   28ms |        n/a |        7.47x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     3ms |    n/a |        n/a |          n/a |              n/a |
-| `move_corr`               |                (1000,) |      1000 |     0ms |    0ms |        n/a |        7.70x |              n/a |
-|                           |            (10000000,) |  10000000 |    51ms |  955ms |        n/a |       18.65x |              n/a |
-|                           |          (100, 100000) |  10000000 |    10ms |  919ms |        n/a |       90.69x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     8ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    98ms |    n/a |        n/a |          n/a |              n/a |
-| `move_cov`                |                (1000,) |      1000 |     0ms |    0ms |        n/a |        7.13x |              n/a |
-|                           |            (10000000,) |  10000000 |    44ms |  661ms |        n/a |       14.94x |              n/a |
-|                           |          (100, 100000) |  10000000 |     9ms |  622ms |        n/a |       69.62x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     8ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    83ms |    n/a |        n/a |          n/a |              n/a |
-| `move_mean`               |                (1000,) |      1000 |     0ms |    0ms |        0ms |        1.63x |            0.02x |
-|                           |            (10000000,) |  10000000 |    33ms |  119ms |       26ms |        3.62x |            0.79x |
-|                           |          (100, 100000) |  10000000 |     6ms |  122ms |       26ms |       18.98x |            4.07x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     6ms |    n/a |       28ms |          n/a |            4.24x |
-|                           |      (100, 1000, 1000) | 100000000 |    49ms |    n/a |      294ms |          n/a |            6.01x |
-| `move_std`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        1.79x |            0.05x |
-|                           |            (10000000,) |  10000000 |    29ms |  179ms |       33ms |        6.26x |            1.15x |
-|                           |          (100, 100000) |  10000000 |     5ms |  172ms |       33ms |       32.21x |            6.18x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |       34ms |          n/a |            6.14x |
-|                           |      (100, 1000, 1000) | 100000000 |    48ms |    n/a |      376ms |          n/a |            7.91x |
-| `move_sum`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        1.64x |            0.02x |
-|                           |            (10000000,) |  10000000 |    31ms |  114ms |       24ms |        3.64x |            0.78x |
-|                           |          (100, 100000) |  10000000 |     5ms |  112ms |       25ms |       21.28x |            4.68x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |       24ms |          n/a |            3.56x |
-|                           |      (100, 1000, 1000) | 100000000 |    48ms |    n/a |      277ms |          n/a |            5.73x |
-| `move_var`                |                (1000,) |      1000 |     0ms |    0ms |        0ms |        1.67x |            0.05x |
-|                           |            (10000000,) |  10000000 |    30ms |  174ms |       32ms |        5.88x |            1.07x |
-|                           |          (100, 100000) |  10000000 |     6ms |  158ms |       32ms |       24.87x |            5.11x |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     6ms |    n/a |       32ms |          n/a |            5.07x |
-|                           |      (100, 1000, 1000) | 100000000 |    48ms |    n/a |      365ms |          n/a |            7.55x |
-| `move_exp_nancorr`        |                (1000,) |      1000 |     0ms |    0ms |        n/a |        6.44x |              n/a |
-|                           |            (10000000,) |  10000000 |    68ms |  472ms |        n/a |        6.98x |              n/a |
-|                           |          (100, 100000) |  10000000 |    15ms |  482ms |        n/a |       32.83x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |    12ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |   112ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nancount`       |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.94x |              n/a |
-|                           |            (10000000,) |  10000000 |    36ms |   83ms |        n/a |        2.33x |              n/a |
-|                           |          (100, 100000) |  10000000 |     7ms |   73ms |        n/a |        9.95x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     5ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    58ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nancov`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        5.41x |              n/a |
-|                           |            (10000000,) |  10000000 |    51ms |  298ms |        n/a |        5.85x |              n/a |
-|                           |          (100, 100000) |  10000000 |    10ms |  332ms |        n/a |       33.19x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |    11ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    81ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nanmean`        |                (1000,) |      1000 |     0ms |    0ms |        n/a |        0.66x |              n/a |
-|                           |            (10000000,) |  10000000 |    33ms |   69ms |        n/a |        2.09x |              n/a |
-|                           |          (100, 100000) |  10000000 |     6ms |   78ms |        n/a |       12.12x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     6ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    69ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nanstd`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        1.09x |              n/a |
-|                           |            (10000000,) |  10000000 |    46ms |   94ms |        n/a |        2.05x |              n/a |
-|                           |          (100, 100000) |  10000000 |     9ms |   98ms |        n/a |       11.40x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     8ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    80ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nansum`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        1.36x |              n/a |
-|                           |            (10000000,) |  10000000 |    31ms |   65ms |        n/a |        2.13x |              n/a |
-|                           |          (100, 100000) |  10000000 |     7ms |   68ms |        n/a |        9.32x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     7ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    55ms |    n/a |        n/a |          n/a |              n/a |
-| `move_exp_nanvar`         |                (1000,) |      1000 |     0ms |    0ms |        n/a |        1.27x |              n/a |
-|                           |            (10000000,) |  10000000 |    47ms |   82ms |        n/a |        1.75x |              n/a |
-|                           |          (100, 100000) |  10000000 |     8ms |   88ms |        n/a |       10.74x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |     8ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |    69ms |    n/a |        n/a |          n/a |              n/a |
-| `nanquantile`             |                (1000,) |      1000 |     0ms |    0ms |        n/a |        1.01x |              n/a |
-|                           |            (10000000,) |  10000000 |   212ms |  187ms |        n/a |        0.88x |              n/a |
-|                           |          (100, 100000) |  10000000 |   213ms |  196ms |        n/a |        0.92x |              n/a |
-|                           | (10, 10, 10, 10, 1000) |  10000000 |   214ms |    n/a |        n/a |          n/a |              n/a |
-|                           |      (100, 1000, 1000) | 100000000 |  2045ms |    n/a |        n/a |          n/a |              n/a |
-
-</details>
+[^5]:
+    `nanmin`, `nanmax`, `nanargmin` & `nanargmax` are not currently parallelized,
+    so exhibit worse performance on parallelizable arrays.
 
 ## Example implementation
 
