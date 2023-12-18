@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-RUN = True
+RUN = False
 
 
 def _sort_key(x):
@@ -79,33 +79,39 @@ def run():
         .assign(numbagg_ratio=lambda df: df.eval("numbagg/numbagg"))
         .assign(pandas_ratio=lambda df: df.eval("pandas/numbagg"))
         .assign(bottleneck_ratio=lambda df: df.eval("bottleneck/numbagg"))
+        .assign(numpy_ratio=lambda df: df.eval("numpy/numbagg"))
         .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
     )
 
     # Surprisingly difficult to get pandas to print a nice-looking table...
     df = (
-        (
-            df.assign(
-                numbagg_ratio=lambda x: x["numbagg_ratio"].map(
-                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-                ),
-                pandas_ratio=lambda x: x["pandas_ratio"].map(
-                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-                ),
-                bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
-                    lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-                ),
-                numbagg=lambda x: (x.numbagg * 1000).map(
-                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-                ),
-                pandas=lambda x: (x.pandas * 1000).map(
-                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-                ),
-                bottleneck=lambda x: (x.bottleneck * 1000).map(
-                    lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-                ),
-            )
-        ).reset_index(drop=True)[
+        df.assign(
+            numbagg_ratio=lambda x: x["numbagg_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            ),
+            pandas_ratio=lambda x: x["pandas_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            ),
+            bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            ),
+            numpy_ratio=lambda x: x["numpy_ratio"].map(
+                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
+            ),
+            numbagg=lambda x: (x.numbagg * 1000).map(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
+            pandas=lambda x: (x.pandas * 1000).map(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
+            bottleneck=lambda x: (x.bottleneck * 1000).map(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
+            numpy=lambda x: (x.numpy * 1000).map(
+                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+            ),
+        )
+        .reset_index(drop=True)[
             [
                 "func",
                 "shape",
@@ -113,12 +119,13 @@ def run():
                 "numbagg",
                 "pandas",
                 "bottleneck",
-                # "numbagg_ratio",
+                "numpy",
+                "numbagg_ratio",
                 "pandas_ratio",
                 "bottleneck_ratio",
+                "numpy_ratio",
             ]
         ]
-        # .set_index(["func", "shape", "size"])
         .rename_axis(columns=None)
     )
 
@@ -135,7 +142,18 @@ def run():
             .reset_index()
             .set_index(["func", "shape"])
             .unstack("shape")
-            .pipe(lambda x: x[[c for c in x.columns if c[0].endswith("ratio")]])
+            .pipe(
+                lambda x: x[
+                    [
+                        c
+                        for c in x.columns
+                        # Want to confirm that numpy is handled correctly before showing
+                        # in summary
+                        if c[0].endswith("ratio")
+                        and c[0] not in ["numbagg_ratio", "numpy_ratio"]
+                    ]
+                ]
+            )
         )
 
     summary_1d = make_summary_df(df, 1)
@@ -147,7 +165,7 @@ def run():
     summary_markdown = tabulate(
         values,
         headers=["func"]
-        + [f"{c[0].removesuffix('_ratio')}, `{c[1]}`" for c in summary.columns[1:]],
+        + [f"{c[0].removesuffix('_ratio')}<br>`{c[1]}`" for c in summary.columns[1:]],
         disable_numparse=True,
         colalign=["left"] + ["right"] * (len(summary.columns) - 1),
         tablefmt="pipe",
@@ -166,15 +184,15 @@ def run():
     )
 
     text = f"""
-### Benchmark summary
+### Summary benchmark
 
 Two benchmarks summarize numbagg's performance — one with a 1D array with no
 parallelization, and one with a 2D array with the potential for parallelization.
 Numbagg's relative performance is much higher where parallelization is possible.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
-given shaped array, calculated over the final axis. (so 1.0x means equal to numbagg,
-higher means slower than numbagg.)
+given shaped array, calculated over the final axis. (so 1.00x means numbagg is equal,
+higher means numbagg is faster.)
 
 {summary_markdown}
 

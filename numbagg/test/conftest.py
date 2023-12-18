@@ -162,6 +162,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numbagg=lambda a, axis=-1: partial(nansum, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).sum().T,
         bottleneck=lambda a, axis=-1: partial(bn.nansum, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nansum, a, axis=axis),
     ),
     nanargmax: dict(
         numbagg=lambda a, axis=-1: partial(nanargmax, a, axis=axis),
@@ -176,31 +177,38 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     nancount: dict(
         numbagg=lambda a, axis=-1: partial(nancount, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).count().T,
+        numpy=lambda a, axis=-1: lambda: a.size
+        - np.count_nonzero(np.isnan(a), axis=axis),
     ),
     nanmax: dict(
         numbagg=lambda a, axis=-1: partial(nanmax, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).max().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanmax, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanmax, a, axis=axis),
     ),
     nanmean: dict(
         numbagg=lambda a, axis=-1: partial(nanmean, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).mean().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanmean, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanmean, a, axis=axis),
     ),
     nanmin: dict(
         numbagg=lambda a, axis=-1: partial(nanmin, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).min().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanmin, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanmin, a, axis=axis),
     ),
     nanstd: dict(
         numbagg=lambda a, axis=-1: partial(nanstd, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).std().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanstd, a, axis=axis, ddof=1),
+        numpy=lambda a, axis=-1: partial(np.nanstd, a, axis=axis),
     ),
     nanvar: dict(
         numbagg=lambda a, axis=-1: partial(nanvar, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).var().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanvar, a, axis=axis, ddof=1),
+        numpy=lambda a, axis=-1: partial(np.nanvar, a, axis=axis),
     ),
     anynan: dict(
         numbagg=lambda a, axis=-1: partial(anynan, a, axis=axis),
@@ -405,7 +413,7 @@ def library(request):
     """By default, limits to numbagg. But can be extended to pandas and bottleneck
 
     ```
-    @pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck"], indirect=True)
+    @pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True)
         def test_func():
             # ...
     ```
@@ -460,8 +468,8 @@ def func_callable(library, func, array):
         assert callable(callable_)
         return callable_
     except KeyError:
-        if library == "bottleneck":
-            pytest.skip(f"Bottleneck doesn't support {func}")
+        if library in ["bottleneck", "numpy"]:
+            pytest.skip(f"{library} doesn't support {func}")
         else:
             raise
 
