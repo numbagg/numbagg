@@ -15,3 +15,5 @@ __pycache__
 .asv
 
 .dmypy.json
+
+.benchmarks

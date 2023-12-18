@@ -19,6 +19,16 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = ["numpy", "numba"]
+
+# These aren't used by pyproject, but we could specify them somewhere (poetry?)
+# dev-dependencies = [
+#   "pytest",
+#   "pytest-benchmark",
+#   "tabulate",
+#   "jq",
+#   "setuptools_scm",
+# ]
+
 description = "Fast N-dimensional aggregation functions with Numba"
 dynamic = ["version"]
 license = {file = "LICENSE"}
@@ -72,4 +82,13 @@ module = [
   "numba.*",
   "pytest.*",
   "setuptools",
+  "tabulate.*",
+  "jq.*",
+]
+
+[tool.pytest.ini_options]
+addopts = ["--benchmark-disable", "--benchmark-warmup=on"]
+markers = [
+  "nightly: Tests not to be run on each commit", #
+  "slow: Tests not to be run on each loop",
 ]
