@@ -73,61 +73,32 @@ def run():
         # numbagg but is probably a better example)
         key=_sort_key,
     )
+    libraries = {"pandas", "bottleneck", "numpy", "numbagg"}.intersection(df.columns)
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
-        .assign(numbagg_ratio=lambda df: df.eval("numbagg/numbagg"))
-        .assign(pandas_ratio=lambda df: df.eval("pandas/numbagg"))
-        .assign(bottleneck_ratio=lambda df: df.eval("bottleneck/numbagg"))
-        .assign(numpy_ratio=lambda df: df.eval("numpy/numbagg"))
         .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
     )
 
-    # Surprisingly difficult to get pandas to print a nice-looking table...
-    df = (
-        df.assign(
-            numbagg_ratio=lambda x: x["numbagg_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            pandas_ratio=lambda x: x["pandas_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            bottleneck_ratio=lambda x: x["bottleneck_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            numpy_ratio=lambda x: x["numpy_ratio"].map(
-                lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
-            ),
-            numbagg=lambda x: (x.numbagg * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-            pandas=lambda x: (x.pandas * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-            bottleneck=lambda x: (x.bottleneck * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
-            numpy=lambda x: (x.numpy * 1000).map(
-                lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
-            ),
+    for library in libraries:
+        df[f"{library}_ratio"] = (df[library] / df["numbagg"]).map(
+            lambda x: f"{x:.2f}x" if not np.isnan(x) else "n/a"
         )
-        .reset_index(drop=True)[
-            [
-                "func",
-                "shape",
-                "size",
-                "numbagg",
-                "pandas",
-                "bottleneck",
-                "numpy",
-                "numbagg_ratio",
-                "pandas_ratio",
-                "bottleneck_ratio",
-                "numpy_ratio",
-            ]
+        df[library] = (df[library] * 1000).map(
+            lambda x: f"{x:.0f}ms" if not np.isnan(x) else "n/a"
+        )
+
+    print(df)
+    # Surprisingly difficult to get pandas to print a nice-looking table...
+    df = df.reset_index(drop=True)[
+        [
+            "func",
+            "shape",
+            "size",
         ]
-        .rename_axis(columns=None)
-    )
+        + list(libraries)
+        + [f"{library}_ratio" for library in libraries]
+    ].rename_axis(columns=None)
 
     def make_summary_df(df, nd: int):
         # Take the biggest of a dimension
