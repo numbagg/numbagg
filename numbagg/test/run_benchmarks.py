@@ -168,13 +168,13 @@ def run():
     text = f"""
 ### Benchmark summary
 
-We have two high-level benchmarks — with a 1D array with no parallelization, and with a
-2D array with the potential for parallelization. Numbagg's relative performance is much
-higher where parallelization is possible.
+Two benchmarks summarize numbagg's performance — one with a 1D array with no
+parallelization, and one with a 2D array with the potential for parallelization.
+Numbagg's relative performance is much higher where parallelization is possible.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
-given shaped array, calculated over the final axis. (1.0x means equal to numbagg, higher
-means slower than numbagg.)
+given shaped array, calculated over the final axis. (so 1.0x means equal to numbagg,
+higher means slower than numbagg.)
 
 {summary_markdown}
 
