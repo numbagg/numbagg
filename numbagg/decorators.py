@@ -419,8 +419,6 @@ class groupndreduce(NumbaBase):
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
         self.func = func
-        nargs = len(signature[0])
-        self.needs_count = nargs == 4
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
@@ -434,6 +432,7 @@ class groupndreduce(NumbaBase):
                     values_dtypes, labels_dtypes
                 )
             ]
+        nargs = len(signature[0])
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
@@ -447,6 +446,7 @@ class groupndreduce(NumbaBase):
                     "all arguments in signature for ndreduce must be scalars: "
                     f" {signature}"
                 )
+        self.needs_count = nargs == 4
 
         self.signature = signature
 

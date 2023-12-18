@@ -1,4 +1,5 @@
 import numpy as np
+from numba.types import float32, float64, int32, int64
 
 from .decorators import groupndreduce
 
@@ -24,7 +25,7 @@ dtypes_counts = [
 ]
 
 
-@groupndreduce.wrap(dtypes_counts)
+@groupndreduce.wrap(signature=dtypes_counts)
 def group_nanmean(values, labels, counts, out):
     out[:] = 0.0
 
