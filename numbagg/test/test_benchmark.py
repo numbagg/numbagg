@@ -21,6 +21,14 @@ def shape(request):
 @pytest.mark.parametrize(
     "library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True
 )
+@pytest.mark.benchmark(
+    min_time=0.1,
+    max_time=5,
+    warmup=True,
+    warmup_iterations=1,
+    # We care more about accuracy than deviations, so we set this high
+    calibration_precision=10,
+)
 def test_benchmark_main(benchmark, func, func_callable, shape):
     """
     Main func that benchmarks how fast functions are.
@@ -34,12 +42,7 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
             "These functions need a different approach to benchmarking; so we're currently excluding them"
         )
     benchmark.group = f"{func}|{shape}"
-    benchmark.pedantic(
-        func_callable,
-        warmup_rounds=1,
-        rounds=3,
-        iterations=int(max(10_000_000 // np.prod(shape), 1)),
-    )
+    benchmark(func_callable)
 
 
 @pytest.mark.parametrize("func", [ffill, bfill], indirect=True)
