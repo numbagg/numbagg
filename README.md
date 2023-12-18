@@ -278,7 +278,7 @@ higher means numbagg is faster.)
 
 </details>
 
-[^1][^2][^3]
+[^1][^2][^3][^4][^5]
 
 [^1]:
     Benchmarks were run on a Mac M1 laptop in December 2023 on numbagg's HEAD,
