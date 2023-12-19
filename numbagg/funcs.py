@@ -204,7 +204,8 @@ def nanquantile(arr, quantile, out):
 
     # replace NaN with maximum
     max_val = np.nanmax(arr)
-    arr[np.isnan(arr)] = max_val
+    # and we need to use `where` to avoid modifying the original array
+    arr = np.where(np.isnan(arr), max_val, arr)
 
     # two columns for indexes — floor and ceiling
     indexes = np.zeros((len(quantile), 2), dtype=np.int32)

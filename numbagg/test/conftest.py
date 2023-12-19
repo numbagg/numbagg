@@ -202,13 +202,13 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         numbagg=lambda a, axis=-1: partial(nanstd, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).std().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanstd, a, axis=axis, ddof=1),
-        numpy=lambda a, axis=-1: partial(np.nanstd, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanstd, a, ddof=1, axis=axis),
     ),
     nanvar: dict(
         numbagg=lambda a, axis=-1: partial(nanvar, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).var().T,
         bottleneck=lambda a, axis=-1: partial(bn.nanvar, a, axis=axis, ddof=1),
-        numpy=lambda a, axis=-1: partial(np.nanvar, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanvar, a, ddof=1, axis=axis),
     ),
     anynan: dict(
         numbagg=lambda a, axis=-1: partial(anynan, a, axis=axis),
@@ -329,11 +329,15 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         ],
     ),
     nanquantile: dict(
-        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a)
-        .quantile(quantiles)
-        .T,
-        numbagg=lambda a, quantiles=[0.25, 0.75]: partial(nanquantile, a, quantiles),
-        numpy=lambda a, quantiles=[0.25, 0.75]: partial(np.nanquantile, a, quantiles),
+        pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a).quantile(
+            quantiles
+        ),
+        numbagg=lambda a, quantiles=[0.25, 0.75], axis=-1: partial(
+            nanquantile, a, quantiles, axis=axis
+        ),
+        numpy=lambda a, quantiles=[0.25, 0.75], axis=-1: partial(
+            np.nanquantile, a, quantiles, axis=axis
+        ),
     ),
     group_nanmean: dict(
         pandas=partial(pandas_group_setup, "mean"),
