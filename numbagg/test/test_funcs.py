@@ -1,7 +1,6 @@
 from functools import partial
 
 import numpy as np
-import pandas as pd
 import pytest
 from numpy.testing import (
     assert_allclose,
@@ -73,17 +72,66 @@ def test_fill_pandas_comp(rand_array, limit, func):
         nanvar,
     ],
 )
-def test_aggregation_pandas_comp(rand_array, func):
+@pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
+def test_aggregation_comparison(func, array):
     c = COMPARISONS[func]
-    array = rand_array[:3]
+    kwargs: dict = {}
 
-    result = c["numbagg"](array)()
-    expected = c["pandas"](array)()
-    if c.get("bottleneck"):
-        expected_bottleneck = c["bottleneck"](array)()
-        assert_allclose(result, expected_bottleneck)
-
+    result = c["numbagg"](array, **kwargs)()
+    expected = c["pandas"](array, **kwargs)()
     assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("limit", [1, 3, None])
+@pytest.mark.parametrize(
+    "func",
+    [
+        ffill,
+        bfill,
+    ],
+)
+def test_fill_comparison(func, array, limit):
+    c = COMPARISONS[func]
+    kwargs = dict(limit=limit)
+
+    result = c["numbagg"](array, **kwargs)()
+    expected = c["pandas"](array, **kwargs)()
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
+def test_quantile_comparison(array, quantiles):
+    c = COMPARISONS[nanquantile]
+    kwargs = dict(quantiles=quantiles)
+
+    result = c["numbagg"](array, **kwargs)()
+    assert_allclose(result, c["numbagg"](array, **kwargs)())
+    expected = c["pandas"](array, **kwargs)().values
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
 
 
 def functions():
@@ -187,21 +235,3 @@ def test_nan_quantile(axis, quantiles, rs):
     expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
-
-
-@pytest.mark.parametrize("limit", [1, 3, None])
-def test_ffill(rand_array, limit):
-    a = rand_array[0]
-    expected = pd.Series(a).ffill(limit=limit).values
-    result = ffill(a, limit=limit)
-
-    assert_allclose(result, expected)
-
-
-@pytest.mark.parametrize("limit", [1, 3, None])
-def test_bfill(rand_array, limit):
-    a = rand_array[0]
-    expected = pd.Series(a).bfill(limit=limit).values
-    result = bfill(a, limit=limit)
-
-    assert_allclose(result, expected)
