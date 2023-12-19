@@ -72,7 +72,7 @@ def test_fill_pandas_comp(rand_array, limit, func):
         nanvar,
     ],
 )
-@pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
+@pytest.mark.parametrize("shape", [(2, 500)], indirect=True)
 def test_aggregation_comparison(func, array):
     c = COMPARISONS[func]
     kwargs: dict = {}
