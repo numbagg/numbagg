@@ -177,7 +177,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     nancount: dict(
         numbagg=lambda a, axis=-1: partial(nancount, a, axis=axis),
         pandas=lambda a: lambda: _df_of_array(a).count().T,
-        numpy=lambda a, axis=-1: lambda: a.size
+        numpy=lambda a, axis=-1: lambda: a.shape[axis]
         - np.count_nonzero(np.isnan(a), axis=axis),
     ),
     nanmax: dict(
