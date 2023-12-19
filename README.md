@@ -14,8 +14,8 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 - Outperforms pandas
   - On a single core, 1-2x faster for aggregation and grouping functions, and 2-20x for
     moving window functions.
-  - When parallelizing across multiple cores, 4-30x faster
-- Outperforms bottleneck when parallelizing across multiple cores
+  - When parallelizing with multiple cores, 4-30x faster
+- Outperforms bottleneck on multiple cores
   - On a single core, matches bottleneck
   - When parallelizing with multiple cores, 4-7x faster
 - ...though numbagg's functions are JIT compiled, so the first run is much slower
@@ -24,7 +24,7 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 - More functions (though bottleneck has some functions we don't have, and pandas' functions
   have many more parameters)
-- Fast functions work for >3 dimensions. Functions take an arbitrary axis or
+- Functions work for >3 dimensions. All functions take an arbitrary axis or
   tuple of axes to calculate over
 - Written in numba — way less code, simple to inspect, simple to improve
 
