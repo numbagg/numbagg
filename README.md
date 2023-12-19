@@ -7,25 +7,24 @@ Fast, flexible N-dimensional array functions written with
 [Numba](https://github.com/numba/numba) and NumPy's [generalized
 ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html).
 
-## Why use numba?
+## Why use numbagg?
 
 ### Performance
 
-- Faster than pandas for most functions — 2-20x
-- About the same speed as bottleneck on a single calculation
-- Much faster than bottleneck — 4-7x — when parallelizing with multiple cores — for
-  example, calculating over each row on an array with 10 rows.
-- ...though numbagg's functions are JIT compiled, so they're much slower on
-  their first run
-
-<!-- Disabled in #189, hopefully temporarily -->
-<!-- The compilation is generally cached on disk[^4]. -->
+- Outperforms pandas
+  - On a single core, 2-10x faster for moving window functions, 1-2x faster for
+    aggregation and grouping functions
+  - When parallelizing with multiple cores, 4-30x faster
+- Outperforms bottleneck on multiple cores
+  - On a single core, matches bottleneck
+  - When parallelizing with multiple cores, 3-7x faster
+- ...though numbagg's functions are JIT compiled, so the first run is much slower
 
 ### Versatility
 
 - More functions (though bottleneck has some functions we don't have, and pandas' functions
   have many more parameters)
-- Fast functions work for >3 dimensions. Functions take an arbitrary axis or
+- Functions work for >3 dimensions. All functions take an arbitrary axis or
   tuple of axes to calculate over
 - Written in numba — way less code, simple to inspect, simple to improve
 
@@ -282,8 +281,8 @@ higher means numbagg is faster.)
 
 [^1]:
     Benchmarks were run on a Mac M1 laptop in December 2023 on numbagg's HEAD,
-    pandas 2.1.1, bottleneck 1.3.7. They're also run in CI, though without
-    demonstrating the full benefits of parallelization given GHA's CPU count.
+    pandas 2.1.1, bottleneck 1.3.7. The run in CI, though without demonstrating
+    the full benefits of parallelization given GHA's low CPU count.
 
 [^2]:
     While we separate the setup and the running of the functions, pandas still
