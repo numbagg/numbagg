@@ -11,14 +11,13 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 ### Performance
 
-- When using a single core:
-  - Outperforms pandas 1-2x for aggregation and grouping
-    functions, and 2-20x for moving window functions.
-  - Matches bottleneck
-- When parallelizing with multiple cores — for example, calculating over each
-  row on an array with 10 rows:
-  - Outperforms pandas 4-30x
-  - Outperforms bottleneck 4-7x
+- Outperforms pandas
+  - On a single core, 1-2x faster for aggregation and grouping functions, and 2-20x for
+    moving window functions.
+  - When parallelizing across multiple cores, 4-30x faster
+- Outperforms bottleneck when parallelizing across multiple cores
+  - On a single core, matches bottleneck
+  - When parallelizing with multiple cores, 4-7x faster
 - ...though numbagg's functions are JIT compiled, so the first run is much slower
 
 ### Versatility
