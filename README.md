@@ -7,19 +7,19 @@ Fast, flexible N-dimensional array functions written with
 [Numba](https://github.com/numba/numba) and NumPy's [generalized
 ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html).
 
-## Why use numba?
+## Why use numbagg?
 
 ### Performance
 
-- Faster than pandas for most functions — 2-20x
-- About the same speed as bottleneck on a single calculation
-- Much faster than bottleneck — 4-7x — when parallelizing with multiple cores — for
-  example, calculating over each row on an array with 10 rows.
-- ...though numbagg's functions are JIT compiled, so they're much slower on
-  their first run
-
-<!-- Disabled in #189, hopefully temporarily -->
-<!-- The compilation is generally cached on disk[^4]. -->
+- When using a single core:
+  - Outperforms pandas 1-2x for aggregation and grouping
+    functions, and 2-20x for moving window functions.
+  - Matches bottleneck
+- When parallelizing with multiple cores — for example, calculating over each
+  row on an array with 10 rows:
+  - Outperforms pandas 4-30x
+  - Outperforms bottleneck 4-7x
+- ...though numbagg's functions are JIT compiled, so the first run is much slower
 
 ### Versatility
 
