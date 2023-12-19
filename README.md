@@ -12,7 +12,7 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 ### Performance
 
 - Outperforms pandas
-  - On a single core, 2-20x for moving window functions and 1-2x faster for
+  - On a single core, 2-20x faster for moving window functions and 1-2x for
     aggregation and grouping functions
   - When parallelizing with multiple cores, 4-30x faster
 - Outperforms bottleneck on multiple cores
