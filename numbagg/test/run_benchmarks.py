@@ -44,7 +44,7 @@ def run(k_filter, run_tests, extra_args):
         )
 
     json = jq.compile(
-        '.benchmarks[] | select(.name | index("test_benchmark_main[")) | .params + {group, library: .params.library, func: .params.func | match("\\\\[numbagg.(.*?)\\\\]").captures[0].string, time: .stats.median, }'
+        r'.benchmarks[] | select(.name | index("test_benchmark_main[")) | .params + {group, library: .params.library, func: .params.func | match("\\[numbagg.(.*?)\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())
@@ -73,11 +73,6 @@ def run(k_filter, run_tests, extra_args):
         # numbagg but is probably a better example)
         key=_sort_key,
     )
-    # Do numbagg last, so the division works below
-    libraries = [c for c in ["pandas", "bottleneck", "numpy"] if c in df.columns] + [
-        "numbagg"
-    ]
-
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
@@ -87,6 +82,11 @@ def run(k_filter, run_tests, extra_args):
             )
         )
     )
+
+    # Do numbagg last, so the division works below
+    libraries = [c for c in ["pandas", "bottleneck", "numpy"] if c in df.columns] + [
+        "numbagg"
+    ]
 
     for library in libraries:
         df[f"{library}_ratio"] = (df[library] / df["numbagg"]).map(
@@ -102,19 +102,14 @@ def run(k_filter, run_tests, extra_args):
             "func",
             "shape",
             "size",
+            "ndim",
         ]
         + list(libraries)
         + [f"{library}_ratio" for library in libraries]
     ].rename_axis(columns=None)
 
     def make_summary_df(df, nd: int):
-        # Take the biggest of a dimension (could have done this with `ndim` which we
-        # made but then discarded above!)
-        shape = (
-            df[lambda x: x["shape"].astype(str).map(lambda x: x.count(" ")) == (nd - 1)]
-            .sort_values(by="size")["shape"]
-            .iloc[-1]
-        )
+        shape = df[lambda x: x["ndim"] == nd].sort_values(by="size")["shape"].iloc[-1]
 
         return (
             df.query(f"shape == '{shape}'")
@@ -141,7 +136,15 @@ def run(k_filter, run_tests, extra_args):
     summary_markdown = tabulate(
         values,
         headers=["func"]
-        + [f"{c[0].removesuffix('_ratio')}<br>`{c[1]}`" for c in summary.columns[1:]],
+        + [
+            # Kinda a horrible expression; we're converting the string to a tuple with
+            # `eval` and then formatting its elements as scientific notation.
+            # f"`({', '.join(f'{s:.0e}' for s in eval(c[1]))})`<br>{c[0].removesuffix('_ratio')}".replace(
+            #     "e+0", "e"
+            # )
+            f"{len(eval(c[1]))}D<br>{c[0].removesuffix('_ratio')}".replace("e+0", "e")
+            for c in summary.columns[1:]
+        ],
         disable_numparse=True,
         colalign=["left"] + ["right"] * (len(summary.columns) - 1),
         tablefmt="pipe",
@@ -162,15 +165,14 @@ def run(k_filter, run_tests, extra_args):
     text = f"""
 ### Summary benchmark
 
-Two benchmarks summarize numbagg's performance — the first with a 1D array without
-parallelization, and a second with a 2D array with parallelization. Numbagg's relative
+Two benchmarks summarize numbagg's performance — the first with a 1D array of 10M elements without
+parallelization, and a second with a 2D array of 100x10K elements with parallelization. Numbagg's relative
 performance is much higher where parallelization is possible. A wider range of arrays is
 listed in the full set of benchmarks below.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
 given shaped array calculated over the final axis. (so 1.00x means numbagg is equal,
-higher means numbagg is faster.). A shape of `(100000000,)` means a 1D array with 100M
-items.
+higher means numbagg is faster.)
 
 {summary_markdown}
 
