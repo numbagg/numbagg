@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+import numbagg
+
 
 def _sort_key(x):
     return (
@@ -71,14 +73,18 @@ def run(k_filter, run_tests):
         key=_sort_key,
     )
     # Do numbagg last, so the division works below
-    libraries = list({"pandas", "bottleneck", "numpy"}.intersection(df.columns)) + [
+    libraries = [c for c in ["pandas", "bottleneck", "numpy"] if c in df.columns] + [
         "numbagg"
     ]
 
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
-        .assign(func=lambda x: x["func"].map(lambda x: f"`{x}`"))
+        .assign(
+            func=lambda x: x["func"].map(
+                lambda x: f"`{x}`{'[^5]' if not getattr(numbagg, x).supports_parallel else ''}"
+            )
+        )
     )
 
     for library in libraries:
@@ -119,10 +125,7 @@ def run(k_filter, run_tests):
                     [
                         c
                         for c in x.columns
-                        # Want to confirm that numpy is handled correctly before showing
-                        # in summary
-                        if c[0].endswith("ratio")
-                        and c[0] not in ["numbagg_ratio", "numpy_ratio"]
+                        if c[0].endswith("ratio") and c[0] not in ["numbagg_ratio"]
                     ]
                 ]
             )
@@ -158,12 +161,12 @@ def run(k_filter, run_tests):
     text = f"""
 ### Summary benchmark
 
-Two benchmarks summarize numbagg's performance — one with a 1D array with no
-parallelization, and one with a 2D array with the potential for parallelization.
+Two benchmarks summarize numbagg's performance — the first with a 1D array with no
+parallelization, and a second with a 2D array with the potential for parallelization.
 Numbagg's relative performance is much higher where parallelization is possible.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
-given shaped array, calculated over the final axis. (so 1.00x means numbagg is equal,
+given shaped array calculated over the final axis. (so 1.00x means numbagg is equal,
 higher means numbagg is faster.)
 
 {summary_markdown}

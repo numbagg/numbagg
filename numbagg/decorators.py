@@ -55,6 +55,7 @@ class NumbaBase:
         self.func = func
         # https://github.com/numba/numba/issues/4807
         self.cache = False
+        self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
 
     @property
