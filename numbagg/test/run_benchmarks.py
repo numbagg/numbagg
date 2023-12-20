@@ -4,6 +4,7 @@ Run the benchmarks and write the results to a markdown file at `.benchmarks/benc
 
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 import jq
@@ -23,11 +24,10 @@ def _sort_key(x):
     )
 
 
-def run(k_filter, run_tests):
+def run(k_filter, run_tests, extra_args):
     json_path = Path(".benchmarks/benchmark.json")
     json_path.parent.mkdir(exist_ok=True, parents=True)
     if run_tests:
-        # pytest numbagg/test/test_benchmark.py --benchmark-only --benchmark-json=.benchmarks/benchmark.json
         subprocess.run(
             [
                 "pytest",
@@ -36,10 +36,10 @@ def run(k_filter, run_tests):
                 f"-k={k_filter}",
                 "--benchmark-enable",
                 "--benchmark-only",
-                "--benchmark-max-time=5",
                 "--run-nightly",
                 f"--benchmark-json={json_path}",
-            ],
+            ]
+            + extra_args,
             check=True,
         )
 
@@ -189,7 +189,7 @@ items.
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run main benchmarks and output results."
+        description="Run main benchmarks and output results. Pass any additional options after a `--`; for example `python run_benchmarks.py -- --benchmark-max-time=10`"
     )
     parser.add_argument(
         "-k",
@@ -209,6 +209,14 @@ if __name__ == "__main__":
         dest="run_tests",
         help="Do not run the tests",
     )
-    args = parser.parse_args()
 
-    run(args.filter, args.run_tests)
+    # Split arguments at '--'
+    if "--" in sys.argv:
+        idx = sys.argv.index("--")
+        args, remaining_args = sys.argv[:idx], sys.argv[idx + 1 :]
+    else:
+        args, remaining_args = sys.argv, []
+
+    parsed_args = parser.parse_args(args[1:])
+
+    run(parsed_args.filter, parsed_args.run_tests, remaining_args)
