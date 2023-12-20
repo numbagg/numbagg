@@ -35,13 +35,15 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 ### Summary benchmark
 
-Two benchmarks summarize numbagg's performance — the first with a 1D array with no
-parallelization, and a second with a 2D array with the potential for parallelization.
-Numbagg's relative performance is much higher where parallelization is possible.
+Two benchmarks summarize numbagg's performance — the first with a 1D array without
+parallelization, and a second with a 2D array with parallelization. Numbagg's relative
+performance is much higher where parallelization is possible. A wider range of arrays is
+listed in the full set of benchmarks below.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
 given shaped array calculated over the final axis. (so 1.00x means numbagg is equal,
-higher means numbagg is faster.)
+higher means numbagg is faster.). A shape of `(100000000,)` means a 1D array with 100M
+items.
 
 | func                      | pandas<br>`(10000000,)` | bottleneck<br>`(10000000,)` | numpy<br>`(10000000,)` | pandas<br>`(100, 100000)` | bottleneck<br>`(100, 100000)` | numpy<br>`(100, 100000)` |
 | :------------------------ | ----------------------: | --------------------------: | ---------------------: | ------------------------: | ----------------------------: | -----------------------: |
