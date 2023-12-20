@@ -35,58 +35,57 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 ### Summary benchmark
 
-Two benchmarks summarize numbagg's performance — the first with a 1D array without
-parallelization, and a second with a 2D array with parallelization. Numbagg's relative
+Two benchmarks summarize numbagg's performance — the first with a 1D array of 10M elements without
+parallelization, and a second with a 2D array of 100x10K elements with parallelization. Numbagg's relative
 performance is much higher where parallelization is possible. A wider range of arrays is
 listed in the full set of benchmarks below.
 
 The values in the table are numbagg's performance as a multiple of other libraries for a
 given shaped array calculated over the final axis. (so 1.00x means numbagg is equal,
-higher means numbagg is faster.). A shape of `(100000000,)` means a 1D array with 100M
-items.
+higher means numbagg is faster.)
 
-| func                      | pandas<br>`(10000000,)` | bottleneck<br>`(10000000,)` | numpy<br>`(10000000,)` | pandas<br>`(100, 100000)` | bottleneck<br>`(100, 100000)` | numpy<br>`(100, 100000)` |
-| :------------------------ | ----------------------: | --------------------------: | ---------------------: | ------------------------: | ----------------------------: | -----------------------: |
-| `bfill`                   |                   1.17x |                       1.18x |                    n/a |                    12.24x |                         4.36x |                      n/a |
-| `ffill`                   |                   1.17x |                       1.12x |                    n/a |                    12.76x |                         4.34x |                      n/a |
-| `group_nanall`            |                   1.44x |                         n/a |                    n/a |                    10.84x |                           n/a |                      n/a |
-| `group_nanany`            |                   1.20x |                         n/a |                    n/a |                     5.25x |                           n/a |                      n/a |
-| `group_nanargmax`         |                   2.88x |                         n/a |                    n/a |                     9.89x |                           n/a |                      n/a |
-| `group_nanargmin`         |                   2.82x |                         n/a |                    n/a |                     9.96x |                           n/a |                      n/a |
-| `group_nancount`          |                   1.01x |                         n/a |                    n/a |                     4.70x |                           n/a |                      n/a |
-| `group_nanfirst`          |                   1.39x |                         n/a |                    n/a |                    11.80x |                           n/a |                      n/a |
-| `group_nanlast`           |                   1.16x |                         n/a |                    n/a |                     5.36x |                           n/a |                      n/a |
-| `group_nanmax`            |                   1.14x |                         n/a |                    n/a |                     5.22x |                           n/a |                      n/a |
-| `group_nanmean`           |                   1.19x |                         n/a |                    n/a |                     5.64x |                           n/a |                      n/a |
-| `group_nanmin`            |                   1.13x |                         n/a |                    n/a |                     5.26x |                           n/a |                      n/a |
-| `group_nanprod`           |                   1.15x |                         n/a |                    n/a |                     4.95x |                           n/a |                      n/a |
-| `group_nanstd`            |                   1.18x |                         n/a |                    n/a |                     5.03x |                           n/a |                      n/a |
-| `group_nansum_of_squares` |                   1.35x |                         n/a |                    n/a |                     8.11x |                           n/a |                      n/a |
-| `group_nansum`            |                   1.21x |                         n/a |                    n/a |                     5.95x |                           n/a |                      n/a |
-| `group_nanvar`            |                   1.19x |                         n/a |                    n/a |                     5.65x |                           n/a |                      n/a |
-| `move_corr`               |                  19.04x |                         n/a |                    n/a |                    92.48x |                           n/a |                      n/a |
-| `move_cov`                |                  14.58x |                         n/a |                    n/a |                    71.61x |                           n/a |                      n/a |
-| `move_exp_nancorr`        |                   6.73x |                         n/a |                    n/a |                    35.30x |                           n/a |                      n/a |
-| `move_exp_nancount`       |                   2.35x |                         n/a |                    n/a |                    10.56x |                           n/a |                      n/a |
-| `move_exp_nancov`         |                   5.77x |                         n/a |                    n/a |                    31.75x |                           n/a |                      n/a |
-| `move_exp_nanmean`        |                   2.03x |                         n/a |                    n/a |                    11.07x |                           n/a |                      n/a |
-| `move_exp_nanstd`         |                   1.89x |                         n/a |                    n/a |                    10.07x |                           n/a |                      n/a |
-| `move_exp_nansum`         |                   1.88x |                         n/a |                    n/a |                     9.70x |                           n/a |                      n/a |
-| `move_exp_nanvar`         |                   1.82x |                         n/a |                    n/a |                     9.71x |                           n/a |                      n/a |
-| `move_mean`               |                   3.82x |                       0.87x |                    n/a |                    16.61x |                         4.01x |                      n/a |
-| `move_std`                |                   5.96x |                       1.29x |                    n/a |                    24.52x |                         6.04x |                      n/a |
-| `move_sum`                |                   3.80x |                       0.83x |                    n/a |                    15.95x |                         3.70x |                      n/a |
-| `move_var`                |                   5.78x |                       1.27x |                    n/a |                    25.41x |                         5.85x |                      n/a |
-| `nanargmax`[^5]           |                   2.45x |                       1.00x |                    n/a |                     2.16x |                         1.00x |                      n/a |
-| `nanargmin`[^5]           |                   2.19x |                       1.01x |                    n/a |                     2.05x |                         1.02x |                      n/a |
-| `nancount`                |                   1.40x |                         n/a |                  1.06x |                    11.00x |                           n/a |                    4.16x |
-| `nanmax`[^5]              |                   3.26x |                       1.00x |                  0.11x |                     3.62x |                         3.24x |                    0.11x |
-| `nanmean`                 |                   2.42x |                       0.98x |                  2.83x |                    13.58x |                         4.54x |                   13.13x |
-| `nanmin`[^5]              |                   3.27x |                       1.00x |                  0.11x |                     3.62x |                         3.24x |                    0.11x |
-| `nanquantile`             |                   0.94x |                         n/a |                  0.78x |                     5.45x |                           n/a |                    5.01x |
-| `nanstd`                  |                   1.50x |                       1.51x |                  2.75x |                     8.29x |                         7.35x |                   13.27x |
-| `nansum`                  |                   2.28x |                       0.97x |                  2.52x |                    17.71x |                         6.24x |                   16.05x |
-| `nanvar`                  |                   1.50x |                       1.49x |                  2.81x |                     8.18x |                         6.97x |                   13.32x |
+| func                      | 1D<br>pandas | 1D<br>bottleneck | 1D<br>numpy | 2D<br>pandas | 2D<br>bottleneck | 2D<br>numpy |
+| :------------------------ | -----------: | ---------------: | ----------: | -----------: | ---------------: | ----------: |
+| `bfill`                   |        1.17x |            1.18x |         n/a |       12.24x |            4.36x |         n/a |
+| `ffill`                   |        1.17x |            1.12x |         n/a |       12.76x |            4.34x |         n/a |
+| `group_nanall`            |        1.44x |              n/a |         n/a |       10.84x |              n/a |         n/a |
+| `group_nanany`            |        1.20x |              n/a |         n/a |        5.25x |              n/a |         n/a |
+| `group_nanargmax`         |        2.88x |              n/a |         n/a |        9.89x |              n/a |         n/a |
+| `group_nanargmin`         |        2.82x |              n/a |         n/a |        9.96x |              n/a |         n/a |
+| `group_nancount`          |        1.01x |              n/a |         n/a |        4.70x |              n/a |         n/a |
+| `group_nanfirst`          |        1.39x |              n/a |         n/a |       11.80x |              n/a |         n/a |
+| `group_nanlast`           |        1.16x |              n/a |         n/a |        5.36x |              n/a |         n/a |
+| `group_nanmax`            |        1.14x |              n/a |         n/a |        5.22x |              n/a |         n/a |
+| `group_nanmean`           |        1.19x |              n/a |         n/a |        5.64x |              n/a |         n/a |
+| `group_nanmin`            |        1.13x |              n/a |         n/a |        5.26x |              n/a |         n/a |
+| `group_nanprod`           |        1.15x |              n/a |         n/a |        4.95x |              n/a |         n/a |
+| `group_nanstd`            |        1.18x |              n/a |         n/a |        5.03x |              n/a |         n/a |
+| `group_nansum_of_squares` |        1.35x |              n/a |         n/a |        8.11x |              n/a |         n/a |
+| `group_nansum`            |        1.21x |              n/a |         n/a |        5.95x |              n/a |         n/a |
+| `group_nanvar`            |        1.19x |              n/a |         n/a |        5.65x |              n/a |         n/a |
+| `move_corr`               |       19.04x |              n/a |         n/a |       92.48x |              n/a |         n/a |
+| `move_cov`                |       14.58x |              n/a |         n/a |       71.61x |              n/a |         n/a |
+| `move_exp_nancorr`        |        6.73x |              n/a |         n/a |       35.30x |              n/a |         n/a |
+| `move_exp_nancount`       |        2.35x |              n/a |         n/a |       10.56x |              n/a |         n/a |
+| `move_exp_nancov`         |        5.77x |              n/a |         n/a |       31.75x |              n/a |         n/a |
+| `move_exp_nanmean`        |        2.03x |              n/a |         n/a |       11.07x |              n/a |         n/a |
+| `move_exp_nanstd`         |        1.89x |              n/a |         n/a |       10.07x |              n/a |         n/a |
+| `move_exp_nansum`         |        1.88x |              n/a |         n/a |        9.70x |              n/a |         n/a |
+| `move_exp_nanvar`         |        1.82x |              n/a |         n/a |        9.71x |              n/a |         n/a |
+| `move_mean`               |        3.82x |            0.87x |         n/a |       16.61x |            4.01x |         n/a |
+| `move_std`                |        5.96x |            1.29x |         n/a |       24.52x |            6.04x |         n/a |
+| `move_sum`                |        3.80x |            0.83x |         n/a |       15.95x |            3.70x |         n/a |
+| `move_var`                |        5.78x |            1.27x |         n/a |       25.41x |            5.85x |         n/a |
+| `nanargmax`[^5]           |        2.45x |            1.00x |         n/a |        2.16x |            1.00x |         n/a |
+| `nanargmin`[^5]           |        2.19x |            1.01x |         n/a |        2.05x |            1.02x |         n/a |
+| `nancount`                |        1.40x |              n/a |       1.06x |       11.00x |              n/a |       4.16x |
+| `nanmax`[^5]              |        3.26x |            1.00x |       0.11x |        3.62x |            3.24x |       0.11x |
+| `nanmean`                 |        2.42x |            0.98x |       2.83x |       13.58x |            4.54x |      13.13x |
+| `nanmin`[^5]              |        3.27x |            1.00x |       0.11x |        3.62x |            3.24x |       0.11x |
+| `nanquantile`             |        0.94x |              n/a |       0.78x |        5.45x |              n/a |       5.01x |
+| `nanstd`                  |        1.50x |            1.51x |       2.75x |        8.29x |            7.35x |      13.27x |
+| `nansum`                  |        2.28x |            0.97x |       2.52x |       17.71x |            6.24x |      16.05x |
+| `nanvar`                  |        1.50x |            1.49x |       2.81x |        8.18x |            6.97x |      13.32x |
 
 ### Full benchmarks
 
