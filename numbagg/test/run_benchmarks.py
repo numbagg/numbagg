@@ -36,6 +36,7 @@ def run(k_filter, run_tests):
                 f"-k={k_filter}",
                 "--benchmark-enable",
                 "--benchmark-only",
+                "--benchmark-max-time=5",
                 "--run-nightly",
                 f"--benchmark-json={json_path}",
             ],
