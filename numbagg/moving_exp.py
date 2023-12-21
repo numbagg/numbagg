@@ -311,7 +311,7 @@ def move_exp_nancorr(a1, a2, alpha, min_weight, out):
 
         if weight >= min_weight:
             denominator = np.sqrt(var_a1 * var_a2)
-            if denominator != 0:
+            if denominator > 0:
                 out[i] = cov / denominator
             else:
                 out[i] = np.nan
