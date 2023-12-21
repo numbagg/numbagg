@@ -15,13 +15,6 @@ from numbagg import (
 from .conftest import COMPARISONS
 
 
-@pytest.fixture(scope="module")
-def rand_array(rs):
-    arr = rs.rand(2000).reshape(10, -1)
-    arr[0, 0] = np.nan
-    return np.where(arr > 0.1, arr, np.nan)
-
-
 @pytest.mark.parametrize(
     "func",
     [
@@ -35,9 +28,12 @@ def rand_array(rs):
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp(rand_array, alpha, func):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_comp(array, alpha, func):
     c = COMPARISONS[func]
-    array = rand_array[:3]
+
+    # TODO: put bug report into pandas on move_exp_nancorr starting with [1, np.nan]
+    array = array[:1]
 
     result = c["numbagg"](array, alpha=alpha)()
     expected = c["pandas"](array, alpha=alpha)()
@@ -93,17 +89,17 @@ def test_move_exp_min_weight(func):
     assert result == expected
 
 
-@pytest.mark.parametrize("n", [10, 200])
+@pytest.mark.parametrize("shape", [(10,), (200,)], indirect=True)
 @pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
 @pytest.mark.parametrize("test_nans", [True, False])
-def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
-    array = rand_array[0, :n]
+def test_move_exp_min_weight_numerical(alpha, array, test_nans):
     if not test_nans:
         array = np.nan_to_num(array)
     # High alphas mean fast decays, mean initial weights are higher
     initial_weight = alpha
     weights = (
-        np.array([(1 - alpha) ** (i - 1) for i in range(n, 0, -1)]) * initial_weight
+        np.array([(1 - alpha) ** (i - 1) for i in range(array.size, 0, -1)])
+        * initial_weight
     )
     assert_allclose(weights[-1], initial_weight)
     # Fill weights with NaNs where array has them
@@ -194,9 +190,9 @@ def test_move_exp_nancorr_numeric():
     ],
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_alphas(rand_array, alpha, func):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_alphas(array, alpha, func):
     c = COMPARISONS[func]
-    array = rand_array[:3]
 
     # Supply alphas as a 1D array
     alphas = np.full(array.shape[-1], alpha)
