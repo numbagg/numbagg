@@ -433,18 +433,21 @@ class groupndreduce(NumbaBase):
                     values_dtypes, labels_dtypes
                 )
             ]
+        nargs = len(signature[0])
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
-            if len(sig) != 3:
+            if len(sig) != nargs:
                 raise TypeError(
-                    "signature has wrong number of arguments != 3: " f"{signature}"
+                    f"signature has wrong number of argument != {nargs}: "
+                    f"{signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
                     "all arguments in signature for ndreduce must be scalars: "
                     f" {signature}"
                 )
+        self.needs_count = nargs == 4
 
         self.signature = signature
 
@@ -457,12 +460,18 @@ class groupndreduce(NumbaBase):
         numba_sig = []
         slices = (slice(None),) * core_ndim
         for input_sig in self.signature:
-            values, labels, out = input_sig
-            new_sig = (values[slices], labels[slices], out[:])
+            if self.needs_count:
+                values, labels, counts, out = input_sig
+                new_sig = (values[slices], labels[slices], counts[:], out[:])
+            else:
+                values, labels, out = input_sig
+                new_sig = (values[slices], labels[slices], out[:])  # type: ignore[assignment]
             numba_sig.append(new_sig)
 
         first_sig = numba_sig[0]
-        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
+        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + (
+            ",(z)" if not self.needs_count else ",(z),(z)"
+        )
         vectorize = numba.guvectorize(
             numba_sig,
             gufunc_sig,
@@ -541,6 +550,7 @@ class groupndreduce(NumbaBase):
                 )
             values = np.moveaxis(values, axis, -1)
             gufunc = self.gufunc(1, target=target)
+
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -557,7 +567,11 @@ class groupndreduce(NumbaBase):
         # while `prod` uses 1. So we don't initialize with a value here, and instead
         # rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
-        gufunc(values, labels, result)
+        if self.needs_count:
+            counts = np.empty(result.shape, dtype=np.int64)
+            gufunc(values, labels, counts, result)
+        else:
+            gufunc(values, labels, result)
         return result
 
 

@@ -1,12 +1,34 @@
 import numpy as np
+from numba.types import float32, float64, int32, int64
 
 from .decorators import groupndreduce
 
+dtypes = [
+    (int32, int32, int32),
+    (int32, int64, int32),
+    (int64, int32, int64),
+    (int64, int64, int64),
+    (float32, int32, float32),
+    (float32, int64, float32),
+    (float64, int32, float64),
+    (float64, int64, float64),
+]
+dtypes_counts = [
+    (int32, int32, int64, int32),
+    (int32, int64, int64, int32),
+    (int64, int32, int64, int64),
+    (int64, int64, int64, int64),
+    (float32, int32, int64, float32),
+    (float32, int64, int64, float32),
+    (float64, int32, int64, float64),
+    (float64, int64, int64, float64),
+]
 
-@groupndreduce.wrap()
-def group_nanmean(values, labels, out):
-    counts = np.zeros(out.shape, dtype=labels.dtype)
+
+@groupndreduce.wrap(signature=dtypes_counts)
+def group_nanmean(values, labels, counts, out):
     out[:] = 0.0
+    counts[:] = 0
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
