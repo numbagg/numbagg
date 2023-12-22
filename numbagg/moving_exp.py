@@ -110,6 +110,8 @@ def move_exp_nanvar(a, alpha, min_weight, out):
     # n2: decayed sum of the (already-decayed) weights of non-missing values.
     sum_x_2 = sum_x = sum_weight = sum_weight_2 = weight = 0.0
 
+    # print("STARTING")
+
     for i in range(N):
         a_i = a[i]
         alpha_i = alpha[i]
@@ -141,6 +143,8 @@ def move_exp_nanvar(a, alpha, min_weight, out):
         #   = sum(weights**2) / sum(weights)**2
         #   = sum_weight_2 / sum_weight**2
         bias = 1 - sum_weight_2 / (sum_weight**2)
+        # print(bias)
+        # raise ValueError
 
         if weight >= min_weight and bias > 0:
             out[i] = var_biased / bias
@@ -274,6 +278,10 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
 def move_exp_nancorr(a1, a2, alpha, min_weight, out):
     N = len(a1)
 
+    print("STARTING")
+
+    print(a1, alpha)
+
     sum_x1 = sum_x2 = sum_x1x2 = sum_weight = sum_weight_2 = 0
     weight = sum_x1_2 = sum_x2_2 = 0
 
@@ -305,15 +313,20 @@ def move_exp_nancorr(a1, a2, alpha, min_weight, out):
 
         # The bias cancels out, so we don't need to adjust for it
 
-        cov = (sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)) / sum_weight
-        var_a1 = (sum_x1_2 - (sum_x1**2 / sum_weight)) / sum_weight
-        var_a2 = (sum_x2_2 - (sum_x2**2 / sum_weight)) / sum_weight
+        cov = sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)
+        var_a1 = sum_x1_2 - (sum_x1**2 / sum_weight)
+        var_a2 = sum_x2_2 - (sum_x2**2 / sum_weight)
 
+        # print(i, cov, var_a1, sum_x1, sum_x1**2, sum_x1x2)
+        print(i, cov, var_a1, sum_x1, sum_x1x2, sum_weight)
         if weight >= min_weight:
             denominator = np.sqrt(var_a1 * var_a2)
+            print(i, denominator)
             if denominator > 0:
                 out[i] = cov / denominator
             else:
                 out[i] = np.nan
         else:
             out[i] = np.nan
+
+    print(out)
