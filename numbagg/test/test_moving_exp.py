@@ -32,9 +32,6 @@ from .conftest import COMPARISONS
 def test_move_exp_comp(array, alpha, func):
     c = COMPARISONS[func]
 
-    # TODO: put bug report into pandas on move_exp_nancorr starting with [1, np.nan]
-    array = array[:1]
-
     result = c["numbagg"](array, alpha=alpha)()
     expected = c["pandas"](array, alpha=alpha)()
 
@@ -137,6 +134,85 @@ def test_move_exp_nancount_nansum(alpha):
 
     result = move_exp_nancount(array, alpha=alpha)
     expected = move_exp_nansum(array, alpha=alpha)
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize(
+    "func_n",
+    [
+        # Functions that are variance-like
+        (move_exp_nanvar, 1),
+        (move_exp_nanstd, 1),
+        (move_exp_nancov, 2),
+        (move_exp_nancorr, 2),
+    ],
+)
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+def test_move_exp_nans_var(func_n, alpha):
+    # This test is related to producing values with `move_exp_nancorr` on arrays with
+    # `[0.9, np.nan]`, when we shouldn't. We could probably replace some of it with
+    # property testing.
+
+    func, n = func_n
+
+    array = np.array([np.nan, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([5.0, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan, 2.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan, 1.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    if func != move_exp_nancorr:
+        expected = np.array([True, True, False])
+    if func == move_exp_nancorr:
+        # Correlation of values that are all the same is undefined
+        expected = np.array([True, True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.1, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.75, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.5, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.9, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    # # NEXT: why does this return a different result to the one above??
+    array = np.array([0.95, np.nan, 1.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False])
+    assert_allclose(result, expected)
+
+    array = np.array([0.59288027, np.nan, 0.4758262, 0.70877039])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False, False])
     assert_allclose(result, expected)
 
 

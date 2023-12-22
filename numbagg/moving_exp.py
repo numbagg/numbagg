@@ -305,13 +305,19 @@ def move_exp_nancorr(a1, a2, alpha, min_weight, out):
 
         # The bias cancels out, so we don't need to adjust for it
 
-        cov = (sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)) / sum_weight
-        var_a1 = (sum_x1_2 - (sum_x1**2 / sum_weight)) / sum_weight
-        var_a2 = (sum_x2_2 - (sum_x2**2 / sum_weight)) / sum_weight
+        cov = sum_x1x2 - (sum_x1 * sum_x2 / sum_weight)
+        var_a1 = sum_x1_2 - (sum_x1**2 / sum_weight)
+        var_a2 = sum_x2_2 - (sum_x2**2 / sum_weight)
 
-        if weight >= min_weight:
+        # TODO: we don't need to compute this for the output, but if we don't, then we
+        # get an error around numerical precision that causes us to produce values when
+        # we shouldn't. Would be good to be able to remove it. (This is well-tested, so
+        # if we can remove it while passing tests, then we can.)
+        bias = 1 - sum_weight_2 / (sum_weight**2)
+
+        if weight >= min_weight and bias > 0:
             denominator = np.sqrt(var_a1 * var_a2)
-            if denominator != 0:
+            if denominator > 0:
                 out[i] = cov / denominator
             else:
                 out[i] = np.nan
