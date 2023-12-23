@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 
 from numbagg import (
+    MOVE_EXP_FUNCS,
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -17,15 +18,7 @@ from .conftest import COMPARISONS
 
 @pytest.mark.parametrize(
     "func",
-    [
-        move_exp_nancount,
-        move_exp_nanmean,
-        move_exp_nanstd,
-        move_exp_nansum,
-        move_exp_nanvar,
-        move_exp_nancov,
-        move_exp_nancorr,
-    ],
+    MOVE_EXP_FUNCS,
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
@@ -228,6 +221,76 @@ def test_move_exp_nanmean_numeric():
     assert_allclose(result, expected)
 
 
+def test_move_exp_inf():
+    array = np.array([np.inf])
+    result = move_exp_nanmean(array, alpha=0.25)
+    expected = np.array([np.inf])
+    assert_allclose(result, expected)
+
+    array = np.array([0, 0, np.inf], dtype=np.float16)
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([0, 0, np.inf])
+    assert_array_equal(result, expected)
+
+    array = np.array([0, np.inf, np.inf], dtype=np.float16)
+    result = move_exp_nanmean(array, alpha=1.0)
+    # Unclear if the final value should remain `inf` or become `nan` — it's changing to
+    # `nan` because `alpha=1`, and so we get `inf * 0`...
+    expected = np.array([0, np.inf, np.nan])
+    assert_array_equal(result, expected)
+
+
+def test_move_exp_nanmean_big():
+    array = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    assert_array_equal(result, expected)
+
+
+def test_move_exp_nanmean_nan():
+    array = np.array([[0, np.nan]])
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([[0, np.nan]])
+    # Notably pandas returns [[0, 0]] here, which I think doesn't make sense — there's
+    # no denominator remaining, since alpha is 1, so I think it should be `nan``
+    assert_array_equal(result, expected)
+
+    # Same here
+    array = np.array([[1, np.nan]])
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([[1, np.nan]])
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.xfail(
+    reason="Decaying the numerator and denominator separately means we can overflow with sufficiently large values"
+)
+def test_move_exp_nanmean_big_x():
+    array = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    result = move_exp_nanmean(array, alpha=0.5)
+    expected = np.array(
+        [[0.00000000e000, 7.989747e307], [1.19846209e308, 1.19846209e308]]
+    )
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_endian(array):
+    expected = move_exp_nanmean(array, alpha=0.25)
+
+    array = array.astype(array.dtype.newbyteorder(">"))
+    # with pytest.warns(UserWarning):
+    result = move_exp_nanmean(array, alpha=0.25)
+
+    assert_allclose(result, expected)
+
+
 def test_move_exp_nansum_numeric():
     array = np.array([10, 0, np.nan, 10])
 
@@ -255,15 +318,7 @@ def test_move_exp_nancorr_numeric():
 
 @pytest.mark.parametrize(
     "func",
-    [
-        move_exp_nancount,
-        move_exp_nanmean,
-        move_exp_nanstd,
-        move_exp_nansum,
-        move_exp_nanvar,
-        move_exp_nancov,
-        move_exp_nancorr,
-    ],
+    MOVE_EXP_FUNCS,
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
