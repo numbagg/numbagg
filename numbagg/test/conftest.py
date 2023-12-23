@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import warnings
 from functools import cache, partial
 from typing import Callable
 
@@ -63,7 +64,9 @@ def pandas_ewm_setup(func, a, alpha=0.5):
 
 
 def two_array_setup(a):
-    a1, a2 = a, a**2 + 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        a1, a2 = a, a**2 + 1
     return a1, a2
 
 
@@ -224,23 +227,33 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     ),
     move_exp_nanvar: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_setup(lambda df: df.var().T, a, alpha),
-        numbagg=lambda a, alpha=0.5: partial(move_exp_nanvar, a, alpha=alpha),
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nanvar, a, alpha=alpha, **kwargs
+        ),
     ),
     move_exp_nanmean: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_setup(lambda df: df.mean().T, a, alpha),
-        numbagg=lambda a, alpha=0.5: partial(move_exp_nanmean, a, alpha=alpha),
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nanmean, a, alpha=alpha, **kwargs
+        ),
     ),
     move_exp_nancount: dict(
         pandas=pandas_ewm_nancount_setup,
-        numbagg=lambda a, alpha=0.5: partial(move_exp_nancount, a, alpha=alpha),
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nancount, a, alpha=alpha, **kwargs
+        ),
     ),
     move_exp_nanstd: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_setup(lambda df: df.std().T, a, alpha),
-        numbagg=lambda a, alpha=0.5: partial(move_exp_nanstd, a, alpha=alpha),
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nanstd, a, alpha=alpha, **kwargs
+        ),
     ),
     move_exp_nansum: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_setup(lambda df: df.sum().T, a, alpha),
-        numbagg=lambda a, alpha=0.5: partial(move_exp_nansum, a, alpha=alpha),
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nansum, a, alpha=alpha, **kwargs
+        ),
     ),
     move_exp_nancorr: dict(
         pandas=lambda a, alpha=0.5: pandas_ewm_2_array_setup(
