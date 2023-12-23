@@ -24,7 +24,7 @@ _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
 
 
 def _gufunc_arg_str(arg):
-    return "(%s)" % ",".join(_ALPHABET[: ndim(arg)])
+    return f"({','.join(_ALPHABET[: ndim(arg)])})"
 
 
 def gufunc_string_signature(numba_args):
@@ -412,6 +412,7 @@ class groupndreduce(NumbaBase):
         func,
         signature: list[tuple] | None = None,
         *,
+        supports_ddof=False,
         supports_nd=True,
         supports_bool=True,
         supports_ints=True,
@@ -419,6 +420,7 @@ class groupndreduce(NumbaBase):
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
+        self.supports_ddof = supports_ddof
         self.func = func
 
         if signature is None:
@@ -428,7 +430,9 @@ class groupndreduce(NumbaBase):
                 values_dtypes += (numba.int32, numba.int64)
 
             signature = [
-                (value_type, label_type, value_type)
+                (value_type, label_type, numba.int64, value_type)
+                if supports_ddof
+                else (value_type, label_type, value_type)
                 for value_type, label_type in itertools.product(
                     values_dtypes, labels_dtypes
                 )
@@ -436,14 +440,14 @@ class groupndreduce(NumbaBase):
         for sig in signature:
             if not isinstance(sig, tuple):
                 raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
-            if len(sig) != 3:
+            n_args = 3 + supports_ddof
+            if len(sig) != n_args:
                 raise TypeError(
-                    "signature has wrong number of arguments != 3: " f"{signature}"
+                    f"signature has wrong number of arguments != {n_args}: {signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
-                    "all arguments in signature for ndreduce must be scalars: "
-                    f" {signature}"
+                    f"all arguments in signature for ndreduce must be scalars: {signature}"
                 )
 
         self.signature = signature
@@ -454,15 +458,24 @@ class groupndreduce(NumbaBase):
     def gufunc(self, core_ndim, *, target):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
-        numba_sig = []
+        numba_sig: list[tuple] = []
         slices = (slice(None),) * core_ndim
-        for input_sig in self.signature:
-            values, labels, out = input_sig
-            new_sig = (values[slices], labels[slices], out[:])
-            numba_sig.append(new_sig)
+        # This is pretty messy. We could inherit from this class for the `ddof` methods.
+        # But probably we want to make it more abstract, and take advantage of
+        # forthcoming numba features such as dynamic signatures.
+        if self.supports_ddof:
+            for input_sig in self.signature:
+                values, labels, ddof, out = input_sig
+                numba_sig += [(values[slices], labels[slices], ddof, out[:])]
+            first_sig = numba_sig[0]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(),(z)"
+        else:
+            for input_sig in self.signature:
+                values, labels, out = input_sig
+                numba_sig += [(values[slices], labels[slices], out[:])]
+            first_sig = numba_sig[0]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(z)"
 
-        first_sig = numba_sig[0]
-        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
         vectorize = numba.guvectorize(
             numba_sig,
             gufunc_sig,
@@ -477,6 +490,7 @@ class groupndreduce(NumbaBase):
         values: np.ndarray,
         labels: np.ndarray,
         *,
+        ddof=1,
         num_labels: int | None = None,
         axis: int | tuple[int, ...] | None = None,
     ):
@@ -557,7 +571,14 @@ class groupndreduce(NumbaBase):
         # while `prod` uses 1. So we don't initialize with a value here, and instead
         # rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
-        gufunc(values, labels, result)
+        args: tuple = (values, labels)
+
+        if self.supports_ddof:
+            args += (ddof,)
+        args += (result,)
+        print(args)
+
+        gufunc(*args)
         return result
 
 
