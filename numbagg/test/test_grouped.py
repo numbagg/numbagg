@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_almost_equal
 
+from numbagg import GROUPED_FUNCS
 from numbagg.grouped import (
     group_nanall,
     group_nanany,
@@ -129,23 +130,7 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
 
 @pytest.mark.parametrize(
     "func",
-    [
-        group_nanall,
-        group_nanany,
-        group_nanargmax,
-        group_nanargmin,
-        group_nancount,
-        group_nanfirst,
-        group_nanlast,
-        group_nanmax,
-        group_nanmean,
-        group_nanmin,
-        group_nanprod,
-        group_nanstd,
-        group_nansum,
-        group_nansum_of_squares,
-        group_nanvar,
-    ],
+    GROUPED_FUNCS,
 )
 @pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
 def test_group_pandas_comp(array, func):
@@ -156,6 +141,21 @@ def test_group_pandas_comp(array, func):
 
     result = c["numbagg"](array)()
     expected_pandas = c["pandas"](array)().values
+
+    assert_allclose(result, expected_pandas)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [f for f in GROUPED_FUNCS if f.supports_ddof],
+)
+@pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
+@pytest.mark.parametrize("ddof", [0, 1, 5])
+def test_group_pandas_comp_ddof(array, func, ddof):
+    c = COMPARISONS[func]
+
+    result = c["numbagg"](array, ddof=ddof)()
+    expected_pandas = c["pandas"](array, ddof=ddof)().values
 
     assert_allclose(result, expected_pandas)
 

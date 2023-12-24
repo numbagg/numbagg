@@ -131,10 +131,12 @@ def numbagg_group_setup(func, a, **kwargs):
     return partial(with_factorization, a, **kwargs)
 
 
-def pandas_group_setup(func_name, a):
+def pandas_group_setup(func_name, a, **kwargs):
     labels = generate_labels(a.shape[-1])
     df = _df_of_array(a)
-    return lambda: (df.groupby(labels).pipe(lambda x: getattr(x, func_name)()).T)
+    return lambda: (
+        df.groupby(labels).pipe(lambda x: getattr(x, func_name)(**kwargs)).T
+    )
 
 
 def pandas_nan_sum_of_squares_setup(a):
