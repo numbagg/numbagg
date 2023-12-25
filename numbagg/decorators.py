@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import functools
 import itertools
 import logging
 import threading
@@ -57,6 +58,7 @@ class NumbaBase:
         self.cache = False
         self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
+        functools.wraps(func)(self)
 
     @property
     def __name__(self):
