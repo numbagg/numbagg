@@ -25,6 +25,7 @@ from numbagg import (
     nansum,
     nanvar,
 )
+from numbagg.moving_exp import move_exp_nanmean
 from numbagg.test.util import arrays
 
 from .conftest import COMPARISONS
@@ -235,3 +236,9 @@ def test_nan_quantile(axis, quantiles, rs):
     expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
+
+
+def test_wraps():
+    assert move_exp_nanmean.__name__ == "move_exp_nanmean"  # type: ignore
+    assert move_exp_nanmean.__repr__() == "numbagg.move_exp_nanmean"
+    assert "Exponentially" in move_exp_nanmean.__doc__  # type: ignore

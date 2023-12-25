@@ -60,12 +60,8 @@ class NumbaBase:
         self._target_cpu = not supports_parallel
         functools.wraps(func)(self)
 
-    @property
-    def __name__(self):
-        return self.func.__name__
-
     def __repr__(self):
-        return f"numbagg.{self.__name__}"
+        return f"numbagg.{self.__name__}"  # type: ignore[attr-defined]
 
     @classmethod
     def wrap(cls: type[T], *args, **kwargs) -> Callable[..., T]:
