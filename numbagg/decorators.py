@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import functools
 import itertools
 import logging
 import threading
@@ -57,13 +58,10 @@ class NumbaBase:
         self.cache = False
         self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
-
-    @property
-    def __name__(self):
-        return self.func.__name__
+        functools.wraps(func)(self)
 
     def __repr__(self):
-        return f"numbagg.{self.__name__}"
+        return f"numbagg.{self.__name__}"  # type: ignore[attr-defined]
 
     @classmethod
     def wrap(cls: type[T], *args, **kwargs) -> Callable[..., T]:

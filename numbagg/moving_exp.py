@@ -40,6 +40,9 @@ def move_exp_nancount(a, alpha, min_weight, out):
     ]
 )
 def move_exp_nanmean(a, alpha, min_weight, out):
+    """
+    Exponentially weighted moving mean
+    """
     N = len(a)
 
     numer = denom = weight = 0.0
