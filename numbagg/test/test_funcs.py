@@ -31,21 +31,14 @@ from numbagg.test.util import arrays
 from .conftest import COMPARISONS
 
 
-@pytest.fixture(scope="module")
-def rand_array(rs):
-    arr = rs.rand(2000).reshape(10, -1)
-    arr[0, 0] = np.nan
-    return np.where(arr > 0.1, arr, np.nan)
-
-
 @pytest.mark.parametrize(
     "func",
     [ffill, bfill],
 )
 @pytest.mark.parametrize("limit", [1, 3, None])
-def test_fill_pandas_comp(rand_array, limit, func):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_fill_pandas_comp(func, array, limit):
     c = COMPARISONS[func]
-    array = rand_array[:3]
 
     result = c["numbagg"](array, limit=limit)()
     expected = c["pandas"](array, limit=limit)()
