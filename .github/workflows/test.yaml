@@ -40,15 +40,15 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis jq
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq
 
       - name: Install numbagg
         # For some reason, jq doesn't get installed by the steps above. Hacking
         # around it for the moment.
         run: |
-          micromamba run -n numbagg-benchmarks pip list
-          micromamba run -n numbagg-benchmarks pip install jq
-          micromamba run -n numbagg-benchmarks pip list
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests pip install jq
+          micromamba run -n numbagg-tests pip list
           python -m pip install --no-deps -e .
 
       - name: Run tests
@@ -68,7 +68,7 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-name: numbagg-benchmarks
+          environment-name: numbagg-tests
           cache-environment: true
           create-args: >-
             python=3.10 numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq
@@ -81,10 +81,10 @@ jobs:
         # For some reason, jq doesn't get installed by the steps above. Hacking
         # around it for the moment.
         run: |
-          micromamba run -n numbagg-benchmarks pip list
-          micromamba run -n numbagg-benchmarks pip install jq
-          micromamba run -n numbagg-benchmarks pip list
-          micromamba run -n numbagg-benchmarks python numbagg/test/run_benchmarks.py
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests pip install jq
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests python numbagg/test/run_benchmarks.py
 
   mypy:
     runs-on: ubuntu-latest
