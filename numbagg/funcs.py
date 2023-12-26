@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
-from numbagg.decorators import ndfill, ndquantile, ndreduce
+from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
 
 
 @ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
@@ -58,19 +58,26 @@ def nanmean(a):
         return np.nan
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanvar(a):
-    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
-    # discussion of whether to add an option.
-
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], int32, float32[:]),
+        (float64[:], int64, float64[:]),
+    ],
+    supports_ddof=True,
+)
+def nanvar(
+    a,
+    ddof,
+    out,
+):
     # Running two loops might seem inefficient, but it's 3x faster than a Welford's
     # algorithm. And if we don't compute the mean first, we get numerical instability
     # (which our tests capture so is easy to observe).
 
-    ddof = 1
     asum = 0
     count = 0
-    for ai in a.flat:
+    # ddof = 1
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -81,20 +88,22 @@ def nanvar(a):
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai
-        return asum / (count - ddof)
+        out[0] = asum / (count - ddof)
     else:
-        return np.nan
+        out[0] = np.nan
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanstd(a):
-    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
-    # discussion of whether to add an option.
-
-    ddof = 1
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], int32, float32[:]),
+        (float64[:], int64, float64[:]),
+    ],
+    supports_ddof=True,
+)
+def nanstd(a, ddof, out):
     asum = 0
     count = 0
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -105,9 +114,9 @@ def nanstd(a):
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai
-        return np.sqrt(asum / (count - ddof))
+        out[0] = np.sqrt(asum / (count - ddof))
     else:
-        return np.nan
+        out[0] = np.nan
 
 
 @ndreduce.wrap(
