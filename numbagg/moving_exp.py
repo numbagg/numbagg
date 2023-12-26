@@ -1,10 +1,10 @@
 import numpy as np
 from numba import float32, float64
 
-from .decorators import ndmovingexp
+from .decorators import ndmoveexp
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64, float64[:]),
@@ -33,7 +33,7 @@ def move_exp_nancount(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64, float64[:]),
@@ -67,7 +67,7 @@ def move_exp_nanmean(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64, float64[:]),
@@ -98,7 +98,7 @@ def move_exp_nansum(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64, float64[:]),
@@ -151,7 +151,7 @@ def move_exp_nanvar(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64, float64[:]),
@@ -219,7 +219,7 @@ def move_exp_nanstd(a, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64[:], float64, float64[:]),
@@ -268,7 +268,7 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
             out[i] = np.nan
 
 
-@ndmovingexp.wrap(
+@ndmoveexp.wrap(
     [
         (float32[:], float32[:], float32[:], float32, float32[:]),
         (float64[:], float64[:], float64[:], float64, float64[:]),
@@ -314,8 +314,8 @@ def move_exp_nancorr(a1, a2, alpha, min_weight, out):
 
         # TODO: we don't need to compute this for the output, but if we don't, then we
         # get an error around numerical precision that causes us to produce values when
-        # we shouldn't. Would be good to be able to remove it. (This is well-tested, so
-        # if we can remove it while passing tests, then we can.)
+        # we shouldn't. Would be good to be able to rendmove it. (This is well-tested, so
+        # if we can rendmove it while passing tests, then we can.)
         bias = 1 - sum_weight_2 / (sum_weight**2)
 
         if weight >= min_weight and bias > 0:

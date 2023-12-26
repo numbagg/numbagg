@@ -1,10 +1,10 @@
 import numpy as np
 from numba import float32, float64, int64
 
-from .decorators import ndmoving
+from .decorators import ndmove
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_mean(a, window, min_count, out):
@@ -41,7 +41,7 @@ def move_mean(a, window, min_count, out):
         out[i] = asum / count if count >= min_count else np.nan
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_sum(a, window, min_count, out):
@@ -78,7 +78,7 @@ def move_sum(a, window, min_count, out):
 
 
 # TODO: pandas doesn't use a `min_count`, which maybe makes sense, but also makes it inconsistent?
-# @ndmoving.wrap(
+# @ndmove.wrap(
 #     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 # )
 # def move_count(a, window, min_count, out):
@@ -98,7 +98,7 @@ def move_sum(a, window, min_count, out):
 #         out[i] = count if count >= min_count else np.nan
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_std(a, window, min_count, out):
@@ -129,7 +129,7 @@ def move_std(a, window, min_count, out):
             out[i] = np.nan
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
 def move_var(a, window, min_count, out):
@@ -159,7 +159,7 @@ def move_var(a, window, min_count, out):
             out[i] = np.nan
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [
         (float32[:], float32[:], int64, int64, float32[:]),
         (float64[:], float64[:], int64, int64, float64[:]),
@@ -198,7 +198,7 @@ def move_cov(a, b, window, min_count, out):
             out[i] = np.nan
 
 
-@ndmoving.wrap(
+@ndmove.wrap(
     [
         (float32[:], float32[:], int64, int64, float32[:]),
         (float64[:], float64[:], int64, int64, float64[:]),
