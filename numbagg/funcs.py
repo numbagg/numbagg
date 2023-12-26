@@ -77,7 +77,7 @@ def nanvar(
     asum = 0
     count = 0
     # ddof = 1
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -103,7 +103,7 @@ def nanvar(
 def nanstd(a, ddof, out):
     asum = 0
     count = 0
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1

@@ -65,7 +65,7 @@ def array_generator(func_name, dtypes):
     yield np.array([1, 1, 1], dtype=np.float64)
 
     # 0d input
-    if not func_name.startswith("ndmove"):
+    if not func_name.startswith("move"):
         yield np.array(-9)
         yield np.array(0)
         yield np.array(9)

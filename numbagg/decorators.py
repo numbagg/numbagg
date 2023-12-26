@@ -171,7 +171,7 @@ class ndaggregate(NumbaBaseSimple):
     @cache
     def gufunc(self, *, target):
         # The difference from the parent is `returns_scalar=True`. This is not elegant,
-        # but we'll ndmove to dynamic signatures once numba supports them.
+        # but we'll move to dynamic signatures once numba supports them.
         gufunc_sig = gufunc_string_signature(self.signature[0], returns_scalar=True)
         vectorize = numba.guvectorize(
             self.signature,
