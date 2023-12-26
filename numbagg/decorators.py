@@ -35,6 +35,7 @@ def gufunc_string_signature(numba_args):
 
     Example:
 
+    >>> from numba import float64
     >>> gufunc_string_signature((float64[:], float64))
     '(a)->()'
     """
