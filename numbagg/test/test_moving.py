@@ -283,35 +283,6 @@ def lastrank(a, axis=-1):
         -1 and 1 and adjusted for ties) of the the last element of each row.
         The output in this example will have shape (n,).
 
-    Examples
-    --------
-    Create an array:
-
-    >>> y1 = larry([1, 2, 3])
-
-    What is the rank of the last element (the value 3 in this example)?
-    It is the largest element so the rank is 1.0:
-
-    >>> import numpy as np
-    >>> from la.afunc import lastrank
-    >>> x1 = np.array([1, 2, 3])
-    >>> lastrank(x1)
-    1.0
-
-    Now let's try an example where the last element has the smallest
-    value:
-
-    >>> x2 = np.array([3, 2, 1])
-    >>> lastrank(x2)
-    -1.0
-
-    Here's an example where the last element is not the minimum or maximum
-    value:
-
-    >>> x3 = np.array([1, 3, 4, 5, 2])
-    >>> lastrank(x3)
-    -0.5
-
     """
     a = np.array(a, copy=False)
     ndim = a.ndim
