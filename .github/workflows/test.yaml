@@ -43,7 +43,12 @@ jobs:
             python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis jq
 
       - name: Install numbagg
+        # For some reason, jq doesn't get installed by the steps above. Hacking
+        # around it for the moment.
         run: |
+          micromamba run -n numbagg-benchmarks pip list
+          micromamba run -n numbagg-benchmarks pip install jq
+          micromamba run -n numbagg-benchmarks pip list
           python -m pip install --no-deps -e .
 
       - name: Run tests
