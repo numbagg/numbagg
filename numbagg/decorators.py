@@ -577,7 +577,7 @@ class ndquantile(NumbaBase):
         with np.errstate(invalid=warn):
             result = gufunc(a, quantiles, axes=axes, **kwargs)
 
-        # numpy returns quantiles as the first axis, so we ndmove ours to that position too
+        # numpy returns quantiles as the first axis, so we move ours to that position too
         result = np.moveaxis(result, -1, 0)
         if squeeze:
             result = result.squeeze(axis=0)
