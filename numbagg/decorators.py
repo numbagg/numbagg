@@ -544,7 +544,7 @@ class ndquantile(NumbaBase):
         **kwargs,
     ):
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
-        # then rendmove a dummy axis.
+        # then remove a dummy axis.
         if not isinstance(quantiles, Iterable):
             squeeze = True
             quantiles = [quantiles]
