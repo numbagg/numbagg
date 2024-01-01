@@ -32,7 +32,7 @@ repos:
       - id: mypy
         additional_dependencies: [types-setuptools, numpy]
   - repo: https://github.com/crate-ci/typos
-    rev: v1.16.25
+    rev: v1.16.26
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347
