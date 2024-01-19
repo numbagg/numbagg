@@ -520,7 +520,6 @@ class groupndreduce(NumbaBase):
         if self.supports_ddof:
             args += (ddof,)
         args += (result,)
-        print(args)
 
         gufunc(*args)
         return result
