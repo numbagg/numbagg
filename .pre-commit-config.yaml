@@ -41,3 +41,12 @@ repos:
     rev: v1.6.26
     hooks:
       - id: actionlint
+  - repo: local
+    hooks:
+      - id: no-print
+        name: no-print
+        description: We shouldn't merge code with `print(` in
+        language: pygrep
+        types: ["python"]
+        entry: 'print\('
+        exclude: ".*/test/.*"
