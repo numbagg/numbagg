@@ -413,7 +413,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     group_nansum_of_squares: dict(
         pandas=pandas_nan_sum_of_squares_setup,
         numbagg=partial(numbagg_group_setup, group_nansum_of_squares),
-    )
+    ),
     # move_count: dict(
     #     pandas=dict(
     #         setup=pandas_move_setup,
