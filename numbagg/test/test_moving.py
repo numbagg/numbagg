@@ -18,22 +18,15 @@ from .conftest import COMPARISONS
 from .util import array_order, arrays
 
 
-@pytest.fixture(scope="module")
-def rand_array(rs):
-    arr = rs.rand(2000).reshape(10, -1)
-    arr[0, 0] = np.nan
-    return np.where(arr > 0.1, arr, np.nan)
-
-
 @pytest.mark.parametrize(
     "func",
     [move_mean, move_sum, move_std, move_var, move_cov, move_corr],
 )
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
 @pytest.mark.parametrize("window", [10, 50])
 @pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
-def test_move_pandas_comp(rand_array, func, window, min_count):
+def test_move_pandas_comp(array, func, window, min_count):
     c = COMPARISONS[func]
-    array = rand_array[:3]
 
     if min_count == "window":
         min_count = window
@@ -52,15 +45,16 @@ def test_move_pandas_comp(rand_array, func, window, min_count):
         assert_allclose(result, expected_bottleneck)
 
 
-def test_move_mean_window(rand_array):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_mean_window(array):
     with pytest.raises(TypeError):
-        move_mean(rand_array, window=0.5)
+        move_mean(array, window=0.5)
     with pytest.raises(ValueError):
-        move_mean(rand_array, window=-1)
+        move_mean(array, window=-1)
     with pytest.raises(ValueError):
-        move_mean(rand_array, window=rand_array.shape[-1] + 1)
+        move_mean(array, window=array.shape[-1] + 1)
     with pytest.raises(ValueError):
-        move_mean(rand_array, window=1, min_count=-1)
+        move_mean(array, window=1, min_count=-1)
 
 
 def functions():
@@ -288,35 +282,6 @@ def lastrank(a, axis=-1):
         axis=1, the output will contain the rank (normalized to be between
         -1 and 1 and adjusted for ties) of the the last element of each row.
         The output in this example will have shape (n,).
-
-    Examples
-    --------
-    Create an array:
-
-    >>> y1 = larry([1, 2, 3])
-
-    What is the rank of the last element (the value 3 in this example)?
-    It is the largest element so the rank is 1.0:
-
-    >>> import numpy as np
-    >>> from la.afunc import lastrank
-    >>> x1 = np.array([1, 2, 3])
-    >>> lastrank(x1)
-    1.0
-
-    Now let's try an example where the last element has the smallest
-    value:
-
-    >>> x2 = np.array([3, 2, 1])
-    >>> lastrank(x2)
-    -1.0
-
-    Here's an example where the last element is not the minimum or maximum
-    value:
-
-    >>> x3 = np.array([1, 3, 4, 5, 2])
-    >>> lastrank(x3)
-    -0.5
 
     """
     a = np.array(a, copy=False)

@@ -1,6 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
 import pytest
 
 
@@ -13,4 +12,3 @@ def test_multithreading(func_callable):
         foo = [executor.submit(func_callable) for _ in range(5)]
         results = [f.result() for f in foo]
         assert (len(results)) == 5
-        assert all([isinstance(r, np.ndarray) for r in results])

@@ -18,7 +18,13 @@ def shape(request):
     return request.param
 
 
-@pytest.mark.parametrize("library", ["numbagg", "pandas", "bottleneck"], indirect=True)
+@pytest.mark.parametrize(
+    "library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True
+)
+@pytest.mark.benchmark(
+    warmup=True,
+    warmup_iterations=1,
+)
 def test_benchmark_main(benchmark, func, func_callable, shape):
     """
     Main func that benchmarks how fast functions are.
@@ -27,13 +33,12 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
         pytest.skip(
             "We're currently skipping the huge arrays with `group` functions, as they're quite slow"
         )
+    if func.__name__ in ["allnan", "anynan"]:
+        pytest.skip(
+            "These functions need a different approach to benchmarking; so we're currently excluding them"
+        )
     benchmark.group = f"{func}|{shape}"
-    benchmark.pedantic(
-        func_callable,
-        warmup_rounds=1,
-        rounds=3,
-        iterations=int(max(10_000_000 // np.prod(shape), 1)),
-    )
+    benchmark(func_callable)
 
 
 @pytest.mark.parametrize("func", [ffill, bfill], indirect=True)

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import abc
+import functools
 import itertools
 import logging
 import threading
-import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 
 import numba
 import numpy as np
+
+from numbagg.utils import move_axes
 
 from .transform import rewrite_ndreduce
 
@@ -25,23 +27,24 @@ _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
 
 
 def _gufunc_arg_str(arg):
-    return "(%s)" % ",".join(_ALPHABET[: ndim(arg)])
+    return f"({','.join(_ALPHABET[: ndim(arg)])})"
 
 
-def gufunc_string_signature(numba_args):
+def gufunc_string_signature(numba_args, *, returns_scalar=False):
     """Convert a tuple of numba types into a numpy gufunc signature.
 
     The last type is used as output argument.
 
     Example:
 
+    >>> from numba import float64
     >>> gufunc_string_signature((float64[:], float64))
     '(a)->()'
     """
     return (
         ",".join(map(_gufunc_arg_str, numba_args[:-1]))
         + "->"
-        + _gufunc_arg_str(numba_args[-1])
+        + ("()" if returns_scalar else _gufunc_arg_str(numba_args[-1]))
     )
 
 
@@ -56,14 +59,12 @@ class NumbaBase:
         self.func = func
         # https://github.com/numba/numba/issues/4807
         self.cache = False
+        self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
-
-    @property
-    def __name__(self):
-        return self.func.__name__
+        functools.wraps(func)(self)
 
     def __repr__(self):
-        return f"numbagg.{self.__name__}"
+        return f"numbagg.{self.__name__}"  # type: ignore[attr-defined]
 
     @classmethod
     def wrap(cls: type[T], *args, **kwargs) -> Callable[..., T]:
@@ -127,109 +128,62 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
         super().__init__(func=func, supports_parallel=supports_parallel)
 
 
-class ndreduce(NumbaBase):
-    """Create an N-dimensional aggregation function.
+class ndaggregate(NumbaBaseSimple):
+    """
+    The decorator for simple aggregations.
 
-    Functions should have signatures of the form output_type(input_type), where
-    input_type and output_type are numba dtypes. This decorator rewrites them
-    to accept input arrays of arbitrary dimensionality, with an additional
-    optional `axis`, which accepts integers or tuples of integers (defaulting
-    to `axis=None` for all axes).
-
-    For example, to write a simplified version of `np.sum(arr, axis=None)`::
-
-        from numba import float64
-
-        @ndreduce([
-            float64(float64)
-        ])
-        def sum(a):
-            asum = 0.0
-            for ai in a.flat:
-                asum += ai
-            return asum
+    This is the "new" form of `ndreduce`.
     """
 
-    def __init__(self, func, signature, **kwargs):
-        self.func = func
-        # NDReduce uses different types than the other funcs, and they seem difficult to
-        # type, so ignoring for the moment.
-        self.signature: Any = signature
+    def __init__(
+        self,
+        func: Callable[..., Any],
+        signature: list[tuple],
+        supports_parallel: bool = True,
+        supports_ddof: bool = False,
+    ):
+        self.supports_ddof = supports_ddof
+        super().__init__(func, signature, supports_parallel)
 
-        for sig in signature:
-            if not hasattr(sig, "return_type"):
-                raise ValueError(
-                    f"signatures for ndreduce must be functions: {signature}"
-                )
-            if any(ndim(arg) != 0 for arg in sig.args):
-                raise ValueError(
-                    "all arguments in signature for ndreduce must be scalars: "
-                    f" {signature}"
-                )
-            if ndim(sig.return_type) != 0:
-                raise ValueError(
-                    f"return type for ndreduce must be a scalar: {signature}"
-                )
+    def __call__(
+        self,
+        *arrays: np.ndarray,
+        ddof: int = 1,
+        axis: int | tuple[int, ...] | None = None,
+    ):
+        if axis is None:
+            axis = tuple(range(arrays[0].ndim))
+        elif not isinstance(axis, Iterable):
+            axis = (axis,)
 
-        super().__init__(func=func, **kwargs)
+        if not all(isinstance(a, np.ndarray) for a in arrays):
+            raise TypeError(
+                f"All positional arguments to {self} must be arrays: {arrays}"
+            )
 
-    @cached_property
-    def transformed_func(self):
-        return rewrite_ndreduce(self.func)
+        arrays = tuple(move_axes(a, axis) for a in arrays)
 
-    @cached_property
-    def _jit_func(self):
-        vectorize = numba.jit(self.signature, nopython=True)
-        return vectorize(self.func)
+        if self.supports_ddof:
+            return self.gufunc(target=self.target)(*arrays, ddof, axis=-1)
+        else:
+            return self.gufunc(target=self.target)(*arrays, axis=-1)
 
     @cache
-    def gufunc(self, core_ndim, *, target):
-        # creating compiling gufunc has some significant overhead (~130ms per
-        # function and number of dimensions to aggregate), so do this in a
-        # lazy fashion
-        numba_sig = []
-        for input_sig in self.signature:
-            new_sig = (
-                (input_sig.args[0][(slice(None),) * max(core_ndim, 1)],)
-                + input_sig.args[1:]
-                + (input_sig.return_type[:],)
-            )
-            numba_sig.append(new_sig)
-
-        first_sig = self.signature[0]
-        gufunc_sig = gufunc_string_signature(
-            (
-                first_sig.args[0][(slice(None),) * core_ndim]
-                if core_ndim
-                else first_sig.args[0],
-            )
-            + first_sig.args[1:]
-            + (first_sig.return_type,)
-        )
-
-        # Can't use `cache=True` because of the dynamic ast transformation
+    def gufunc(self, *, target):
+        # The difference from the parent is `returns_scalar=True`. This is not elegant,
+        # but we'll move to dynamic signatures once numba supports them.
+        gufunc_sig = gufunc_string_signature(self.signature[0], returns_scalar=True)
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=target
+            self.signature,
+            gufunc_sig,
+            nopython=True,
+            target=target,
+            cache=self.cache,
         )
-        return vectorize(self.transformed_func)
-
-    def __call__(self, arr, *args, axis=None):
-        if axis is None:
-            # TODO: switch to using jit_func (it's faster), once numba reliably
-            # returns the right dtype
-            # see: https://github.com/numba/numba/issues/1087
-            # f = self._jit_func
-            f = self.gufunc(arr.ndim, target=self.target)
-        elif isinstance(axis, int):
-            arr = np.moveaxis(arr, axis, -1)
-            f = self.gufunc(1, target=self.target)
-        else:
-            arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
-            f = self.gufunc(len(axis), target=self.target)
-        return f(arr, *args)
+        return vectorize(self.func)
 
 
-class ndmoving(NumbaBaseSimple):
+class ndmove(NumbaBaseSimple):
     """Create an N-dimensional moving window function along one dimension.
 
     Functions should accept arguments for the input array, a window
@@ -238,7 +192,7 @@ class ndmoving(NumbaBaseSimple):
     For example, to write a simplified (and naively implemented) moving window
     sum::
 
-        @ndmoving([
+        @ndmove([
             (float64[:], int64, int64, float64[:]),
         ])
         def move_sum(a, window, min_count, out):
@@ -252,8 +206,8 @@ class ndmoving(NumbaBaseSimple):
         self,
         func: Callable,
         signature: list[tuple] = [
-            (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
+            (numba.float64[:], numba.int64, numba.float64[:]),
         ],
         **kwargs,
     ):
@@ -293,7 +247,7 @@ class ndmoving(NumbaBaseSimple):
         return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
-class ndmovingexp(NumbaBaseSimple):
+class ndmoveexp(NumbaBaseSimple):
     """
     Exponential moving window function.
 
@@ -371,8 +325,8 @@ class ndfill(NumbaBaseSimple):
         self,
         func: Callable,
         signature: list[tuple] = [
-            (numba.float64[:], numba.int64, numba.float64[:]),
             (numba.float32[:], numba.int32, numba.float32[:]),
+            (numba.float64[:], numba.int64, numba.float64[:]),
         ],
         **kwargs,
     ):
@@ -402,6 +356,7 @@ class groupndreduce(NumbaBase):
         func,
         signature: list[tuple] | None = None,
         *,
+        supports_ddof=False,
         supports_nd=True,
         supports_bool=True,
         supports_ints=True,
@@ -409,6 +364,7 @@ class groupndreduce(NumbaBase):
         self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
+        self.supports_ddof = supports_ddof
         self.func = func
 
         if signature is None:
@@ -418,22 +374,24 @@ class groupndreduce(NumbaBase):
                 values_dtypes += (numba.int32, numba.int64)
 
             signature = [
-                (value_type, label_type, value_type)
+                (value_type, label_type, numba.int64, value_type)
+                if supports_ddof
+                else (value_type, label_type, value_type)
                 for value_type, label_type in itertools.product(
                     values_dtypes, labels_dtypes
                 )
             ]
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmoving must be tuples: {signature}")
-            if len(sig) != 3:
+                raise TypeError(f"signatures for ndmove must be tuples: {signature}")
+            n_args = 3 + supports_ddof
+            if len(sig) != n_args:
                 raise TypeError(
-                    "signature has wrong number of arguments != 3: " f"{signature}"
+                    f"signature has wrong number of arguments != {n_args}: {signature}"
                 )
             if any(ndim(arg) != 0 for arg in sig):
                 raise ValueError(
-                    "all arguments in signature for ndreduce must be scalars: "
-                    f" {signature}"
+                    f"all arguments in signature for ndreduce must be scalars: {signature}"
                 )
 
         self.signature = signature
@@ -444,15 +402,24 @@ class groupndreduce(NumbaBase):
     def gufunc(self, core_ndim, *, target):
         # compiling gufuncs has some significant overhead (~130ms per function
         # and number of dimensions to aggregate), so do this in a lazy fashion
-        numba_sig = []
+        numba_sig: list[tuple] = []
         slices = (slice(None),) * core_ndim
-        for input_sig in self.signature:
-            values, labels, out = input_sig
-            new_sig = (values[slices], labels[slices], out[:])
-            numba_sig.append(new_sig)
+        # This is pretty messy. We could inherit from this class for the `ddof` methods.
+        # But probably we want to make it more abstract, and take advantage of
+        # forthcoming numba features such as dynamic signatures.
+        if self.supports_ddof:
+            for input_sig in self.signature:
+                values, labels, ddof, out = input_sig
+                numba_sig += [(values[slices], labels[slices], ddof, out[:])]
+            first_sig = numba_sig[0]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(),(z)"
+        else:
+            for input_sig in self.signature:
+                values, labels, out = input_sig
+                numba_sig += [(values[slices], labels[slices], out[:])]
+            first_sig = numba_sig[0]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(z)"
 
-        first_sig = numba_sig[0]
-        gufunc_sig = ",".join(2 * [_gufunc_arg_str(first_sig[0])]) + ",(z)"
         vectorize = numba.guvectorize(
             numba_sig,
             gufunc_sig,
@@ -467,6 +434,7 @@ class groupndreduce(NumbaBase):
         values: np.ndarray,
         labels: np.ndarray,
         *,
+        ddof=1,
         num_labels: int | None = None,
         axis: int | tuple[int, ...] | None = None,
     ):
@@ -478,7 +446,7 @@ class groupndreduce(NumbaBase):
                 "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
             )
 
-        # TODO: I think we can remove this, now that every function supports ND...
+        # TODO: I think we can rendmove this, now that every function supports ND...
         if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
             # TODO: it might be possible to allow returning an extra dimension for the
             # indices by using the technique at
@@ -547,17 +515,14 @@ class groupndreduce(NumbaBase):
         # while `prod` uses 1. So we don't initialize with a value here, and instead
         # rely on the function to do so.
         result = np.empty(broadcast_shape + (num_labels,), values.dtype)
-        gufunc(values, labels, result)
+        args: tuple = (values, labels)
+
+        if self.supports_ddof:
+            args += (ddof,)
+        args += (result,)
+
+        gufunc(*args)
         return result
-
-
-def move_axes(arr: np.ndarray, axes: tuple[int, ...]):
-    """
-    Move & reshape a tuple of axes to an array's final axis.
-    """
-    moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))
-    new_shape = moved_arr.shape[: -len(axes)] + (-1,)
-    return moved_arr.reshape(new_shape)
 
 
 class ndquantile(NumbaBase):
@@ -599,12 +564,16 @@ class ndquantile(NumbaBase):
         axes = [-1, -1, -1]
 
         gufunc = self.gufunc(target=self.target)
-        with warnings.catch_warnings():
-            # TODO: `nanquantile` raises a warning here for the default test fixture; I
-            # can't figure out where it's coming from, and can't reproduce it locally.
-            # So I'm ignoring so that we can still raise errors on other warnings.
-            warnings.simplefilter("ignore")
+        # TODO: `nanquantile` raises a warning here for the default test
+        # fixture; I can't figure out where it's coming from, and can't reproduce it
+        # locally. So I'm ignoring so that we can still raise errors on other
+        # warnings.
+        if self.func.__name__ in ["nanquantile"]:
+            warn: Literal["ignore", "warn"] = "ignore"
+        else:
+            warn = "warn"
 
+        with np.errstate(invalid=warn):
             result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
@@ -630,6 +599,124 @@ class ndquantile(NumbaBase):
             cache=self.cache,
         )
         return vectorize(self.func)
+
+
+class ndreduce(NumbaBase):
+    """Create an N-dimensional aggregation function.
+
+    Functions should have signatures of the form output_type(input_type), where
+    input_type and output_type are numba dtypes. This decorator rewrites them
+    to accept input arrays of arbitrary dimensionality, with an additional
+    optional `axis`, which accepts integers or tuples of integers (defaulting
+    to `axis=None` for all axes).
+
+    For example, to write a simplified version of `np.sum(arr, axis=None)`::
+
+        from numba import float64
+
+        @ndreduce([
+            float64(float64)
+        ])
+        def sum(a):
+            asum = 0.0
+            for ai in a.flat:
+                asum += ai
+            return asum
+
+    This is an "old" decorator, which has the advantage of never copying the array, even
+    when the data is not contiguous. But it adds lots more complication, and the current
+    implementation restricts any additional scalar parameters, such as `ddof`. The "new"
+    version of this is `ndaggregate`. More details at
+    https://github.com/numbagg/numbagg/issues/218.
+    """
+
+    def __init__(self, func, signature, **kwargs):
+        self.func = func
+        # NDReduce uses different types than the other funcs, and they seem difficult to
+        # type, so ignoring for the moment.
+        self.signature: Any = signature
+
+        for sig in signature:
+            if not hasattr(sig, "return_type"):
+                raise ValueError(
+                    f"signatures for ndreduce must be functions: {signature}"
+                )
+            if any(ndim(arg) != 0 for arg in sig.args):
+                raise ValueError(
+                    "all arguments in signature for ndreduce must be scalars: "
+                    f" {signature}"
+                )
+            if ndim(sig.return_type) != 0:
+                raise ValueError(
+                    f"return type for ndreduce must be a scalar: {signature}"
+                )
+
+        super().__init__(func=func, **kwargs)
+
+    @cached_property
+    def transformed_func(self):
+        return rewrite_ndreduce(self.func)
+
+    @cached_property
+    def _jit_func(self):
+        vectorize = numba.jit(self.signature, nopython=True)
+        return vectorize(self.func)
+
+    @cache
+    def gufunc(self, core_ndim, *, target):
+        # creating compiling gufunc has some significant overhead (~130ms per
+        # function and number of dimensions to aggregate), so do this in a
+        # lazy fashion
+        numba_sig = []
+        for input_sig in self.signature:
+            new_sig = (
+                (input_sig.args[0][(slice(None),) * max(core_ndim, 1)],)
+                + input_sig.args[1:]
+                + (input_sig.return_type[:],)
+            )
+            numba_sig.append(new_sig)
+
+        first_sig = self.signature[0]
+        gufunc_sig = gufunc_string_signature(
+            (
+                first_sig.args[0][(slice(None),) * core_ndim]
+                if core_ndim
+                else first_sig.args[0],
+            )
+            + first_sig.args[1:]
+            + (first_sig.return_type,)
+        )
+
+        # Can't use `cache=True` because of the dynamic ast transformation
+        vectorize = numba.guvectorize(
+            numba_sig, gufunc_sig, nopython=True, target=target
+        )
+        return vectorize(self.transformed_func)
+
+    def __call__(self, arr, *args, axis=None):
+        # TODO: `nanmin` & `nanmix` raises a warning here for the default test
+        # fixture; I can't figure out where it's coming from, and can't reproduce it
+        # locally. So I'm ignoring so that we can still raise errors on other
+        # warnings.
+        if self.func.__name__ in ["nanmin", "nanmax"]:
+            warn: Literal["ignore", "warn"] = "ignore"
+        else:
+            warn = "warn"
+
+        with np.errstate(invalid=warn):
+            if axis is None:
+                # TODO: switch to using jit_func (it's faster), once numba reliably
+                # returns the right dtype
+                # see: https://github.com/numba/numba/issues/1087
+                # f = self._jit_func
+                f = self.gufunc(arr.ndim, target=self.target)
+            elif isinstance(axis, int):
+                arr = np.moveaxis(arr, axis, -1)
+                f = self.gufunc(1, target=self.target)
+            else:
+                arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
+                f = self.gufunc(len(axis), target=self.target)
+            return f(arr, *args)
 
 
 def _is_in_unsafe_thread_pool() -> bool:

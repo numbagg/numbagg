@@ -146,8 +146,8 @@ def group_nansum_of_squares(values, labels, out):
             out[label] += values[indices] ** 2
 
 
-@groupndreduce.wrap(supports_bool=False, supports_ints=False)
-def group_nanvar(values, labels, out):
+@groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
+def group_nanvar(values, labels, ddof, out):
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
@@ -168,16 +168,15 @@ def group_nanvar(values, labels, out):
     # Calculate for each group
     for label in range(len(out)):
         count = counts[label]
-        if count < 2:  # not enough data for std deviation
+        denom = count - ddof
+        if denom <= 0:
             out[label] = np.nan
         else:
-            out[label] = (sums_of_squares[label] - (sums[label] ** 2 / count)) / (
-                count - 1
-            )
+            out[label] = (sums_of_squares[label] - (sums[label] ** 2 / count)) / denom
 
 
-@groupndreduce.wrap(supports_bool=False, supports_ints=False)
-def group_nanstd(values, labels, out):
+@groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
+def group_nanstd(values, labels, ddof, out):
     # Copy-pasted from `group_nanvar`
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
@@ -198,11 +197,12 @@ def group_nanstd(values, labels, out):
 
     for label in range(len(out)):
         count = counts[label]
-        if count < 2:  # not enough data for std deviation
+        denom = count - ddof
+        if denom <= 0:
             out[label] = np.nan
         else:
             out[label] = np.sqrt(
-                (sums_of_squares[label] - (sums[label] ** 2 / count)) / (count - 1)
+                (sums_of_squares[label] - (sums[label] ** 2 / count)) / denom
             )
 
 
