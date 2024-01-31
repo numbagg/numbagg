@@ -38,7 +38,7 @@ jobs:
         with:
           environment-name: numbagg-tests
           cache-environment: true
-          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
+          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}-2024-jan"
           create-args: >-
             python=${{matrix.python-version}} numba pandas<3 bottleneck pytest pytest-benchmark hypothesis tabulate jq
 
