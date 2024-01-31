@@ -94,8 +94,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # https://github.com/numbagg/numbagg/issues/36
-        # os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         os: ["ubuntu-latest"]
         python-version: ["3.11"]
     steps:
