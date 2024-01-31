@@ -71,7 +71,7 @@ jobs:
           environment-name: numbagg-tests
           cache-environment: true
           create-args: >-
-            python=3.10 numba pandas<3 bottleneck pytest pytest-benchmark hypothesis tabulate jq
+            python=3.10 numba pandas<2.2 bottleneck pytest pytest-benchmark hypothesis tabulate jq
 
       - name: Install numbagg
         run: |
