@@ -38,9 +38,9 @@ jobs:
         with:
           environment-name: numbagg-tests
           cache-environment: true
-          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}-2024-jan"
+          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas<3 bottleneck pytest pytest-benchmark hypothesis tabulate jq
+            python=${{matrix.python-version}} numba pandas<2.2 bottleneck pytest pytest-benchmark hypothesis tabulate jq
 
       - name: Install numbagg
         # For some reason, jq doesn't get installed by the steps above. Hacking
