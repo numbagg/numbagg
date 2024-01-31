@@ -551,6 +551,11 @@ class ndquantile(NumbaBase):
             squeeze = False
         quantiles = np.asarray(quantiles)
 
+        if any(quantiles < 0) or any(quantiles > 1):
+            raise ValueError(
+                f"quantiles must be in the range [0, 1], inclusive. Got {quantiles}."
+            )
+
         if axis is None:
             axis = tuple(range(a.ndim))
         elif not isinstance(axis, Iterable):
