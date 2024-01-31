@@ -224,11 +224,17 @@ def test_nan_quantile(axis, quantiles, rs):
     arr = rs.rand(2000).reshape(10, 10, -1)
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
-    # quantiles = np.array([0.25, 0.75])
     result = nanquantile(arr, quantiles, axis=axis)
     expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
+def test_nan_quantile_errors(quantiles):
+    array = np.random.rand(10, 10)
+    with pytest.raises(ValueError, match="quantiles must be in the range"):
+        nanquantile(array, quantiles)
 
 
 def test_wraps():
