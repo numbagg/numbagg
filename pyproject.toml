@@ -20,15 +20,6 @@ classifiers = [
 ]
 dependencies = ["numpy", "numba"]
 
-# These aren't used by pyproject, but we could specify them somewhere (poetry?)
-# dev-dependencies = [
-#   "pytest",
-#   "pytest-benchmark",
-#   "tabulate",
-#   "jq",
-#   "setuptools_scm",
-# ]
-
 description = "Fast N-dimensional aggregation functions with Numba"
 dynamic = ["version"]
 license = {file = "LICENSE"}
@@ -40,7 +31,18 @@ requires-python = ">=3.9"
 homepage = "https://github.com/numbagg/numbagg"
 
 [project.optional-dependencies]
-test = ["pytest", "bottleneck", "pandas"]
+dev = [
+  "bottleneck",
+  "hypothesis",
+  "jq",
+  "pandas",
+  "pre-commit",
+  "pytest-benchmark",
+  "pytest",
+  "ruff",
+  "setuptools_scm",
+  "tabulate",
+]
 
 [tool.setuptools_scm]
 fallback_version = "999"
