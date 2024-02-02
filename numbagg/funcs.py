@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import functools
+from functools import partial
+
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
@@ -283,3 +286,5 @@ def ffill(a, limit, out):
 
 
 count = nancount
+
+nanmedian = functools.wraps(nanquantile)(partial(nanquantile, quantiles=0.5))
