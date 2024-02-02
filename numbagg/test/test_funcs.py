@@ -220,7 +220,7 @@ def slow_count(x, axis=None):
 
 @pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
 @pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
-def test_nan_quantile(axis, quantiles, rs):
+def test_nanquantile(axis, quantiles, rs):
     arr = rs.rand(2000).reshape(10, 10, -1)
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
@@ -231,10 +231,16 @@ def test_nan_quantile(axis, quantiles, rs):
 
 
 @pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
-def test_nan_quantile_errors(quantiles):
+def test_nanquantile_errors(quantiles):
     array = np.random.rand(10, 10)
     with pytest.raises(ValueError, match="quantiles must be in the range"):
         nanquantile(array, quantiles)
+
+
+def test_nanquantile_no_valid_obs():
+    array = np.full((10, 10), np.nan)
+    result = nanquantile(array, 0.5)
+    assert np.isnan(result)
 
 
 def test_wraps():
