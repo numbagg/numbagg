@@ -203,9 +203,10 @@ def nanmin(a):
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr, quantile, out):
-    # valid (non NaN) observations
-    valid_obs = np.sum(np.isfinite(arr))
+def nanquantile(arr: np.ndarray, quantile, out):
+
+    nans = np.isnan(arr)
+    valid_obs = arr.size - np.sum(nans)
 
     if valid_obs == 0:
         out[:] = np.nan
@@ -213,8 +214,9 @@ def nanquantile(arr, quantile, out):
 
     # replace NaN with maximum
     max_val = np.nanmax(arr)
+
     # and we need to use `where` to avoid modifying the original array
-    arr = np.where(np.isnan(arr), max_val, arr)
+    arr = np.where(nans, max_val, arr)
 
     # two columns for indexes — floor and ceiling
     indexes = np.zeros((len(quantile), 2), dtype=np.int32)
