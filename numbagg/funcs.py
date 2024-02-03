@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import functools
-from functools import partial
-
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
