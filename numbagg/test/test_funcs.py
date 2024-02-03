@@ -10,8 +10,7 @@ from numpy.testing import (
 )
 
 from numbagg import (
-    allnan,
-    anynan,
+    AGGREGATION_FUNCS,
     bfill,
     ffill,
     nanargmax,
@@ -19,7 +18,6 @@ from numbagg import (
     nancount,
     nanmax,
     nanmean,
-    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
@@ -52,21 +50,7 @@ def test_fill_pandas_comp(func, array, limit):
 
 @pytest.mark.parametrize(
     "func",
-    [
-        nansum,
-        nanargmax,
-        nanargmin,
-        anynan,
-        allnan,
-        nancount,
-        nanmax,
-        nanmean,
-        nanmedian,
-        nanmin,
-        nanstd,
-        nansum,
-        nanvar,
-    ],
+    AGGREGATION_FUNCS,
 )
 @pytest.mark.parametrize("shape", [(2, 500)], indirect=True)
 def test_aggregation_comparison(func, array):
