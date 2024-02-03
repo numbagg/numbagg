@@ -285,5 +285,5 @@ def ffill(a, limit, out):
 count = nancount
 
 
-def nanmedian(a, **kwargs):
-    return nanquantile(a, quantiles=0.5, **kwargs)
+def nanmedian(a: np.ndarray, **kwargs):
+    return nanquantile(a, quantile=0.5, **kwargs)
