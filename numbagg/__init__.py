@@ -85,6 +85,7 @@ AGGREGATION_FUNCS = [
     nancount,
     nanmax,
     nanmean,
+    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
