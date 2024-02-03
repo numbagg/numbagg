@@ -287,4 +287,6 @@ def ffill(a, limit, out):
 
 count = nancount
 
-nanmedian = functools.wraps(nanquantile)(partial(nanquantile, quantiles=0.5))
+
+def nanmedian(a, **kwargs):
+    return nanquantile(a, quantiles=0.5, **kwargs)
