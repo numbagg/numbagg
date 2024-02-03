@@ -286,4 +286,4 @@ count = nancount
 
 
 def nanmedian(a: np.ndarray, **kwargs):
-    return nanquantile(a, quantile=0.5, **kwargs)
+    return nanquantile(a, quantiles=0.5, **kwargs)
