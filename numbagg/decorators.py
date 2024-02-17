@@ -28,7 +28,9 @@ def ndim(arg):
 _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
 
 if os.getenv("NUMBAGG_FASTMATH", 'False').lower() in ('true', '1', 't'):
-    _FASTMATH = True
+    # we exclude the "no nans" and "no infs" flags
+    # see https://llvm.org/docs/LangRef.html#fast-math-flags
+    _FASTMATH = {"nsz", "arcp", "contract", "afn", "reassoc"}
     warnings.warn(
         "Fastmath optimizations are enabled in numbagg. "
         "This may result in different results than numpy due to reduced precision.",
@@ -37,7 +39,6 @@ if os.getenv("NUMBAGG_FASTMATH", 'False').lower() in ('true', '1', 't'):
 else:
     _FASTMATH = False
 
-_FASTMATH_FLAGS = {"nsz", "arcp", "contract", "afn", "reassoc"}
 
 
 def _gufunc_arg_str(arg):
@@ -118,7 +119,7 @@ class NumbaBase:
             nopython=True,
             target=target,
             cache=self.cache,
-            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
+            fastmath=_FASTMATH,
         )
         return vectorize(self.func)
 
@@ -194,7 +195,7 @@ class ndaggregate(NumbaBaseSimple):
             nopython=True,
             target=target,
             cache=self.cache,
-            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
+            fastmath=_FASTMATH,
         )
         return vectorize(self.func)
 
@@ -442,7 +443,7 @@ class groupndreduce(NumbaBase):
             nopython=True,
             target=target,
             cache=self.cache,
-            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
+            fastmath=_FASTMATH,
         )
         return vectorize(self.func)
 
@@ -619,7 +620,7 @@ class ndquantile(NumbaBase):
             nopython=True,
             target=target,
             cache=self.cache,
-            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
+            fastmath=_FASTMATH,
         )
         return vectorize(self.func)
 
@@ -712,7 +713,7 @@ class ndreduce(NumbaBase):
 
         # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=target, fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
+            numba_sig, gufunc_sig, nopython=True, target=target, fastmath=_FASTMATH,
         )
         return vectorize(self.transformed_func)
 
