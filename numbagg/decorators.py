@@ -4,7 +4,9 @@ import abc
 import functools
 import itertools
 import logging
+import os
 import threading
+import warnings
 from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import Any, Callable, Literal, TypeVar
@@ -24,6 +26,18 @@ def ndim(arg):
 
 
 _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
+
+if os.getenv("NUMBAGG_FASTMATH", 'False').lower() in ('true', '1', 't'):
+    _FASTMATH = True
+    warnings.warn(
+        "Fastmath optimizations are enabled in numbagg. "
+        "This may result in different results than numpy due to reduced precision.",
+        UserWarning
+    )
+else:
+    _FASTMATH = False
+
+_FASTMATH_FLAGS = {"nsz", "arcp", "contract", "afn", "reassoc"}
 
 
 def _gufunc_arg_str(arg):
@@ -104,6 +118,7 @@ class NumbaBase:
             nopython=True,
             target=target,
             cache=self.cache,
+            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
         )
         return vectorize(self.func)
 
@@ -179,6 +194,7 @@ class ndaggregate(NumbaBaseSimple):
             nopython=True,
             target=target,
             cache=self.cache,
+            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
         )
         return vectorize(self.func)
 
@@ -426,6 +442,7 @@ class groupndreduce(NumbaBase):
             nopython=True,
             target=target,
             cache=self.cache,
+            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
         )
         return vectorize(self.func)
 
@@ -602,6 +619,7 @@ class ndquantile(NumbaBase):
             nopython=True,
             target=target,
             cache=self.cache,
+            fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
         )
         return vectorize(self.func)
 
@@ -694,7 +712,7 @@ class ndreduce(NumbaBase):
 
         # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=target
+            numba_sig, gufunc_sig, nopython=True, target=target, fastmath=_FASTMATH_FLAGS if _FASTMATH else False,
         )
         return vectorize(self.transformed_func)
 
