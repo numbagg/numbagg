@@ -51,6 +51,7 @@ def nancount(a, out):
             non_missing += 1
     out[0] = non_missing
 
+
 @ndaggregate.wrap(
     signature=[
         (int32[:], int32[:]),
@@ -84,6 +85,7 @@ def nanmean(a, out):
         out[0] = asum / count
     else:
         out[0] = np.nan
+
 
 @ndaggregate.wrap(
     signature=[

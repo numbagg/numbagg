@@ -27,18 +27,17 @@ def ndim(arg):
 
 _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
 
-if os.getenv("NUMBAGG_FASTMATH", 'False').lower() in ('true', '1', 't'):
+if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
     # we exclude the "no nans" and "no infs" flags
     # see https://llvm.org/docs/LangRef.html#fast-math-flags
     _FASTMATH = {"nsz", "arcp", "contract", "afn", "reassoc"}
     warnings.warn(
         "Fastmath optimizations are enabled in numbagg. "
         "This may result in different results than numpy due to reduced precision.",
-        UserWarning
+        UserWarning,
     )
 else:
     _FASTMATH = False
-
 
 
 def _gufunc_arg_str(arg):
@@ -713,7 +712,11 @@ class ndreduce(NumbaBase):
 
         # Can't use `cache=True` because of the dynamic ast transformation
         vectorize = numba.guvectorize(
-            numba_sig, gufunc_sig, nopython=True, target=target, fastmath=_FASTMATH,
+            numba_sig,
+            gufunc_sig,
+            nopython=True,
+            target=target,
+            fastmath=_FASTMATH,
         )
         return vectorize(self.transformed_func)
 

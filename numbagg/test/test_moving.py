@@ -71,7 +71,6 @@ def test_numerical_results_identical(func, func0):
     else:
         decimal = 5
     for i, a in enumerate(arrays(func_name)):
-
         if a.size >= 1_000:
             print(f"{func_name}: skipping large array with shape {a.shape}")
             continue
