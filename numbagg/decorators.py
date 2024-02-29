@@ -37,7 +37,7 @@ if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
         UserWarning,
     )
 else:
-    _FASTMATH = False
+    _FASTMATH = False  # type: ignore[assignment]
 
 
 def _gufunc_arg_str(arg):
