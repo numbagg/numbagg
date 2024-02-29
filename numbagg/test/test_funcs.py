@@ -25,9 +25,8 @@ from numbagg import (
     nanvar,
 )
 from numbagg.moving_exp import move_exp_nanmean
+from numbagg.test.conftest import COMPARISONS
 from numbagg.test.util import arrays
-
-from .conftest import COMPARISONS
 
 
 @pytest.mark.parametrize(
