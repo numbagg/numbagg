@@ -41,13 +41,8 @@ jobs:
             python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
 
       - name: Install numbagg
-        # For some reason, jq doesn't get installed by the steps above. Hacking
-        # around it for the moment.
         run: |
-          micromamba run -n numbagg-tests pip list
-          micromamba run -n numbagg-tests pip install jq
-          micromamba run -n numbagg-tests pip list
-          python -m pip install --no-deps -e .
+          python -m pip install -e .[dev]
 
       - name: Run tests
         run: |
@@ -73,15 +68,10 @@ jobs:
 
       - name: Install numbagg
         run: |
-          python -m pip install --no-deps -e .
+          python -m pip install -e .[dev]
 
       - name: Run benchmarks
-        # For some reason, jq doesn't get installed by the steps above. Hacking
-        # around it for the moment.
         run: |
-          micromamba run -n numbagg-tests pip list
-          micromamba run -n numbagg-tests pip install jq
-          micromamba run -n numbagg-tests pip list
           micromamba run -n numbagg-tests python numbagg/test/run_benchmarks.py
 
   mypy:
