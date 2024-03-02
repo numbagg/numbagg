@@ -35,6 +35,7 @@ dev = [
   "bottleneck",
   "hypothesis",
   "jq",
+  "mypy",
   "pandas",
   "pre-commit",
   "pytest-benchmark",
