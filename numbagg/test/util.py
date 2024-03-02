@@ -90,26 +90,25 @@ def array_generator(func_name, dtypes):
     ss[7] = {"size": 1_000_000, "shapes": [(1_000, 1_000)]}
     ss[8] = {"size": 1_000_000, "shapes": [(100, 10_000)]}
 
-    # FIXME: restore
-    # for seed in (1, 2):
-    #     rs = np.random.RandomState(seed)
-    #     for ndim in ss:
-    #         size = ss[ndim]["size"]
-    #         shapes = ss[ndim]["shapes"]
-    #         for dtype in dtypes:
-    #             a = np.arange(size, dtype=dtype)
-    #             if issubclass(a.dtype.type, np.inexact):
-    #                 if func_name not in ("nanargmin", "nanargmax"):
-    #                     # numpy can't handle eg np.nanargmin([np.nan, np.inf])
-    #                     idx = rs.rand(*a.shape) < 0.2
-    #                     a[idx] = inf
-    #                 idx = rs.rand(*a.shape) < 0.2
-    #                 a[idx] = nan
-    #                 idx = rs.rand(*a.shape) < 0.2
-    #                 a[idx] *= -1
-    #             rs.shuffle(a)
-    #             for shape in shapes:  # type: ignore
-    #                 yield a.reshape(shape)
+    for seed in (1, 2):
+        rs = np.random.RandomState(seed)
+        for ndim in ss:
+            size = ss[ndim]["size"]
+            shapes = ss[ndim]["shapes"]
+            for dtype in dtypes:
+                a = np.arange(size, dtype=dtype)
+                if issubclass(a.dtype.type, np.inexact):
+                    if func_name not in ("nanargmin", "nanargmax"):
+                        # numpy can't handle eg np.nanargmin([np.nan, np.inf])
+                        idx = rs.rand(*a.shape) < 0.2
+                        a[idx] = inf
+                    idx = rs.rand(*a.shape) < 0.2
+                    a[idx] = nan
+                    idx = rs.rand(*a.shape) < 0.2
+                    a[idx] *= -1
+                rs.shuffle(a)
+                for shape in shapes:  # type: ignore
+                    yield a.reshape(shape)
 
     # non-contiguous arrays
     yield np.array([[1, 2], [3, 4]], dtype=np.int64)[:, [1]]  # gh 161
