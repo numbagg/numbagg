@@ -38,7 +38,7 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate pyarrow
 
       - name: Install numbagg
         run: |
@@ -64,7 +64,7 @@ jobs:
           environment-name: numbagg-tests
           cache-environment: true
           create-args: >-
-            python=3.10 numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
+            python=3.10 numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate pyarrow
 
       - name: Install numbagg
         run: |
