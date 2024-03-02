@@ -1,67 +1,71 @@
 import numpy as np
 import pytest
 
-from .. import (
-    move_corr,
-    move_cov,
-    move_exp_nancorr,
-    move_exp_nancount,
-    move_exp_nancov,
-    move_exp_nanmean,
-    move_exp_nanstd,
-    move_exp_nansum,
-    move_exp_nanvar,
-    move_mean,
-    move_std,
-    move_sum,
-    move_var,
-)
+from .. import bfill, ffill
 
 
 @pytest.fixture(
     params=[
-        move_corr,
-        move_cov,
-        move_exp_nancorr,
-        move_exp_nancount,
-        move_exp_nancov,
-        move_exp_nanmean,
-        move_exp_nanstd,
-        move_exp_nansum,
-        move_exp_nanvar,
-        move_mean,
-        move_std,
-        move_sum,
-        move_var,
+        (1_000,),
+        pytest.param((10_000_000,), marks=pytest.mark.nightly),
+        pytest.param((100, 100_000), marks=pytest.mark.slow),
+        pytest.param((100, 1000, 1000), marks=pytest.mark.nightly),
+        pytest.param((10, 10, 10, 10, 1000), marks=pytest.mark.nightly),
     ],
+    scope="module",
 )
-def func(request):
+def shape(request):
     return request.param
 
 
-@pytest.fixture(params=[1_000, 100_000, 10_000_000])
-def size(request):
-    return request.param
+@pytest.mark.parametrize(
+    "library", ["numbagg", "pandas", "bottleneck", "numpy"], indirect=True
+)
+@pytest.mark.benchmark(
+    warmup=True,
+    warmup_iterations=1,
+)
+def test_benchmark_main(benchmark, func, func_callable, shape):
+    """
+    Main func that benchmarks how fast functions are.
+    """
+    if func.__name__.startswith("group") and np.prod(shape) > 10_000_000:
+        pytest.skip(
+            "We're currently skipping the huge arrays with `group` functions, as they're quite slow"
+        )
+    if func.__name__ in ["allnan", "anynan"]:
+        pytest.skip(
+            "These functions need a different approach to benchmarking; so we're currently excluding them"
+        )
+    benchmark.group = f"{func}|{shape}"
+    benchmark(func_callable)
 
 
-@pytest.fixture()
-def array(size):
-    array = np.random.RandomState(0).rand(3, size)
-    return np.where(array > 0.1, array, np.nan)
-
-
-def test_benchmark_small(benchmark, run, func, obj, size):
-    benchmark.group = f"{func}|{size}"
+@pytest.mark.parametrize("func", [ffill, bfill], indirect=True)
+@pytest.mark.parametrize("shape", [(10, 10, 10, 10, 1000)], indirect=True)
+def test_benchmark_f_bfill(benchmark, func_callable):
+    """
+    Was seeing some weird results for ffill and bfill — bfill was sometimes much faster
+    than ffill. We can check this if we see this again.
+    """
     benchmark.pedantic(
-        run, args=(obj,), warmup_rounds=1, rounds=3, iterations=10_000_000 // size
+        func_callable,
+        warmup_rounds=1,
+        rounds=100,
+        iterations=10,
     )
 
 
-# def setup(self, func, n):
-#     array = np.random.RandomState(0).rand(3, n)
-#     self.array = np.where(array > 0.1, array, np.nan)
-#     self.df_ewm = pd.DataFrame(self.array.T).ewm(alpha=0.5)
-#     # One run for JIT (asv states that it does this before runs, but this still
-#     # seems to make a difference)
-#     func[0](self.array, 0.5)
-#     func[1](self.df_ewm)
+@pytest.fixture
+def clear_numba_cache(func):
+    func.gufunc.cache_clear()
+
+    yield
+
+
+# Because this clears the cache, it really slows down running the tests. So we only run
+# it selectively.
+@pytest.mark.nightly
+@pytest.mark.parametrize("shape", [(1, 20)], indirect=True)
+def test_benchmark_compile(benchmark, clear_numba_cache, func_callable):
+    benchmark.pedantic(func_callable, warmup_rounds=0, rounds=1, iterations=1)

@@ -38,15 +38,20 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
 
       - name: Install numbagg
+        # For some reason, jq doesn't get installed by the steps above. Hacking
+        # around it for the moment.
         run: |
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests pip install jq
+          micromamba run -n numbagg-tests pip list
           python -m pip install --no-deps -e .
 
       - name: Run tests
         run: |
-          python -m pytest
+          python -m pytest --durations=20 -W error
 
   benchmark:
     runs-on: ubuntu-latest
@@ -61,10 +66,10 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-name: numbagg-benchmarks
+          environment-name: numbagg-tests
           cache-environment: true
           create-args: >-
-            python=3.10 numba pandas bottleneck pytest pytest-benchmark tabulate jq
+            python=3.10 numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
 
       - name: Install numbagg
         run: |
@@ -74,10 +79,10 @@ jobs:
         # For some reason, jq doesn't get installed by the steps above. Hacking
         # around it for the moment.
         run: |
-          micromamba run -n numbagg-benchmarks pip list
-          micromamba run -n numbagg-benchmarks pip install jq
-          micromamba run -n numbagg-benchmarks pip list
-          micromamba run -n numbagg-benchmarks python numbagg/test/run_benchmarks.py
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests pip install jq
+          micromamba run -n numbagg-tests pip list
+          micromamba run -n numbagg-tests python numbagg/test/run_benchmarks.py
 
   mypy:
     runs-on: ubuntu-latest
@@ -87,8 +92,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # https://github.com/numbagg/numbagg/issues/36
-        # os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         os: ["ubuntu-latest"]
         python-version: ["3.11"]
     steps:
@@ -103,7 +106,7 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest mypy
+            python=${{matrix.python-version}} numba pandas bottleneck pytest mypy hypothesis
 
       - name: Mypy
         run: |

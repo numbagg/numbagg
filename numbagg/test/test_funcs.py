@@ -1,7 +1,6 @@
 from functools import partial
 
 import numpy as np
-import pandas as pd
 import pytest
 from numpy.testing import (
     assert_allclose,
@@ -10,39 +9,131 @@ from numpy.testing import (
     assert_equal,
 )
 
-import numbagg
-from numbagg import bfill, ffill
+from numbagg import (
+    AGGREGATION_FUNCS,
+    bfill,
+    ffill,
+    nanargmax,
+    nanargmin,
+    nancount,
+    nanmax,
+    nanmean,
+    nanmin,
+    nanquantile,
+    nanstd,
+    nansum,
+    nanvar,
+)
+from numbagg.moving_exp import move_exp_nanmean
+from numbagg.test.conftest import COMPARISONS
 from numbagg.test.util import arrays
 
 
-@pytest.fixture(scope="module")
-def rand_array():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
-    arr[0, 0] = np.nan
-    return np.where(arr > 0.1, arr, np.nan)
+@pytest.mark.parametrize(
+    "func",
+    [ffill, bfill],
+)
+@pytest.mark.parametrize("limit", [1, 3, None])
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_fill_pandas_comp(func, array, limit):
+    c = COMPARISONS[func]
+
+    result = c["numbagg"](array, limit=limit)()
+    expected = c["pandas"](array, limit=limit)()
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected_bottleneck = c["bottleneck"](array, limit=limit)()
+        assert_allclose(result, expected_bottleneck)
+
+
+@pytest.mark.parametrize(
+    "func",
+    AGGREGATION_FUNCS,
+)
+@pytest.mark.parametrize("shape", [(2, 500)], indirect=True)
+def test_aggregation_comparison(func, array):
+    c = COMPARISONS[func]
+    kwargs: dict = {}
+
+    result = c["numbagg"](array, **kwargs)()
+    expected = c["pandas"](array, **kwargs)()
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("limit", [1, 3, None])
+@pytest.mark.parametrize(
+    "func",
+    [
+        ffill,
+        bfill,
+    ],
+)
+def test_fill_comparison(func, array, limit):
+    c = COMPARISONS[func]
+    kwargs = dict(limit=limit)
+
+    result = c["numbagg"](array, **kwargs)()
+    expected = c["pandas"](array, **kwargs)()
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
+def test_quantile_comparison(array, quantiles):
+    c = COMPARISONS[nanquantile]
+    kwargs = dict(quantiles=quantiles)
+
+    result = c["numbagg"](array, **kwargs)()
+    assert_allclose(result, c["numbagg"](array, **kwargs)())
+    expected = c["pandas"](array, **kwargs)().values
+    assert_allclose(result, expected)
+
+    if c.get("bottleneck"):
+        expected = c["bottleneck"](array, **kwargs)()
+        assert_allclose(result, expected)
+
+    if c.get("numpy"):
+        expected = c["numpy"](array, **kwargs)()
+        assert_allclose(result, expected)
 
 
 def functions():
     # TODO: test tuple axes
-    yield numbagg.nansum, np.nansum, np.inf
-    yield numbagg.nanmax, np.nanmax, np.inf
-    yield numbagg.nanargmin, np.nanargmin, np.inf
-    yield numbagg.nanargmax, np.nanargmax, np.inf
-    yield numbagg.nanmin, np.nanmin, np.inf
-    yield numbagg.nanmean, np.nanmean, 5
-    yield numbagg.nanmean, np.nanmean, True
-    yield numbagg.nanstd, partial(np.nanstd, ddof=1), 5
-    yield numbagg.nanvar, partial(np.nanvar, ddof=1), 5
-    # yield numbagg.anynan, bn.anynan, np.inf
-    # yield numbagg.allnan, bn.allnan, np.inf
-    yield numbagg.nancount, slow_count, np.inf
+    yield nansum, np.nansum, np.inf
+    yield nanmax, np.nanmax, np.inf
+    yield nanargmin, np.nanargmin, np.inf
+    yield nanargmax, np.nanargmax, np.inf
+    yield nanmin, np.nanmin, np.inf
+    yield nanmean, np.nanmean, 5
+    yield nanmean, np.nanmean, True
+    yield nanstd, partial(np.nanstd, ddof=1), 5
+    yield nanvar, partial(np.nanvar, ddof=1), 5
+    # yield anynan, bn.anynan, np.inf
+    # yield allnan, bn.allnan, np.inf
+    yield nancount, slow_count, np.inf
     yield (
-        lambda x: numbagg.nanquantile(x, [0.25, 0.75]),
+        lambda x: nanquantile(x, [0.25, 0.75]),
         lambda x: np.nanquantile(x, [0.25, 0.75]),
         5,
     )
     yield (
-        lambda x: numbagg.nanquantile(x, 0.5),
+        lambda x: nanquantile(x, 0.5),
         lambda x: np.nanquantile(x, 0.5),
         5,
     )
@@ -51,15 +142,13 @@ def functions():
 @pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
 @pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
+@pytest.mark.filterwarnings("ignore:invalid value encountered")
 @pytest.mark.parametrize("numbagg_func,comp_func,decimal", functions())
 def test_numerical_results_identical(numbagg_func, comp_func, decimal):
-    "Test that bn.xxx gives the same output as bn.slow.xxx."
     msg = "\nfunc %s | input %s (%s) | shape %s | axis %s\n"
     msg += "\nInput array:\n%s\n"
     for i, arr in enumerate(arrays(numbagg_func.__name__)):
         for axis in list(range(-arr.ndim, arr.ndim)) + [None]:
-            # if numbagg_func == numbagg.nanquantile:
-            #     breakpoint()
             with np.errstate(invalid="ignore"):
                 desiredraised = False
                 desired_arr = arr.copy()
@@ -114,29 +203,32 @@ def slow_count(x, axis=None):
     return np.sum(~np.isnan(x), axis=axis)
 
 
-def test_nan_quantile():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, 10, -1)
+@pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
+@pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
+def test_nanquantile(axis, quantiles, rs):
+    arr = rs.rand(2000).reshape(10, 10, -1)
+    arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
-    quantiles = np.array([0.25, 0.75])
-    result = numbagg.nanquantile(arr, quantiles, axis=1)
-    expected = np.nanquantile(arr, quantiles, axis=1)
+    result = nanquantile(arr, quantiles, axis=axis)
+    expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
 
 
-@pytest.mark.parametrize("limit", [1, 3, None])
-def test_ffill(rand_array, limit):
-    a = rand_array[0]
-    expected = pd.Series(a).ffill(limit=limit).values
-    result = ffill(a, limit=limit)
-
-    assert_allclose(result, expected)
+@pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
+def test_nanquantile_errors(quantiles):
+    array = np.random.rand(10, 10)
+    with pytest.raises(ValueError, match="quantiles must be in the range"):
+        nanquantile(array, quantiles)
 
 
-@pytest.mark.parametrize("limit", [1, 3, None])
-def test_bfill(rand_array, limit):
-    a = rand_array[0]
-    expected = pd.Series(a).bfill(limit=limit).values
-    result = bfill(a, limit=limit)
+def test_nanquantile_no_valid_obs():
+    array = np.full((10, 10), np.nan)
+    result = nanquantile(array, 0.5)
+    assert np.isnan(result)
 
-    assert_allclose(result, expected)
+
+def test_wraps():
+    assert move_exp_nanmean.__name__ == "move_exp_nanmean"  # type: ignore
+    assert move_exp_nanmean.__repr__() == "numbagg.move_exp_nanmean"
+    assert "Exponentially" in move_exp_nanmean.__doc__  # type: ignore
