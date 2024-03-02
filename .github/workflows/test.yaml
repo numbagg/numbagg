@@ -40,7 +40,7 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate pyarrow
 
       - name: Install numbagg
         run: |
@@ -55,6 +55,11 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,8 +70,9 @@ jobs:
         with:
           environment-name: numbagg-tests
           cache-environment: true
+          cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=3.10 numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate jq pyarrow
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate pyarrow
 
       - name: Install numbagg
         run: |
@@ -98,7 +104,7 @@ jobs:
           cache-environment: true
           cache-environment-key: "${{matrix.os}}-${{matrix.python-version}}"
           create-args: >-
-            python=${{matrix.python-version}} numba pandas bottleneck pytest mypy hypothesis
+            python=${{matrix.python-version}} numba pandas bottleneck pytest pytest-benchmark hypothesis tabulate pyarrow
 
       - name: Mypy
         run: |
