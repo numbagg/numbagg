@@ -6,46 +6,75 @@ from numba import bool_, float32, float64, int32, int64
 from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
 
 
-@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
-def allnan(a):
-    f = True
-    for ai in a.flat:
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], bool_[:]),
+        (int64[:], bool_[:]),
+        (float32[:], bool_[:]),
+        (float64[:], bool_[:]),
+    ]
+)
+def allnan(a, out):
+    for ai in a:
         if not np.isnan(ai):
-            f = False
-            break
-    return f
+            out[0] = False
+            return
 
 
-@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
-def anynan(a):
-    f = False
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], bool_[:]),
+        (int64[:], bool_[:]),
+        (float32[:], bool_[:]),
+        (float64[:], bool_[:]),
+    ]
+)
+def anynan(a, out):
     for ai in a.flat:
         if np.isnan(ai):
-            f = True
-            break
-    return f
+            out[0] = True
+            return
 
 
-@ndreduce.wrap([int64(int32), int64(int64), int64(float32), int64(float64)])
-def nancount(a):
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], int64[:]),
+        (int64[:], int64[:]),
+        (float32[:], int64[:]),
+        (float64[:], int64[:]),
+    ]
+)
+def nancount(a, out):
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
             non_missing += 1
-    return non_missing
+    out[0] = non_missing
 
 
-@ndreduce.wrap([int32(int32), int64(int64), float32(float32), float64(float64)])
-def nansum(a):
-    asum = 0
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], int32[:]),
+        (int64[:], int64[:]),
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def nansum(a, out):
+    asum = a.dtype.type(0)
     for ai in a.flat:
         if not np.isnan(ai):
             asum += ai
-    return asum
+    out[0] = asum
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanmean(a):
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def nanmean(a, out):
     asum = 0.0
     count = 0
     for ai in a.flat:
@@ -53,9 +82,9 @@ def nanmean(a):
             asum += ai
             count += 1
     if count > 0:
-        return asum / count
+        out[0] = asum / count
     else:
-        return np.nan
+        out[0] = np.nan
 
 
 @ndaggregate.wrap(
@@ -203,9 +232,9 @@ def nanmin(a):
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr, quantile, out):
-    # valid (non NaN) observations
-    valid_obs = np.sum(np.isfinite(arr))
+def nanquantile(arr: np.ndarray, quantile, out):
+    nans = np.isnan(arr)
+    valid_obs = arr.size - np.sum(nans)
 
     if valid_obs == 0:
         out[:] = np.nan
@@ -213,8 +242,9 @@ def nanquantile(arr, quantile, out):
 
     # replace NaN with maximum
     max_val = np.nanmax(arr)
+
     # and we need to use `where` to avoid modifying the original array
-    arr = np.where(np.isnan(arr), max_val, arr)
+    arr = np.where(nans, max_val, arr)
 
     # two columns for indexes — floor and ceiling
     indexes = np.zeros((len(quantile), 2), dtype=np.int32)
@@ -282,3 +312,7 @@ def ffill(a, limit, out):
 
 
 count = nancount
+
+
+def nanmedian(a: np.ndarray, **kwargs):
+    return nanquantile(a, quantiles=0.5, **kwargs)
