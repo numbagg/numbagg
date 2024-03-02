@@ -56,8 +56,7 @@ def array_generator(func_name, dtypes):
     yield np.array([1, 2, 3], dtype=np.float64) + 1e9  # check that move_std is robust
     yield np.array([0, 0, 0], dtype=np.float64)  # nanargmax/nanargmin
     yield np.array([1, nan, nan, 2], dtype=np.float64)  # nanmedian
-    # FIXME: uncomment
-    # yield np.array([2**31], dtype=np.int64)  # overflows on windows
+    yield np.array([2**31], dtype=np.int64)  # overflows on windows
     yield np.array([[1.0, 2], [3, 4]], dtype=np.float64)[..., np.newaxis]  # issue #183
 
     # ties
