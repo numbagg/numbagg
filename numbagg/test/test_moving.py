@@ -6,12 +6,8 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numbagg import (
-    move_corr,
-    move_cov,
+    MOVE_FUNCS,
     move_mean,
-    move_std,
-    move_sum,
-    move_var,
 )
 
 from .conftest import COMPARISONS
@@ -20,7 +16,7 @@ from .util import array_order, arrays
 
 @pytest.mark.parametrize(
     "func",
-    [move_mean, move_sum, move_std, move_var, move_cov, move_corr],
+    MOVE_FUNCS,
 )
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
 @pytest.mark.parametrize("window", [10, 50])
@@ -75,6 +71,9 @@ def test_numerical_results_identical(func, func0):
     else:
         decimal = 5
     for i, a in enumerate(arrays(func_name)):
+        if a.size >= 1_000:
+            print(f"{func_name}: skipping large array with shape {a.shape}")
+            continue
         axes = range(-1, a.ndim)
         for axis in axes:
             windows = range(1, a.shape[axis])

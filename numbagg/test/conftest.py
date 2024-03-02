@@ -50,6 +50,7 @@ from .. import (
     nancount,
     nanmax,
     nanmean,
+    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
@@ -342,6 +343,11 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         bottleneck=lambda a, limit=None: lambda: bn.push(a[..., ::-1], limit)[
             ..., ::-1
         ],
+    ),
+    nanmedian: dict(
+        pandas=lambda a,: lambda: _df_of_array(a).median(),
+        numbagg=lambda a, axis=-1: partial(nanmedian, a, axis=axis),
+        numpy=lambda a, axis=-1: partial(np.nanmedian, a, axis=axis),
     ),
     nanquantile: dict(
         pandas=lambda a, quantiles=[0.25, 0.75]: lambda: _df_of_array(a).quantile(
