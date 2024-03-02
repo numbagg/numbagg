@@ -71,7 +71,7 @@ class _NDReduceTransformer(ast.NodeTransformer):
     def visit_Return(self, node):
         subscript = ast.Subscript(
             value=ast.Name(id=_OUT_NAME, ctx=ast.Load()),
-            slice=ast.Index(value=ast.Num(n=0)),
+            slice=ast.Index(value=ast.Constant(value=0)),
             ctx=ast.Store(),
         )
         assign = ast.Assign(targets=[subscript], value=node.value)
