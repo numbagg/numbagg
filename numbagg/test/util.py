@@ -60,7 +60,7 @@ def array_generator(func_name, dtypes):
     yield np.array([[1.0, 2], [3, 4]], dtype=np.float64)[..., np.newaxis]  # issue #183
 
     # ties
-    yield np.array([0, 0, 0])
+    yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([1, 1, 1], dtype=np.float64)
 
