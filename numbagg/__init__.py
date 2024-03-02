@@ -11,6 +11,7 @@ from .funcs import (
     nancount,
     nanmax,
     nanmean,
+    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
@@ -44,6 +45,56 @@ from .moving_exp import (
     move_exp_nansum,
     move_exp_nanvar,
 )
+
+GROUPED_FUNCS = [
+    group_nanall,
+    group_nanany,
+    group_nanargmax,
+    group_nanargmin,
+    group_nancount,
+    group_nanfirst,
+    group_nanlast,
+    group_nanmax,
+    group_nanmean,
+    group_nanmin,
+    group_nanprod,
+    group_nanstd,
+    group_nansum,
+    group_nansum_of_squares,
+    group_nanvar,
+]
+
+MOVE_EXP_FUNCS = [
+    move_exp_nancorr,
+    move_exp_nancount,
+    move_exp_nancov,
+    move_exp_nanmean,
+    move_exp_nanstd,
+    move_exp_nansum,
+    move_exp_nanvar,
+]
+
+MOVE_FUNCS = [move_corr, move_cov, move_mean, move_std, move_sum, move_var]
+
+AGGREGATION_FUNCS = [
+    allnan,
+    anynan,
+    count,
+    nanargmax,
+    nanargmin,
+    nancount,
+    nanmax,
+    nanmean,
+    nanmedian,
+    nanmin,
+    nanquantile,
+    nanstd,
+    nansum,
+    nanvar,
+]
+
+OTHER_FUNCS = [bfill, ffill]
+
 
 try:
     __version__ = _version("numbagg")
@@ -92,6 +143,7 @@ __all__ = [
     "group_nansum_of_squares",
     "group_nanvar",
     "nanmean",
+    "nanmedian",
     "nanmin",
     "nanquantile",
     "nanstd",

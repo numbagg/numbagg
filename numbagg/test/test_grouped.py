@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_almost_equal
 
+from numbagg import GROUPED_FUNCS
 from numbagg.grouped import (
     group_nanall,
     group_nanany,
@@ -75,11 +76,6 @@ def silence_pandas_idx_warnings():
         yield
 
 
-@pytest.fixture(scope="module")
-def rs():
-    return np.random.RandomState(0)
-
-
 @pytest.fixture(params=[np.float64, np.int32, np.bool_], scope="module")
 def dtype(request):
     return request.param
@@ -134,24 +130,7 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
 
 @pytest.mark.parametrize(
     "func",
-    [
-        # TODO: add these in; requires ensuring we're handling dimensionality and types correctly
-        # group_nanall,
-        # group_nanany,
-        # group_nanargmax,
-        # group_nanargmin,
-        group_nancount,
-        group_nanfirst,
-        group_nanlast,
-        group_nanmax,
-        group_nanmean,
-        group_nanmin,
-        group_nanprod,
-        group_nanstd,
-        group_nansum,
-        group_nansum_of_squares,
-        group_nanvar,
-    ],
+    GROUPED_FUNCS,
 )
 @pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
 def test_group_pandas_comp(array, func):
@@ -161,7 +140,22 @@ def test_group_pandas_comp(array, func):
     c = COMPARISONS[func]
 
     result = c["numbagg"](array)()
-    expected_pandas = c["pandas"](array)().squeeze().values
+    expected_pandas = c["pandas"](array)().values
+
+    assert_allclose(result, expected_pandas)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [f for f in GROUPED_FUNCS if f.supports_ddof],
+)
+@pytest.mark.parametrize("shape", [(1, 500)], indirect=True)
+@pytest.mark.parametrize("ddof", [0, 1, 5])
+def test_group_pandas_comp_ddof(array, func, ddof):
+    c = COMPARISONS[func]
+
+    result = c["numbagg"](array, ddof=ddof)()
+    expected_pandas = c["pandas"](array, ddof=ddof)().values
 
     assert_allclose(result, expected_pandas)
 
@@ -354,17 +348,19 @@ def test_numeric_int_nanprod():
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+@pytest.mark.parametrize("func", [group_nanmean, group_nansum])
 @pytest.mark.parametrize("n", [127, 128, 255, 256, 1000])
-def test_int8(n, dtype):
+def test_int8(n, func, dtype):
     data = np.random.randn(n)
     assert_almost_equal(
-        np.mean(data),
-        group_nanmean(data, np.zeros((n,), dtype=dtype))[0],
+        getattr(np, func.__name__.removeprefix("group_nan"))(data),
+        func(data, np.zeros((n,), dtype=dtype))[0],
     )
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
-def test_int8_again(dtype):
+@pytest.mark.parametrize("func", [group_nanmean, group_nansum])
+def test_int8_again(dtype, func):
     array = np.array(
         [
             [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
@@ -376,9 +372,45 @@ def test_int8_again(dtype):
     )
     by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
 
-    expected = pd.DataFrame(array.T).groupby(by).sum().T.astype(dtype)
+    expected = getattr(
+        pd.DataFrame(array.T).groupby(by), func.__name__.removeprefix("group_nan")
+    )().T.astype(dtype)
 
     # https://github.com/numbagg/numbagg/issues/213
-    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    assert_almost_equal(func(array, by, axis=-1), expected)
     # Amazingly it can also be more incorrect with another run!
-    assert_almost_equal(group_nansum(array, by, axis=-1), expected)
+    assert_almost_equal(func(array, by, axis=-1), expected)
+
+
+def test_dimensionality():
+    func = group_nansum
+
+    values = np.arange(6)
+    labels = np.arange(6)
+
+    result = func(values, labels)
+    assert result.shape == (6,)
+
+    result = func(values, labels, axis=-1)
+    assert result.shape == (6,)
+
+    result = func(values.reshape(1, 6), labels, axis=-1)
+    assert result.shape == (1, 6)
+
+    with pytest.raises(ValueError):
+        func(values.reshape(1, 6), labels)
+
+    values = np.arange(24).reshape(6, 4)
+    labels = np.arange(4)
+
+    result = func(values, labels, axis=-1)
+    assert result.shape == (6, 4)
+
+    result = func(values.reshape(1, 6, 4), labels, axis=-1)
+    assert result.shape == (1, 6, 4)
+
+    result = func(values.reshape(1, 6, 2, 2), labels.reshape(2, 2), axis=(-1, -2))
+    assert result.shape == (1, 6, 4)
+
+    with pytest.raises(ValueError):
+        func(values, labels)

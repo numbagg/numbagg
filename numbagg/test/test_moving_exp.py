@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 
 from numbagg import (
+    MOVE_EXP_FUNCS,
     move_exp_nancorr,
     move_exp_nancount,
     move_exp_nancov,
@@ -15,29 +16,14 @@ from numbagg import (
 from .conftest import COMPARISONS
 
 
-@pytest.fixture(scope="module")
-def rand_array():
-    arr = np.random.RandomState(0).rand(2000).reshape(10, -1)
-    arr[0, 0] = np.nan
-    return np.where(arr > 0.1, arr, np.nan)
-
-
 @pytest.mark.parametrize(
     "func",
-    [
-        move_exp_nancount,
-        move_exp_nanmean,
-        move_exp_nanstd,
-        move_exp_nansum,
-        move_exp_nanvar,
-        move_exp_nancov,
-        move_exp_nancorr,
-    ],
+    MOVE_EXP_FUNCS,
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_pandas_comp(rand_array, alpha, func):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_comp(array, alpha, func):
     c = COMPARISONS[func]
-    array = rand_array[:3]
 
     result = c["numbagg"](array, alpha=alpha)()
     expected = c["pandas"](array, alpha=alpha)()
@@ -93,17 +79,17 @@ def test_move_exp_min_weight(func):
     assert result == expected
 
 
-@pytest.mark.parametrize("n", [10, 200])
+@pytest.mark.parametrize("shape", [(10,), (200,)], indirect=True)
 @pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
 @pytest.mark.parametrize("test_nans", [True, False])
-def test_move_exp_min_weight_numerical(n, alpha, rand_array, test_nans):
-    array = rand_array[0, :n]
+def test_move_exp_min_weight_numerical(alpha, array, test_nans):
     if not test_nans:
         array = np.nan_to_num(array)
     # High alphas mean fast decays, mean initial weights are higher
     initial_weight = alpha
     weights = (
-        np.array([(1 - alpha) ** (i - 1) for i in range(n, 0, -1)]) * initial_weight
+        np.array([(1 - alpha) ** (i - 1) for i in range(array.size, 0, -1)])
+        * initial_weight
     )
     assert_allclose(weights[-1], initial_weight)
     # Fill weights with NaNs where array has them
@@ -144,6 +130,85 @@ def test_move_exp_nancount_nansum(alpha):
     assert_allclose(result, expected)
 
 
+@pytest.mark.parametrize(
+    "func_n",
+    [
+        # Functions that are variance-like
+        (move_exp_nanvar, 1),
+        (move_exp_nanstd, 1),
+        (move_exp_nancov, 2),
+        (move_exp_nancorr, 2),
+    ],
+)
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+def test_move_exp_nans_var(func_n, alpha):
+    # This test is related to producing values with `move_exp_nancorr` on arrays with
+    # `[0.9, np.nan]`, when we shouldn't. We could probably replace some of it with
+    # property testing.
+
+    func, n = func_n
+
+    array = np.array([np.nan, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([5.0, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan, 2.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan, 1.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    if func != move_exp_nancorr:
+        expected = np.array([True, True, False])
+    if func == move_exp_nancorr:
+        # Correlation of values that are all the same is undefined
+        expected = np.array([True, True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([1.0, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.1, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.75, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.5, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    array = np.array([0.9, np.nan])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True])
+    assert_allclose(result, expected)
+
+    # # NEXT: why does this return a different result to the one above??
+    array = np.array([0.95, np.nan, 1.0])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False])
+    assert_allclose(result, expected)
+
+    array = np.array([0.59288027, np.nan, 0.4758262, 0.70877039])
+    result = np.isnan(func(*[array] * n, alpha=alpha))
+    expected = np.array([True, True, False, False])
+    assert_allclose(result, expected)
+
+
 def test_move_exp_nanmean_numeric():
     array = np.array([10, 0, np.nan, 10])
 
@@ -153,6 +218,76 @@ def test_move_exp_nanmean_numeric():
 
     result = move_exp_nanmean(array, alpha=0.25)
     expected = np.array([10.0, 4.2857143, 4.2857143, 7.1653543])
+    assert_allclose(result, expected)
+
+
+def test_move_exp_inf():
+    array = np.array([np.inf])
+    result = move_exp_nanmean(array, alpha=0.25)
+    expected = np.array([np.inf])
+    assert_allclose(result, expected)
+
+    array = np.array([0, 0, np.inf], dtype=np.float16)
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([0, 0, np.inf])
+    assert_array_equal(result, expected)
+
+    array = np.array([0, np.inf, np.inf], dtype=np.float16)
+    result = move_exp_nanmean(array, alpha=1.0)
+    # Unclear if the final value should remain `inf` or become `nan` — it's changing to
+    # `nan` because `alpha=1`, and so we get `inf * 0`...
+    expected = np.array([0, np.inf, np.nan])
+    assert_array_equal(result, expected)
+
+
+def test_move_exp_nanmean_big():
+    array = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    assert_array_equal(result, expected)
+
+
+def test_move_exp_nanmean_nan():
+    array = np.array([[0, np.nan]])
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([[0, np.nan]])
+    # Notably pandas returns [[0, 0]] here, which I think doesn't make sense — there's
+    # no denominator remaining, since alpha is 1, so I think it should be `nan``
+    assert_array_equal(result, expected)
+
+    # Same here
+    array = np.array([[1, np.nan]])
+    result = move_exp_nanmean(array, alpha=1.0)
+    expected = np.array([[1, np.nan]])
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.xfail(
+    reason="Decaying the numerator and denominator separately means we can overflow with sufficiently large values"
+)
+def test_move_exp_nanmean_big_x():
+    array = np.array(
+        [[0.00000000e000, 1.19846209e308], [1.19846209e308, 1.19846209e308]]
+    )
+    result = move_exp_nanmean(array, alpha=0.5)
+    expected = np.array(
+        [[0.00000000e000, 7.989747e307], [1.19846209e308, 1.19846209e308]]
+    )
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_endian(array):
+    expected = move_exp_nanmean(array, alpha=0.25)
+
+    array = array.astype(array.dtype.newbyteorder(">"))
+    # with pytest.warns(UserWarning):
+    result = move_exp_nanmean(array, alpha=0.25)
+
     assert_allclose(result, expected)
 
 
@@ -183,20 +318,12 @@ def test_move_exp_nancorr_numeric():
 
 @pytest.mark.parametrize(
     "func",
-    [
-        move_exp_nancount,
-        move_exp_nanmean,
-        move_exp_nanstd,
-        move_exp_nansum,
-        move_exp_nanvar,
-        move_exp_nancov,
-        move_exp_nancorr,
-    ],
+    MOVE_EXP_FUNCS,
 )
 @pytest.mark.parametrize("alpha", [0.5, 0.1])
-def test_move_exp_alphas(rand_array, alpha, func):
+@pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
+def test_move_exp_alphas(array, alpha, func):
     c = COMPARISONS[func]
-    array = rand_array[:3]
 
     # Supply alphas as a 1D array
     alphas = np.full(array.shape[-1], alpha)

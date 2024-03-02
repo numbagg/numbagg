@@ -83,6 +83,13 @@ def array_generator(func_name, dtypes):
     ss[2] = {"size": 12, "shapes": [(2, 6), (3, 4)]}
     ss[3] = {"size": 16, "shapes": [(2, 2, 4)]}
     ss[4] = {"size": 24, "shapes": [(1, 2, 3, 4)]}
+
+    # some large arrays to ensure numerical precision
+    ss[5] = {"size": 1_000, "shapes": [(1_000,)]}
+    ss[6] = {"size": 10_000, "shapes": [(100, 100)]}
+    ss[7] = {"size": 1_000_000, "shapes": [(1_000, 1_000)]}
+    ss[8] = {"size": 1_000_000, "shapes": [(100, 10_000)]}
+
     for seed in (1, 2):
         rs = np.random.RandomState(seed)
         for ndim in ss:

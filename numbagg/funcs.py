@@ -3,49 +3,78 @@ from __future__ import annotations
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
-from numbagg.decorators import ndfill, ndquantile, ndreduce
+from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
 
 
-@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
-def allnan(a):
-    f = True
-    for ai in a.flat:
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], bool_[:]),
+        (int64[:], bool_[:]),
+        (float32[:], bool_[:]),
+        (float64[:], bool_[:]),
+    ]
+)
+def allnan(a, out):
+    for ai in a:
         if not np.isnan(ai):
-            f = False
-            break
-    return f
+            out[0] = False
+            return
 
 
-@ndreduce.wrap([bool_(int32), bool_(int64), bool_(float32), bool_(float64)])
-def anynan(a):
-    f = False
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], bool_[:]),
+        (int64[:], bool_[:]),
+        (float32[:], bool_[:]),
+        (float64[:], bool_[:]),
+    ]
+)
+def anynan(a, out):
     for ai in a.flat:
         if np.isnan(ai):
-            f = True
-            break
-    return f
+            out[0] = True
+            return
 
 
-@ndreduce.wrap([int64(int32), int64(int64), int64(float32), int64(float64)])
-def nancount(a):
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], int64[:]),
+        (int64[:], int64[:]),
+        (float32[:], int64[:]),
+        (float64[:], int64[:]),
+    ]
+)
+def nancount(a, out):
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
             non_missing += 1
-    return non_missing
+    out[0] = non_missing
 
 
-@ndreduce.wrap([int32(int32), int64(int64), float32(float32), float64(float64)])
-def nansum(a):
-    asum = 0
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], int32[:]),
+        (int64[:], int64[:]),
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def nansum(a, out):
+    asum = a.dtype.type(0)
     for ai in a.flat:
         if not np.isnan(ai):
             asum += ai
-    return asum
+    out[0] = asum
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanmean(a):
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def nanmean(a, out):
     asum = 0.0
     count = 0
     for ai in a.flat:
@@ -53,19 +82,31 @@ def nanmean(a):
             asum += ai
             count += 1
     if count > 0:
-        return asum / count
+        out[0] = asum / count
     else:
-        return np.nan
+        out[0] = np.nan
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanstd(a):
-    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
-    # discussion of whether to add an option.
-    ddof = 1
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], int32, float32[:]),
+        (float64[:], int64, float64[:]),
+    ],
+    supports_ddof=True,
+)
+def nanvar(
+    a,
+    ddof,
+    out,
+):
+    # Running two loops might seem inefficient, but it's 3x faster than a Welford's
+    # algorithm. And if we don't compute the mean first, we get numerical instability
+    # (which our tests capture so is easy to observe).
+
     asum = 0
     count = 0
-    for ai in a.flat:
+    # ddof = 1
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -76,19 +117,22 @@ def nanstd(a):
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai
-        return np.sqrt(asum / (count - ddof))
+        out[0] = asum / (count - ddof)
     else:
-        return np.nan
+        out[0] = np.nan
 
 
-@ndreduce.wrap([float32(float32), float64(float64)])
-def nanvar(a):
-    # for now, fix ddof=1. See https://github.com/numbagg/numbagg/issues/138 for
-    # discussion of whether to add an option.
-    ddof = 1
+@ndaggregate.wrap(
+    signature=[
+        (float32[:], int32, float32[:]),
+        (float64[:], int64, float64[:]),
+    ],
+    supports_ddof=True,
+)
+def nanstd(a, ddof, out):
     asum = 0
     count = 0
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -99,13 +143,14 @@ def nanvar(a):
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai
-        return asum / (count - ddof)
+        out[0] = np.sqrt(asum / (count - ddof))
     else:
-        return np.nan
+        out[0] = np.nan
 
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanargmax(a):
@@ -114,6 +159,8 @@ def nanargmax(a):
     amax = -np.infty
     idx = -1
     for i, ai in enumerate(a.flat):
+        # Much slower, by 3-4x to use this construction:
+        # if not np.isnan(ai) and (ai > ammax or idx == -1):
         if ai > amax or (idx == -1 and not np.isnan(ai)):
             amax = ai
             idx = i
@@ -124,6 +171,7 @@ def nanargmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), int64(float32), int64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanargmin(a):
@@ -142,6 +190,7 @@ def nanargmin(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanmax(a):
@@ -150,11 +199,12 @@ def nanmax(a):
             "zero-size array to reduction operation fmax which has no identity"
         )
     amax = -np.infty
-    all_missing = 1
+    all_missing = True
     for ai in a.flat:
+        # If we check for `isnan` here, the function becomes much slower (by about 4x!)
         if ai >= amax:
             amax = ai
-            all_missing = 0
+            all_missing = False
     if all_missing:
         amax = np.nan
     return amax
@@ -162,6 +212,7 @@ def nanmax(a):
 
 @ndreduce.wrap(
     [int64(int32), int64(int64), float32(float32), float64(float64)],
+    # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
 def nanmin(a):
@@ -170,23 +221,30 @@ def nanmin(a):
             "zero-size array to reduction operation fmin which has no identity"
         )
     amin = np.infty
-    all_missing = 1
+    all_missing = True
     for ai in a.flat:
         if ai <= amin:
             amin = ai
-            all_missing = 0
+            all_missing = False
     if all_missing:
         amin = np.nan
     return amin
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr, quantile, out):
-    # valid (non NaN) observations
-    valid_obs = np.sum(np.isfinite(arr))
+def nanquantile(arr: np.ndarray, quantile, out):
+    nans = np.isnan(arr)
+    valid_obs = arr.size - np.sum(nans)
+
+    if valid_obs == 0:
+        out[:] = np.nan
+        return
+
     # replace NaN with maximum
     max_val = np.nanmax(arr)
-    arr[np.isnan(arr)] = max_val
+
+    # and we need to use `where` to avoid modifying the original array
+    arr = np.where(nans, max_val, arr)
 
     # two columns for indexes — floor and ceiling
     indexes = np.zeros((len(quantile), 2), dtype=np.int32)
@@ -194,10 +252,11 @@ def nanquantile(arr, quantile, out):
     ranks = np.zeros(len(quantile), dtype=np.float64)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            continue
         rank = (valid_obs - 1) * quantile[i]
         ranks[i] = rank
-        indexes[i, 0] = int(np.floor(rank))
-        indexes[i, 1] = int(np.ceil(rank))
+        indexes[i] = [int(np.floor(rank)), int(np.ceil(rank))]
 
     # `partition` is similar to a `sort`, but only ensures that the indexes passed to
     # kth are in the correct positions
@@ -205,12 +264,14 @@ def nanquantile(arr, quantile, out):
     sorted = np.partition(arr, kth=unique_indices)
 
     for i in range(len(quantile)):
+        if np.isnan(quantile[i]):
+            out[i] = np.nan
+            continue
         # linear interpolation (like numpy percentile) takes the fractional part of
         # desired position
         proportion = ranks[i] - indexes[i, 0]
 
-        floor_val = sorted[indexes[i, 0]]
-        ceil_val = sorted[indexes[i, 1]]
+        floor_val, ceil_val = sorted[indexes[i]]
 
         result = floor_val + proportion * (ceil_val - floor_val)
 
@@ -251,3 +312,7 @@ def ffill(a, limit, out):
 
 
 count = nancount
+
+
+def nanmedian(a: np.ndarray, **kwargs):
+    return nanquantile(a, quantiles=0.5, **kwargs)
