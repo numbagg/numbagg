@@ -34,7 +34,8 @@ homepage = "https://github.com/numbagg/numbagg"
 dev = [
   "bottleneck",
   "hypothesis",
-  "jq",
+  "jq; platform_system!='Windows'", # jq doesn't easily install on Windows. Alternatively we could have a `benchmark` category
+  "mypy",
   "pandas",
   "pre-commit",
   "pytest-benchmark",
