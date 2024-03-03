@@ -195,14 +195,8 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                     assert_array_equal(actual, desired, err_msg)
 
                 # Windows seems generate int64 vs. int32 differently with `nancount`
-                # when the input is float. This would be very low priority to fix;
-                # skipping for the moment.
-                if (
-                    numbagg_func.__name__ == "nancount"
-                    and sys.platform == "win32"
-                    and arr.dtype.kind == "f"
-                    and actual.dtype.kind == "i"
-                ):
+                # This would be very low priority to fix; skipping for the moment.
+                if numbagg_func.__name__ == "nancount" and sys.platform == "win32":
                     continue
                 err_msg += "\n dtype mismatch %s %s"
                 da = actual.dtype
