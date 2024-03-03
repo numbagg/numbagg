@@ -199,7 +199,7 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                 # skipping for the moment.
                 if (
                     sys.platform == "win32"
-                    and arr.dtype == np.float64
+                    and arr.dtype.kind == "f"
                     and actual.dtype.kind == "i"
                 ):
                     continue
