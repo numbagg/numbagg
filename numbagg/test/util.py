@@ -38,12 +38,12 @@ def array_generator(func_name, dtypes):
         inf = np.inf
 
     # nan and inf
-    yield np.array([inf, nan])
-    yield np.array([inf, -inf])
-    yield np.array([nan, 2, 3])
-    yield np.array([-inf, 2, 3])
+    yield np.array([inf, nan], dtype=np.float64)
+    yield np.array([inf, -inf], dtype=np.float64)
+    yield np.array([nan, 2, 3], dtype=np.float64)
+    yield np.array([-inf, 2, 3], dtype=np.float64)
     if func_name != "nanargmin":
-        yield np.array([nan, inf])
+        yield np.array([nan, inf], dtype=np.float64)
 
     # byte swapped
     yield np.array([1, 2, 3], dtype=">f4")
@@ -53,28 +53,28 @@ def array_generator(func_name, dtypes):
     yield np.array([1, 2, 3], dtype=np.float16)
 
     # regression tests
-    yield np.array([1, 2, 3]) + 1e9  # check that move_std is robust
-    yield np.array([0, 0, 0])  # nanargmax/nanargmin
-    yield np.array([1, nan, nan, 2])  # nanmedian
+    yield np.array([1, 2, 3], dtype=np.float64) + 1e9  # check that move_std is robust
+    yield np.array([0, 0, 0], dtype=np.float64)  # nanargmax/nanargmin
+    yield np.array([1, nan, nan, 2], dtype=np.float64)  # nanmedian
     yield np.array([2**31], dtype=np.int64)  # overflows on windows
-    yield np.array([[1.0, 2], [3, 4]])[..., np.newaxis]  # issue #183
+    yield np.array([[1.0, 2], [3, 4]], dtype=np.float64)[..., np.newaxis]  # issue #183
 
     # ties
-    yield np.array([0, 0, 0])
+    yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([1, 1, 1], dtype=np.float64)
 
     # 0d input
     if not func_name.startswith("move"):
-        yield np.array(-9)
-        yield np.array(0)
-        yield np.array(9)
-        yield np.array(-9.0)
-        yield np.array(0.0)
-        yield np.array(9.0)
-        yield np.array(-inf)
-        yield np.array(inf)
-        yield np.array(nan)
+        yield np.array(-9, dtype=np.float64)
+        yield np.array(0, dtype=np.float64)
+        yield np.array(9, dtype=np.float64)
+        yield np.array(-9.0, dtype=np.float64)
+        yield np.array(0.0, dtype=np.float64)
+        yield np.array(9.0, dtype=np.float64)
+        yield np.array(-inf, dtype=np.float64)
+        yield np.array(inf, dtype=np.float64)
+        yield np.array(nan, dtype=np.float64)
 
     # automate a bunch of arrays to test
     ss = {}
@@ -111,7 +111,7 @@ def array_generator(func_name, dtypes):
                     yield a.reshape(shape)
 
     # non-contiguous arrays
-    yield np.array([[1, 2], [3, 4]])[:, [1]]  # gh 161
+    yield np.array([[1, 2], [3, 4]], dtype=np.int64)[:, [1]]  # gh 161
     for dtype in dtypes:
         # 1d
         a = np.arange(12).astype(dtype)

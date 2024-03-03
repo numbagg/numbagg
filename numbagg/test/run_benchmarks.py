@@ -7,7 +7,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import jq
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
@@ -25,6 +24,8 @@ def _sort_key(x):
 
 
 def run(k_filter, run_tests, extra_args):
+    import jq
+
     json_path = Path(".benchmarks/benchmark.json")
     json_path.parent.mkdir(exist_ok=True, parents=True)
     if run_tests:
