@@ -156,7 +156,7 @@ def nanstd(a, ddof, out):
 def nanargmax(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
-    amax = -np.infty
+    amax = -np.inf
     idx = -1
     for i, ai in enumerate(a.flat):
         # Much slower, by 3-4x to use this construction:
@@ -177,7 +177,7 @@ def nanargmax(a):
 def nanargmin(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
-    amin = np.infty
+    amin = np.inf
     idx = -1
     for i, ai in enumerate(a.flat):
         if ai < amin or (idx == -1 and not np.isnan(ai)):
@@ -198,7 +198,7 @@ def nanmax(a):
         raise ValueError(
             "zero-size array to reduction operation fmax which has no identity"
         )
-    amax = -np.infty
+    amax = -np.inf
     all_missing = True
     for ai in a.flat:
         # If we check for `isnan` here, the function becomes much slower (by about 4x!)
@@ -220,7 +220,7 @@ def nanmin(a):
         raise ValueError(
             "zero-size array to reduction operation fmin which has no identity"
         )
-    amin = np.infty
+    amin = np.inf
     all_missing = True
     for ai in a.flat:
         if ai <= amin:
