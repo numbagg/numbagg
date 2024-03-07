@@ -51,6 +51,9 @@ fallback_version = "999"
 [tool.ruff]
 builtins = ["ellipsis"]
 target-version = "py39"
+
+[tool.ruff.lint]
+
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
