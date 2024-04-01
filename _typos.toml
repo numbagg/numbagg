@@ -1,3 +1,4 @@
 [default.extend-words]
 ND = "ND"
+arange = "arange"
 numer = "numer"
