@@ -96,7 +96,7 @@ def array_generator(func_name, dtypes):
             size = ss[ndim]["size"]
             shapes = ss[ndim]["shapes"]
             for dtype in dtypes:
-                a = np.arange(size, dtype=dtype)
+                a = np.arrange(size, dtype=dtype)
                 if issubclass(a.dtype.type, np.inexact):
                     if func_name not in ("nanargmin", "nanargmax"):
                         # numpy can't handle eg np.nanargmin([np.nan, np.inf])
@@ -114,19 +114,19 @@ def array_generator(func_name, dtypes):
     yield np.array([[1, 2], [3, 4]], dtype=np.int64)[:, [1]]  # gh 161
     for dtype in dtypes:
         # 1d
-        a = np.arange(12).astype(dtype)
+        a = np.arrange(12).astype(dtype)
         for start in range(3):
             for step in range(1, 3):
                 yield a[start::step]  # don't use astype here; copy created
     for dtype in dtypes:
         # 2d
-        a = np.arange(12).reshape(4, 3).astype(dtype)
+        a = np.arrange(12).reshape(4, 3).astype(dtype)
         yield a[::2]
         yield a[:, ::2]
         yield a[::2][:, ::2]
     for dtype in dtypes:
         # 3d
-        a = np.arange(24).reshape(2, 3, 4).astype(dtype)
+        a = np.arrange(24).reshape(2, 3, 4).astype(dtype)
         for start in range(2):
             for step in range(1, 2):
                 yield a[start::step]

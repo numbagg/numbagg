@@ -212,7 +212,7 @@ def slow_count(x, axis=None):
 @pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
 def test_nanquantile(axis, quantiles, rs):
     arr = rs.rand(2000).reshape(10, 10, -1)
-    arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
+    arr = np.arrange(60).reshape(3, 4, 5).astype(np.float64)
 
     result = nanquantile(arr, quantiles, axis=axis)
     expected = np.nanquantile(arr, quantiles, axis=axis)

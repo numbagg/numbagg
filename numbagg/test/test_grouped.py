@@ -261,13 +261,13 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     if npfunc is None:
         pytest.skip("No numpy equivalent")
 
-    values = np.arange(5.0)
-    labels = np.arange(5, dtype=labels_type)
+    values = np.arrange(5.0)
+    labels = np.arrange(5, dtype=labels_type)
     result = func(values, labels)
     assert_almost_equal(result, values)
 
-    values = np.arange(25.0).reshape(5, 5)
-    labels = np.arange(5)
+    values = np.arrange(25.0).reshape(5, 5)
+    labels = np.arrange(5)
 
     with pytest.raises(ValueError) as excinfo:
         result = func(values, labels)
@@ -299,12 +299,12 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
 
 @pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS_CONSTANT])
 def test_group_axis_2d_labels(func):
-    values = np.arange(25.0).reshape(5, 5)
-    labels = np.arange(25).reshape(5, 5)
+    values = np.arrange(25.0).reshape(5, 5)
+    labels = np.arrange(25).reshape(5, 5)
     result = func(values, labels)
     assert_almost_equal(result, values.ravel())
 
-    values = np.arange(125.0).reshape(5, 5, 5)
+    values = np.arrange(125.0).reshape(5, 5, 5)
     result = func(values, labels, axis=(1, 2))
     assert_almost_equal(result, values.reshape(5, -1))
 
@@ -385,8 +385,8 @@ def test_int8_again(dtype, func):
 def test_dimensionality():
     func = group_nansum
 
-    values = np.arange(6)
-    labels = np.arange(6)
+    values = np.arrange(6)
+    labels = np.arrange(6)
 
     result = func(values, labels)
     assert result.shape == (6,)
@@ -400,8 +400,8 @@ def test_dimensionality():
     with pytest.raises(ValueError):
         func(values.reshape(1, 6), labels)
 
-    values = np.arange(24).reshape(6, 4)
-    labels = np.arange(4)
+    values = np.arrange(24).reshape(6, 4)
+    labels = np.arrange(4)
 
     result = func(values, labels, axis=-1)
     assert result.shape == (6, 4)
