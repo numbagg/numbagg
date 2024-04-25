@@ -17,5 +17,6 @@ __pycache__
 .dmypy.json
 
 .benchmarks
+.bench
 
 .hypothesis
