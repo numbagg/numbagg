@@ -45,7 +45,7 @@ def _apply_ast_rewrite(func, node_transformer):
     try:
         return scope[_TRANSFORMED_FUNC_NAME]
     except KeyError:
-        raise TypeError("failed to rewrite function definition:\n%s" % orig_source)
+        raise TypeError(f"failed to rewrite function definition:\n{orig_source}")
 
 
 class _NDReduceTransformer(ast.NodeTransformer):
