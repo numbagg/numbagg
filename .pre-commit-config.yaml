@@ -8,7 +8,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.5
+    rev: v0.4.7
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -28,13 +28,13 @@ repos:
       - id: mypy
         additional_dependencies: [types-setuptools, numpy]
   - repo: https://github.com/crate-ci/typos
-    rev: v1.21.0
+    rev: v1.22.0
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347
         pass_filenames: false
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.0
+    rev: v1.7.1
     hooks:
       - id: actionlint
   - repo: local
