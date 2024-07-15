@@ -66,7 +66,7 @@ def test_move_exp_pandas_comparison(
             ):
                 # pandas doesn't support this but it's OK that we do
                 return
-            assert type(result_exception) == type(expected_exception)
+            assert type(result_exception) is type(expected_exception)
 
             # If only one function raised an exception, the test should fail
             return  # Both raised exceptions, test passes
