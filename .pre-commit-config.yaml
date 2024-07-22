@@ -26,7 +26,8 @@ repos:
     rev: v1.11.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-setuptools, numpy]
+        additional_dependencies:
+          [types-setuptools, numpy, types-Pygments, types-colorama]
   - repo: https://github.com/crate-ci/typos
     rev: v1.23.3
     hooks:
