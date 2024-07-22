@@ -1,3 +1,4 @@
+import logging
 import sys
 from functools import partial
 
@@ -28,6 +29,8 @@ from numbagg import (
 from numbagg.moving_exp import move_exp_nanmean
 from numbagg.test.conftest import COMPARISONS
 from numbagg.test.util import arrays
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
@@ -170,7 +173,15 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                     actual = str(err)
                     actualraised = True
             if actualraised and desiredraised:
+                if (
+                    actual == "All-NaN slice encountered"
+                    and desired == "attempt to get argmin of an empty sequence"
+                ):
+                    logger.info(
+                        "Different error messages because of numpy 2.0. This is fine atm."
+                    )
                 assert desired == actual
+
             elif desiredraised and actual.size == 0:
                 # there are no array values, so don't worry about not raising
                 pass
