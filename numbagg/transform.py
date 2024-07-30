@@ -62,10 +62,11 @@ class _NDReduceTransformer(ast.NodeTransformer):
         )
         # for mypy we split this out; unclear why it's required
         decorator_list: list[ast.expr] = []
+        body: list[ast.stmt] = node.body
         function_def = ast.FunctionDef(
             name=_TRANSFORMED_FUNC_NAME,
             args=arguments,
-            body=node.body,
+            body=body,
             decorator_list=decorator_list,
         )
         return self.generic_visit(function_def)
