@@ -173,14 +173,15 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                     actual = str(err)
                     actualraised = True
             if actualraised and desiredraised:
-                if (
-                    actual == "All-NaN slice encountered"
-                    and desired == "attempt to get argmin of an empty sequence"
-                ):
+                if actual == "All-NaN slice encountered" and desired in [
+                    "attempt to get argmin of an empty sequence",
+                    "attempt to get argmax of an empty sequence",
+                ]:
                     logger.info(
                         "Different error messages because of numpy 2.0. This is fine atm."
                     )
-                assert desired == actual
+                else:
+                    assert desired == actual
 
             elif desiredraised and actual.size == 0:
                 # there are no array values, so don't worry about not raising
