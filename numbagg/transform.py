@@ -60,11 +60,13 @@ class _NDReduceTransformer(ast.NodeTransformer):
             defaults=[],
             posonlyargs=[],
         )
+        # for mypy we split this out; unclear why it's required
+        decorator_list: list[ast.expr] = []
         function_def = ast.FunctionDef(
             name=_TRANSFORMED_FUNC_NAME,
             args=arguments,
             body=node.body,
-            decorator_list=[],
+            decorator_list=decorator_list,
         )
         return self.generic_visit(function_def)
 
