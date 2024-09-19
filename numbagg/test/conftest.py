@@ -507,7 +507,6 @@ def numba_logger():
     numba_logger.setLevel(logging.INFO)
 
 
-# @pytest.fixture(scope="module")
 @pytest.fixture(scope="function")
 def rs():
     return np.random.RandomState(0)
