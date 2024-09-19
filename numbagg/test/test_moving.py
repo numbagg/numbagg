@@ -8,6 +8,7 @@ from numpy.testing import assert_allclose
 from numbagg import (
     MOVE_FUNCS,
     move_mean,
+    move_sum,
 )
 
 from .conftest import COMPARISONS
@@ -53,12 +54,19 @@ def test_move_mean_window(array):
         move_mean(array, window=1, min_count=-1)
 
 
-def test_numerical_issues_float32():
-    arr = np.array([1e10, 1e10, 1e10, 1e10], dtype=np.float32)
-    arr = (np.random.rand(1000) * 1e10).astype(np.float32)
+def test_numerical_issues_float32_move_mean_1(rs):
+    arr = (rs.random(1000) * 1e13).astype(np.float32)
     result = move_mean(arr, window=1)
     assert_allclose(result, arr)
-    # arr = np.array([0.1, .2, 0.3, 0.4], dtype=np.float32)
+
+
+def test_numerical_issues_float32_move_sum_100(rs):
+    # Does running over a repeated array accumulate any errors, compared to just running
+    # over one of the tiles?
+    arr = np.tile((rs.rand(10) * 1e13).astype(np.float32), 100)
+    result = move_sum(arr, window=10)
+    expected = np.sum(arr[:10])
+    assert result[-1] == expected, result[-1] - expected
 
 
 def functions():

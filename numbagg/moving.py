@@ -31,13 +31,14 @@ def move_mean(a, window, min_count, out):
 
         # We previously had a single operation where both variables are valid, but it
         # caused some numerical instability for float32 values. For example the
-        # `test_numerical_issues_float32` test fails. While it had a 10% performance
-        # impact relative to the previous if / elif, the current mode with just two `if`
-        # branches is about 10% faster than the previous mode; maybe it can execute both
-        # branches in parallel?
+        # `test_numerical_issues_float32_move_mean_1` test fails. While it had a 10%
+        # performance impact relative to the previous if / elif, the current mode with
+        # just two `if` branches is about 10% faster than the previous mode; maybe it
+        # can execute both branches in parallel?
 
         # if ai_valid and aold_valid:
         #     asum += ai - aold
+        # elif ...
 
         if aold_valid:
             asum -= aold
@@ -72,6 +73,16 @@ def move_sum(a, window, min_count, out):
 
         ai_valid = not np.isnan(ai)
         aold_valid = not np.isnan(aold)
+
+        # Similar to the comment in `move_mean`, we previously had a single operation if
+        # both were valid. That causes numerical instability for float32 values with a
+        # window of 1.
+        #
+        # But possibly — particularly with a sum — the old and new values are likely to
+        # be closer to each other than to the accumulator, so the numerical instability
+        # is worse with this approach. When testing — for example with
+        # `test_numerical_issues_float32_move_sum_100`, both approaches seem to fail
+        # when increasing the multiplier at approximately the same rate.
 
         if ai_valid:
             asum += ai
