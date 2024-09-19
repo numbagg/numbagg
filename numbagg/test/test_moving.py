@@ -15,6 +15,11 @@ from .conftest import COMPARISONS
 from .util import array_order, arrays
 
 
+@pytest.fixture(scope="function")
+def rs():
+    return np.random.RandomState(0)
+
+
 @pytest.mark.parametrize(
     "func",
     MOVE_FUNCS,
