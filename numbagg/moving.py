@@ -30,7 +30,8 @@ def move_mean(a, window, min_count, out):
         aold_valid = not np.isnan(aold)
 
         if ai_valid and aold_valid:
-            asum += ai - aold
+            asum -= aold
+            asum += ai
         elif ai_valid:
             asum += ai
             count += 1

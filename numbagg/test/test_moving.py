@@ -53,6 +53,14 @@ def test_move_mean_window(array):
         move_mean(array, window=1, min_count=-1)
 
 
+def test_numerical_issues_float32():
+    arr = np.array([1e10, 1e10, 1e10, 1e10], dtype=np.float32)
+    arr = (np.random.rand(1000) * 1e10).astype(np.float32)
+    result = move_mean(arr, window=1)
+    assert_allclose(result, arr)
+    # arr = np.array([0.1, .2, 0.3, 0.4], dtype=np.float32)
+
+
 def functions():
     yield move_mean, slow_move_mean
 
