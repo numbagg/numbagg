@@ -390,9 +390,11 @@ class groupndreduce(NumbaBase):
                 values_dtypes += (numba.int32, numba.int64)
 
             signature = [
-                (value_type, label_type, numba.int64, value_type)
-                if supports_ddof
-                else (value_type, label_type, value_type)
+                (
+                    (value_type, label_type, numba.int64, value_type)
+                    if supports_ddof
+                    else (value_type, label_type, value_type)
+                )
                 for value_type, label_type in itertools.product(
                     values_dtypes, labels_dtypes
                 )
@@ -702,9 +704,11 @@ class ndreduce(NumbaBase):
         first_sig = self.signature[0]
         gufunc_sig = gufunc_string_signature(
             (
-                first_sig.args[0][(slice(None),) * core_ndim]
-                if core_ndim
-                else first_sig.args[0],
+                (
+                    first_sig.args[0][(slice(None),) * core_ndim]
+                    if core_ndim
+                    else first_sig.args[0]
+                ),
             )
             + first_sig.args[1:]
             + (first_sig.return_type,)
@@ -751,7 +755,7 @@ def _is_in_unsafe_thread_pool() -> bool:
     # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
     return current_thread.name.startswith(
         "ThreadPoolExecutor"
-    ) and _thread_backend() in ["workqueue" or None]
+    ) and _thread_backend() in {"workqueue", None}
 
 
 @cache
