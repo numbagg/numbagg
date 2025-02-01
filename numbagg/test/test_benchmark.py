@@ -58,7 +58,11 @@ def test_benchmark_f_bfill(benchmark, func_callable):
 
 @pytest.fixture
 def clear_numba_cache(func):
-    func.gufunc.cache_clear()
+    if hasattr(func, "gufunc"):
+        func.gufunc.cache_clear()
+    else:
+        # Functions like `nanmedian` are wrappers, so we can't clear a cache
+        pytest.skip(f"Can't clear cache for {func}")
 
     yield
 
