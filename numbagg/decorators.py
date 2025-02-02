@@ -413,7 +413,9 @@ class groupndreduce(NumbaBase):
             ]
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmove must be tuples: {signature}")
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
             n_args = 3 + supports_ddof
             if len(sig) != n_args:
                 raise TypeError(
