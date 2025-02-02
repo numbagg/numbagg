@@ -3,8 +3,8 @@ requires = ["setuptools", "wheel", "setuptools_scm"]
 
 [project]
 authors = [
-  {name = "Stephan Hoyer", email = "shoyer@gmail.com"},
-  {name = "Maximilian Roos", email = "m@maxroos.com"},
+  { name = "Stephan Hoyer", email = "shoyer@gmail.com" },
+  { name = "Maximilian Roos", email = "m@maxroos.com" },
 ]
 classifiers = [
   # "License :: OSI Approved :: BSD License",
@@ -23,7 +23,7 @@ dependencies = ["numpy", "numba"]
 
 description = "Fast N-dimensional aggregation functions with Numba"
 dynamic = ["version"]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 name = "numbagg"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -58,18 +58,20 @@ target-version = "py39"
 # E402: module level import not at top of file
 # E501: line too long - let black worry about that
 # E731: do not assign a lambda expression, use a def
-ignore = [
-  "E402",
-  "E501",
-  "E731",
-]
+ignore = ["E402", "E501", "E731"]
 select = [
-  "F", # Pyflakes
-  "E", # Pycodestyle
+  "F",  # Pyflakes
+  "E",  # Pycodestyle
   "W",
-  "I", # isort
+  "I",  # isort
   "UP", # Pyupgrade
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["numbagg"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.mypy]
 check_untyped_defs = true
