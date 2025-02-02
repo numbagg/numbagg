@@ -39,6 +39,18 @@ if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
 else:
     _FASTMATH = False  # type: ignore[assignment]
 
+# https://github.com/numba/numba/issues/4807
+if os.getenv("NUMBAGG_CACHE", "False").lower() in ("true", "1", "t"):
+    _ENABLE_CACHE = True
+    warnings.warn(
+        "Numba caching is enabled in numbagg. "
+        "This will likely cause segfaults when used with multiprocessing. "
+        "See https://github.com/numba/numba/issues/4807",
+        UserWarning,
+    )
+else:
+    _ENABLE_CACHE = False
+
 
 def _gufunc_arg_str(arg):
     return f"({','.join(_ALPHABET[: ndim(arg)])})"
@@ -71,8 +83,8 @@ class NumbaBase:
 
     def __init__(self, func: Callable, supports_parallel: bool = True):
         self.func = func
-        # https://github.com/numba/numba/issues/4807
-        self.cache = False
+
+        self.cache = _ENABLE_CACHE
         self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
         functools.wraps(func)(self)
@@ -401,7 +413,9 @@ class groupndreduce(NumbaBase):
             ]
         for sig in signature:
             if not isinstance(sig, tuple):
-                raise TypeError(f"signatures for ndmove must be tuples: {signature}")
+                raise TypeError(
+                    f"signatures for {self.__class__} must be tuples: {signature}"
+                )
             n_args = 3 + supports_ddof
             if len(sig) != n_args:
                 raise TypeError(
