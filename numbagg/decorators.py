@@ -88,7 +88,6 @@ class NumbaBase:
 
         # https://github.com/numba/numba/issues/4807
         _reload_parfors()
-        self.cache = _ENABLE_CACHE
 
         self.cache = _ENABLE_CACHE
         self.supports_parallel = supports_parallel
