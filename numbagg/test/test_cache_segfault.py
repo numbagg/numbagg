@@ -91,7 +91,7 @@ def numbagg_worker(i, x):
 )
 def test_numbagg_cache_segfault(clean_pycache):
     """Test that reproduces numba cache segfault with numbagg's group_nanmean — doesn't
-    seem to currently fail though"""
+    seem to currently fail though, even when `_NUMBAGG_CACHE` is set to `True`"""
     jobs = 32
 
     with ProcessPoolExecutor(jobs) as pool:
