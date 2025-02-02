@@ -1,5 +1,10 @@
 from importlib.metadata import version as _version
 
+from numba.core.typed_passes import _reload_parfors
+
+# https://github.com/numba/numba/issues/8578
+_reload_parfors()
+
 from .funcs import (
     allnan,
     anynan,
