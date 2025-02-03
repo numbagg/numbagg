@@ -397,6 +397,9 @@ class groupndreduce(NumbaBase):
 
         if signature is None:
             values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
+            # We restrict to int32 & int64 to reduce compile time. When numba supports
+            # dynamic compilation, we'll accept everything. We cast up to int32 if the
+            # type is smaller than that.
             labels_dtypes = (numba.int32, numba.int64)
             if supports_ints:
                 values_dtypes += (numba.int32, numba.int64)
@@ -491,6 +494,9 @@ class groupndreduce(NumbaBase):
                 f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
                 "Please raise an issue if this feature would be particularly helpful."
             )
+
+        if labels.dtype.kind == "i" and labels.dtype < np.dtype("int16"):
+            labels = labels.astype(np.int32)
 
         # We need to be careful that we don't overflow `counts` in the grouping
         # function. So the labels need to be a big enough integer type to hold the
