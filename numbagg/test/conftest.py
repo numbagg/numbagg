@@ -510,3 +510,14 @@ def numba_logger():
 @pytest.fixture(scope="module")
 def rs():
     return np.random.RandomState(0)
+
+
+@pytest.fixture
+def clear_numba_cache(func):
+    if hasattr(func, "gufunc"):
+        func.gufunc.cache_clear()
+    else:
+        # Functions like `nanmedian` are wrappers, so we can't clear a cache
+        pytest.skip(f"Can't clear cache for {func}")
+
+    yield
