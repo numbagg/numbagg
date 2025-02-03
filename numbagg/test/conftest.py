@@ -482,12 +482,6 @@ def func_callable(library, func, array):
     """
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
-    if (
-        len(array.shape) > 1
-        and library == "numbagg"
-        and not getattr(func, "supports_nd", True)
-    ):
-        pytest.skip(f"{func} doesn't support nd")
     try:
         callable_ = COMPARISONS[func][library](array)
         assert callable(callable_)
