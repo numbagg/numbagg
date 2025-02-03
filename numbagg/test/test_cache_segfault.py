@@ -86,10 +86,13 @@ def numbagg_worker(i, x):
     return group_nanmean(arr, labels)
 
 
+# We use this fixture to clear the numba cache before each test, though we then hardcode
+# `group_nanmean` (but still doesn't seem to correctly fail)
+@pytest.mark.parametrize("func", [group_nanmean], indirect=True)
 @pytest.mark.xfail(
-    reason="Known segfault issue with numba caching in multiprocessing - https://github.com/numba/numba/issues/4807"
+    reason="Expecting this to fail with a segfault; it doesn't seem to fail, but `test_numbagg_module_cache_segfault` does"
 )
-def test_numbagg_cache_segfault(clean_pycache):
+def test_numbagg_cache_segfault(func, clear_numba_cache, clean_pycache):
     """Test that reproduces numba cache segfault with numbagg's group_nanmean — doesn't
     seem to currently fail though, even when `_NUMBAGG_CACHE` is set to `True`"""
     jobs = 32
@@ -153,4 +156,5 @@ def test_numbagg_module_cache_segfault(clean_pycache):
 
         # Process should have failed with a segfault and show warning about caching
         assert "will likely cause segfaults" in process.stderr
-        assert process.returncode != 0, "Process should have failed with segfault"
+        if "LLVM ERROR: Symbol not found" in process.stderr:
+            pytest.xfail("Known segfault issue with numba caching in multiprocessing")
