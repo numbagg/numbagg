@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import functools
-import itertools
 import logging
 import os
 import threading
@@ -382,7 +381,6 @@ class groupndreduce(NumbaBase):
     def __init__(
         self,
         func,
-        signature: list[tuple] | None = None,
         *,
         supports_ddof=False,
         supports_bool=True,
@@ -392,63 +390,28 @@ class groupndreduce(NumbaBase):
         self.supports_ints = supports_ints
         self.supports_ddof = supports_ddof
         self.func = func
-
-        if signature is None:
-            values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
-            if supports_ints:
-                values_dtypes += (numba.int32, numba.int64)
-
-            signature = [
-                (
-                    (value_type, label_type, numba.int64, value_type)
-                    if supports_ddof
-                    else (value_type, label_type, value_type)
-                )
-                for value_type, label_type in itertools.product(
-                    values_dtypes, labels_dtypes
-                )
-            ]
-        for sig in signature:
-            if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for {self.__class__} must be tuples: {signature}"
-                )
-            n_args = 3 + supports_ddof
-            if len(sig) != n_args:
-                raise TypeError(
-                    f"signature has wrong number of arguments != {n_args}: {signature}"
-                )
-            if any(ndim(arg) != 0 for arg in sig):
-                raise ValueError(
-                    f"all arguments in signature for ndreduce must be scalars: {signature}"
-                )
-
-        self.signature = signature
-
         super().__init__(func=func)
 
     @cache
-    def gufunc(self, core_ndim, *, target):
-        # compiling gufuncs has some significant overhead (~130ms per function
-        # and number of dimensions to aggregate), so do this in a lazy fashion
-        numba_sig: list[tuple] = []
-        slices = (slice(None),) * core_ndim
-        # This is pretty messy. We could inherit from this class for the `ddof` methods.
-        # But probably we want to make it more abstract, and take advantage of
-        # forthcoming numba features such as dynamic signatures.
+    def gufunc(self, core_ndim, values_dtype, labels_dtype, *, target):
+        # Create signature based on actual input types
+        if not self.supports_ints and np.issubdtype(values_dtype, np.integer):
+            raise TypeError(f"{self.func.__name__} does not support integer inputs")
+        if not self.supports_bool and values_dtype == np.bool_:
+            raise TypeError(f"{self.func.__name__} does not support boolean inputs")
+
+        values_type = numba.from_dtype(values_dtype)
+        labels_type = numba.from_dtype(labels_dtype)
+
+        slices = (slice(None),) * max(core_ndim, 1)
         if self.supports_ddof:
-            for input_sig in self.signature:
-                values, labels, ddof, out = input_sig
-                numba_sig += [(values[slices], labels[slices], ddof, out[:])]
-            first_sig = numba_sig[0]
-            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(),(z)"
+            numba_sig: list[tuple[Any, ...]] = [
+                (values_type[slices], labels_type[slices], numba.int64, values_type[:])
+            ]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(),(z)"
         else:
-            for input_sig in self.signature:
-                values, labels, out = input_sig
-                numba_sig += [(values[slices], labels[slices], out[:])]
-            first_sig = numba_sig[0]
-            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(z)"
+            numba_sig = [(values_type[slices], labels_type[slices], values_type[:])]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(z)"
 
         vectorize = numba.guvectorize(
             numba_sig,
@@ -508,7 +471,12 @@ class groupndreduce(NumbaBase):
                     "axis required if values and labels have different "
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
-            gufunc = self.gufunc(values.ndim, target=target)
+            gufunc = self.gufunc(
+                core_ndim=values.ndim,
+                values_dtype=values.dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -516,7 +484,12 @@ class groupndreduce(NumbaBase):
                     f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(1, target=target)
+            gufunc = self.gufunc(
+                core_ndim=1,
+                values_dtype=values.dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -525,7 +498,12 @@ class groupndreduce(NumbaBase):
                     f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self.gufunc(len(axis), target=target)
+            gufunc = self.gufunc(
+                core_ndim=len(axis),
+                values_dtype=values.dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
@@ -687,30 +665,28 @@ class ndreduce(NumbaBase):
         return vectorize(self.func)
 
     @cache
-    def gufunc(self, core_ndim, *, target):
-        # creating compiling gufunc has some significant overhead (~130ms per
-        # function and number of dimensions to aggregate), so do this in a
-        # lazy fashion
-        numba_sig = []
-        for input_sig in self.signature:
-            new_sig = (
-                (input_sig.args[0][(slice(None),) * max(core_ndim, 1)],)
-                + input_sig.args[1:]
-                + (input_sig.return_type[:],)
-            )
-            numba_sig.append(new_sig)
+    def gufunc(self, core_ndim, values_dtype, labels_dtype, *, target):
+        # Create signature based on actual input types
 
-        first_sig = self.signature[0]
+        values_type = numba.from_dtype(values_dtype)
+        labels_type = numba.from_dtype(labels_dtype)
+
+        slices = (slice(None),) * max(core_ndim, 1)
+        numba_sig = [
+            (
+                values_type[slices],
+                labels_type[slices],
+                values_type[:],
+            )
+        ]
+
+        first_sig = numba_sig[0]
         gufunc_sig = gufunc_string_signature(
             (
-                (
-                    first_sig.args[0][(slice(None),) * core_ndim]
-                    if core_ndim
-                    else first_sig.args[0]
-                ),
+                first_sig[0] if core_ndim else values_type,
+                first_sig[1] if core_ndim else labels_type,
+                *first_sig[2:],
             )
-            + first_sig.args[1:]
-            + (first_sig.return_type,)
         )
 
         # Can't use `cache=True` because of the dynamic ast transformation
