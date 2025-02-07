@@ -403,7 +403,7 @@ class groupndreduce(NumbaBase):
         values_type = numba.from_dtype(values_dtype)
         labels_type = numba.from_dtype(labels_dtype)
 
-        slices = (slice(None),) * max(core_ndim, 1)
+        slices = (slice(None),) * core_ndim
         if self.supports_ddof:
             numba_sig: list[tuple[Any, ...]] = [
                 (values_type[slices], labels_type[slices], numba.int64, values_type[:])
