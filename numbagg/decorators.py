@@ -385,11 +385,9 @@ class groupndreduce(NumbaBase):
         signature: list[tuple] | None = None,
         *,
         supports_ddof=False,
-        supports_nd=True,
         supports_bool=True,
         supports_ints=True,
     ):
-        self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
         self.supports_ddof = supports_ddof
@@ -477,19 +475,6 @@ class groupndreduce(NumbaBase):
         if labels.dtype.kind not in "i":
             raise TypeError(
                 "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
-            )
-
-        # TODO: I think we can rendmove this, now that every function supports ND...
-        if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
-            # TODO: it might be possible to allow returning an extra dimension for the
-            # indices by using the technique at
-            # https://stackoverflow.com/a/66372474/3064736. Or we could have the numba
-            # function return indices for the flattened array, and we stack them into nd
-            # indices.
-            raise ValueError(
-                f"values and labels must be 1-dimensional for {self.func.__name__}. "
-                f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
-                "Please raise an issue if this feature would be particularly helpful."
             )
 
         # We need to be careful that we don't overflow `counts` in the grouping
