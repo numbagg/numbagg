@@ -665,28 +665,30 @@ class ndreduce(NumbaBase):
         return vectorize(self.func)
 
     @cache
-    def gufunc(self, core_ndim, values_dtype, labels_dtype, *, target):
-        # Create signature based on actual input types
-
-        values_type = numba.from_dtype(values_dtype)
-        labels_type = numba.from_dtype(labels_dtype)
-
-        slices = (slice(None),) * max(core_ndim, 1)
-        numba_sig = [
-            (
-                values_type[slices],
-                labels_type[slices],
-                values_type[:],
+    def gufunc(self, core_ndim, *, target):
+        # creating compiling gufunc has some significant overhead (~130ms per
+        # function and number of dimensions to aggregate), so do this in a
+        # lazy fashion
+        numba_sig = []
+        for input_sig in self.signature:
+            new_sig = (
+                (input_sig.args[0][(slice(None),) * max(core_ndim, 1)],)
+                + input_sig.args[1:]
+                + (input_sig.return_type[:],)
             )
-        ]
+            numba_sig.append(new_sig)
 
-        first_sig = numba_sig[0]
+        first_sig = self.signature[0]
         gufunc_sig = gufunc_string_signature(
             (
-                first_sig[0] if core_ndim else values_type,
-                first_sig[1] if core_ndim else labels_type,
-                *first_sig[2:],
+                (
+                    first_sig.args[0][(slice(None),) * core_ndim]
+                    if core_ndim
+                    else first_sig.args[0]
+                ),
             )
+            + first_sig.args[1:]
+            + (first_sig.return_type,)
         )
 
         # Can't use `cache=True` because of the dynamic ast transformation
