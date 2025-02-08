@@ -399,7 +399,7 @@ class groupndreduce(NumbaBase):
 
         slices = (slice(None),) * core_ndim
         if self.supports_ddof:
-            numba_sig: list[tuple[Any, ...]] = [
+            numba_sig: list[tuple] = [
                 (values_type[slices], labels_type[slices], numba.int64, values_type[:])
             ]
             gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(),(z)"
@@ -459,7 +459,10 @@ class groupndreduce(NumbaBase):
 
         target = self.target
 
-        # Cast to float64 if needed
+        # Use a float type. But TODO: I'm not confident when exactly numba will coerce
+        # vs. raise an error. If this is important we should decide + add tests
+        # (currently tests skip these cases, and IIUC the behavior changed when we added
+        # our own pre-type caching).
         if (not self.supports_ints and np.issubdtype(values.dtype, np.integer)) or (
             not self.supports_bool and values.dtype == np.bool_
         ):
