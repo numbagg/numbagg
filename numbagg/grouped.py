@@ -177,7 +177,6 @@ def group_nanvar(values, labels, ddof, out):
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
 def group_nanstd(values, labels, ddof, out):
-    # Copy-pasted from `group_nanvar`
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
