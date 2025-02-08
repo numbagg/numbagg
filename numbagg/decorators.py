@@ -394,12 +394,6 @@ class groupndreduce(NumbaBase):
 
     @cache
     def gufunc(self, core_ndim, values_dtype, labels_dtype, *, target):
-        # Create signature based on actual input types
-        if not self.supports_ints and np.issubdtype(values_dtype, np.integer):
-            raise TypeError(f"{self.func.__name__} does not support integer inputs")
-        if not self.supports_bool and values_dtype == np.bool_:
-            raise TypeError(f"{self.func.__name__} does not support boolean inputs")
-
         values_type = numba.from_dtype(values_dtype)
         labels_type = numba.from_dtype(labels_dtype)
 
@@ -465,6 +459,16 @@ class groupndreduce(NumbaBase):
 
         target = self.target
 
+        # Cast to float64 if needed
+        if (not self.supports_ints and np.issubdtype(values.dtype, np.integer)) or (
+            not self.supports_bool and values.dtype == np.bool_
+        ):
+            values_dtype = values.dtype
+            result_dtype: np.dtype = np.dtype(np.float64)
+        else:
+            values_dtype = values.dtype
+            result_dtype = values.dtype
+
         if axis is None:
             if values.shape != labels.shape:
                 raise ValueError(
@@ -473,7 +477,7 @@ class groupndreduce(NumbaBase):
                 )
             gufunc = self.gufunc(
                 core_ndim=values.ndim,
-                values_dtype=values.dtype,
+                values_dtype=values_dtype,
                 labels_dtype=labels.dtype,
                 target=target,
             )
@@ -486,7 +490,7 @@ class groupndreduce(NumbaBase):
             values = np.moveaxis(values, axis, -1)
             gufunc = self.gufunc(
                 core_ndim=1,
-                values_dtype=values.dtype,
+                values_dtype=values_dtype,
                 labels_dtype=labels.dtype,
                 target=target,
             )
@@ -500,7 +504,7 @@ class groupndreduce(NumbaBase):
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
             gufunc = self.gufunc(
                 core_ndim=len(axis),
-                values_dtype=values.dtype,
+                values_dtype=values_dtype,
                 labels_dtype=labels.dtype,
                 target=target,
             )
@@ -510,7 +514,7 @@ class groupndreduce(NumbaBase):
         # Different functions initialize with different values — e.g. `sum` uses 0,
         # while `prod` uses 1. So we don't initialize with a value here, and instead
         # rely on the function to do so.
-        result = np.empty(broadcast_shape + (num_labels,), values.dtype)
+        result = np.empty(broadcast_shape + (num_labels,), result_dtype)
         args: tuple = (values, labels)
 
         if self.supports_ddof:

@@ -124,7 +124,6 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
     elif dtype == np.bool_:
         if not numbagg_func.supports_bool:
             pytest.skip(f"{numbagg_func} doesn't support bools")
-        result = numbagg_func(values, labels)
     else:
         result = numbagg_func(values, labels)
         assert_almost_equal(result, expected.values)
