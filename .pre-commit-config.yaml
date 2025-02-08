@@ -8,7 +8,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
+    rev: v0.9.4
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -30,7 +30,7 @@ repos:
   #      additional_dependencies:
   #        [types-setuptools, numpy, types-Pygments, types-colorama]
   - repo: https://github.com/crate-ci/typos
-    rev: dictgen-v0.3.1
+    rev: typos-dict-v0.12.4
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347
