@@ -307,7 +307,7 @@ class ndmoveexp(NumbaBaseSimple):
     def __call__(
         self,
         *arr: np.ndarray,
-        alpha: float,
+        alpha: float | np.ndarray,
         min_weight: float = 0,
         axis: int = -1,
         **kwargs,
