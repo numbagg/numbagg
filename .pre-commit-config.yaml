@@ -30,7 +30,7 @@ repos:
   #      additional_dependencies:
   #        [types-setuptools, numpy, types-Pygments, types-colorama]
   - repo: https://github.com/crate-ci/typos
-    rev: typos-dict-v0.12.4
+    rev: typos-dict-v0.12.5
     hooks:
       - id: typos
         # https://github.com/crate-ci/typos/issues/347
