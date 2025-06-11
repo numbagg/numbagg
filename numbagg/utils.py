@@ -11,8 +11,10 @@ class Type(Protocol):
 class Array(Type):
     def __init__(self, dtype: Any, ndim: Any, layout: Any) -> None: ...
 
+
 class Integer(Type):
     def __getitem__(self, args: Any) -> Array: ...
+
 
 class Float(Type):
     def __getitem__(self, args: Any) -> Array: ...

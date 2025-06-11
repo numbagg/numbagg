@@ -6,6 +6,7 @@ from typing import ParamSpec, TypeVar
 P = ParamSpec("P")
 R = TypeVar("R")
 
+
 def rewrite_ndreduce(func: Callable[P, R]) -> Callable[P, R]:
     """Transforms aggregation functions into something numba can handle.
 
@@ -32,7 +33,9 @@ _OUT_NAME = "__numbagg_out"
 _TRANSFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
 
-def _apply_ast_rewrite(func: Callable[P, R], node_transformer: "_NDReduceTransformer") -> Callable[P, R]:
+def _apply_ast_rewrite(
+    func: Callable[P, R], node_transformer: "_NDReduceTransformer"
+) -> Callable[P, R]:
     """A hack to make the syntax for writing aggregators more Pythonic.
 
     This should go away once numba is more fully featured.

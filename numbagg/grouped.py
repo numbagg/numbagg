@@ -137,7 +137,9 @@ def group_nanprod(values: GenericArray, labels: IntArray, out: GenericArray) -> 
 
 
 @groupndreduce.wrap()
-def group_nansum_of_squares(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
+def group_nansum_of_squares(
+    values: GenericArray, labels: IntArray, out: GenericArray
+) -> None:
     out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -148,7 +150,9 @@ def group_nansum_of_squares(values: GenericArray, labels: IntArray, out: Generic
 
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
-def group_nanvar(values: FloatArray, labels: IntArray, ddof: int, out: FloatArray) -> None:
+def group_nanvar(
+    values: FloatArray, labels: IntArray, ddof: int, out: FloatArray
+) -> None:
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
@@ -177,7 +181,9 @@ def group_nanvar(values: FloatArray, labels: IntArray, ddof: int, out: FloatArra
 
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
-def group_nanstd(values: FloatArray, labels: IntArray, ddof: int, out: FloatArray) -> None:
+def group_nanstd(
+    values: FloatArray, labels: IntArray, ddof: int, out: FloatArray
+) -> None:
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)

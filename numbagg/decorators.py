@@ -64,7 +64,9 @@ def _gufunc_arg_str(arg) -> str:
     return f"({','.join(_ALPHABET[: ndim(arg)])})"
 
 
-def gufunc_string_signature(numba_args: NumbaTypes, *, returns_scalar: bool =False) -> str:
+def gufunc_string_signature(
+    numba_args: NumbaTypes, *, returns_scalar: bool = False
+) -> str:
     """Convert a tuple of numba types into a numpy gufunc signature.
 
     The last type is used as output argument.
@@ -89,7 +91,9 @@ class NumbaBase:
     func: Callable[..., Any]
     signature: Any
 
-    def __init__(self, func: Callable[..., Any], supports_parallel: bool = True) -> None:
+    def __init__(
+        self, func: Callable[..., Any], supports_parallel: bool = True
+    ) -> None:
         self.func = func
 
         self.cache: bool = _ENABLE_CACHE
@@ -152,7 +156,10 @@ class NumbaBaseSimple(NumbaBase, metaclass=abc.ABCMeta):
     signature: list[NumbaTypes]
 
     def __init__(
-        self, func: Callable[..., Any], signature: list[NumbaTypes], supports_parallel: bool = True
+        self,
+        func: Callable[..., Any],
+        signature: list[NumbaTypes],
+        supports_parallel: bool = True,
     ) -> None:
         for sig in signature:
             if not isinstance(sig, tuple):
@@ -207,7 +214,9 @@ class ndaggregate(NumbaBaseSimple):
     def gufunc(self, *, target: Targets):
         # The difference from the parent is `returns_scalar=True`. This is not elegant,
         # but we'll move to dynamic signatures once numba supports them.
-        gufunc_sig: str = gufunc_string_signature(self.signature[0], returns_scalar=True)
+        gufunc_sig: str = gufunc_string_signature(
+            self.signature[0], returns_scalar=True
+        )
         vectorize = numba.guvectorize(
             self.signature,
             gufunc_sig,
@@ -717,7 +726,9 @@ class ndreduce(NumbaBase):
         )
         return vectorize(self.transformed_func)
 
-    def __call__(self, arr: NumericArray, *args, axis: tuple[int, ...] | int | None =None):
+    def __call__(
+        self, arr: NumericArray, *args, axis: tuple[int, ...] | int | None = None
+    ):
         # TODO: `nanmin` & `nanmix` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other
