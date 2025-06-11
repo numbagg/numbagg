@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
+from numpy.typing import NDArray
 
 from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
+
+from .utils import FloatArray, NumericArray, NumericScalar
 
 
 @ndaggregate.wrap(
@@ -14,7 +17,7 @@ from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
         (float64[:], bool_[:]),
     ]
 )
-def allnan(a, out):
+def allnan(a: NumericArray, out: NumericArray) -> None:
     for ai in a:
         if not np.isnan(ai):
             out[0] = False
@@ -29,7 +32,7 @@ def allnan(a, out):
         (float64[:], bool_[:]),
     ]
 )
-def anynan(a, out):
+def anynan(a: NumericArray, out: NumericArray) -> None:
     for ai in a.flat:
         if np.isnan(ai):
             out[0] = True
@@ -44,7 +47,7 @@ def anynan(a, out):
         (float64[:], int64[:]),
     ]
 )
-def nancount(a, out):
+def nancount[T: NumericArray](a: T, out: T) -> None:
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
@@ -60,7 +63,7 @@ def nancount(a, out):
         (float64[:], float64[:]),
     ]
 )
-def nansum(a, out):
+def nansum[T: NumericArray](a: T, out: T) -> None:
     asum = a.dtype.type(0)
     for ai in a.flat:
         if not np.isnan(ai):
@@ -74,7 +77,7 @@ def nansum(a, out):
         (float64[:], float64[:]),
     ]
 )
-def nanmean(a, out):
+def nanmean[T: FloatArray](a: T, out: T) -> None:
     asum = 0.0
     count = 0
     for ai in a.flat:
@@ -94,11 +97,11 @@ def nanmean(a, out):
     ],
     supports_ddof=True,
 )
-def nanvar(
-    a,
-    ddof,
-    out,
-):
+def nanvar[T: FloatArray](
+    a: T,
+    ddof: int,
+    out: T,
+) -> None:
     # Running two loops might seem inefficient, but it's 3x faster than a Welford's
     # algorithm. And if we don't compute the mean first, we get numerical instability
     # (which our tests capture so is easy to observe).
@@ -129,7 +132,7 @@ def nanvar(
     ],
     supports_ddof=True,
 )
-def nanstd(a, ddof, out):
+def nanstd[T: FloatArray](a: T, ddof: int, out: T) -> None:
     asum = 0
     count = 0
     for ai in a:
@@ -153,7 +156,7 @@ def nanstd(a, ddof, out):
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanargmax(a):
+def nanargmax(a: NumericScalar) -> int:
     if not a.size:
         raise ValueError("All-NaN slice encountered")
     amax = -np.inf
@@ -174,7 +177,7 @@ def nanargmax(a):
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanargmin(a):
+def nanargmin(a: NumericScalar) -> int:
     if not a.size:
         raise ValueError("All-NaN slice encountered")
     amin = np.inf
@@ -193,7 +196,7 @@ def nanargmin(a):
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanmax(a):
+def nanmax(a: NumericScalar):
     if not a.size:
         raise ValueError(
             "zero-size array to reduction operation fmax which has no identity"
@@ -215,7 +218,7 @@ def nanmax(a):
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanmin(a):
+def nanmin(a: NumericScalar):
     if not a.size:
         raise ValueError(
             "zero-size array to reduction operation fmin which has no identity"
@@ -232,7 +235,7 @@ def nanmin(a):
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr: np.ndarray, quantile, out):
+def nanquantile(arr: NDArray[np.float64], quantile: NDArray[np.float64], out: NDArray[np.float64]) -> None:
     nans = np.isnan(arr)
     valid_obs = arr.size - np.sum(nans)
 
@@ -279,7 +282,7 @@ def nanquantile(arr: np.ndarray, quantile, out):
 
 
 @ndfill.wrap()
-def bfill(a, limit, out):
+def bfill[T: FloatArray](a: T, limit: int, out: T) -> None:
     lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
@@ -297,7 +300,7 @@ def bfill(a, limit, out):
 
 
 @ndfill.wrap()
-def ffill(a, limit, out):
+def ffill[T: FloatArray](a: T, limit: int, out: T) -> None:
     lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):
@@ -314,5 +317,5 @@ def ffill(a, limit, out):
 count = nancount
 
 
-def nanmedian(a: np.ndarray, **kwargs):
+def nanmedian(a: NDArray[np.float64], **kwargs) -> NDArray[np.float64]:
     return nanquantile(a, quantiles=0.5, **kwargs)

@@ -1,10 +1,11 @@
 import numpy as np
 
 from .decorators import groupndreduce
+from .utils import FloatArray, GenericArray, IntArray
 
 
 @groupndreduce.wrap()
-def group_nanmean(values, labels, out):
+def group_nanmean(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     counts = np.zeros(out.shape, dtype=labels.dtype)
     out[:] = 0.0
 
@@ -27,7 +28,7 @@ def group_nanmean(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nansum(values, labels, out):
+def group_nansum(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -40,7 +41,7 @@ def group_nansum(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nancount(values, labels, out):
+def group_nancount(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -51,7 +52,7 @@ def group_nancount(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanargmax(values, labels, out):
+def group_nanargmax(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     max_values = np.full(out.shape, np.nan)
     for i in range(len(values)):
         value = values[i]
@@ -77,7 +78,7 @@ def group_nanargmax(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanargmin(values, labels, out):
+def group_nanargmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
     for i in range(len(values.flat)):
@@ -96,7 +97,7 @@ def group_nanargmin(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanfirst(values, labels, out):
+def group_nanfirst(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     # Slightly inefficient for floats, for which we could avoid allocating the
     # `have_seen_values` array, and instead use an array with NaNs from the start. We
     # could write separate routines, though I don't think we can use `@overload` with
@@ -114,7 +115,7 @@ def group_nanfirst(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanlast(values, labels, out):
+def group_nanlast(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = np.nan
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -125,7 +126,7 @@ def group_nanlast(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanprod(values, labels, out):
+def group_nanprod(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 1
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -136,7 +137,7 @@ def group_nanprod(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nansum_of_squares(values, labels, out):
+def group_nansum_of_squares(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 0
     for indices in np.ndindex(values.shape):
         label = labels[indices]
@@ -147,7 +148,7 @@ def group_nansum_of_squares(values, labels, out):
 
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
-def group_nanvar(values, labels, ddof, out):
+def group_nanvar(values: FloatArray, labels: IntArray, ddof: int, out: FloatArray) -> None:
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
@@ -176,7 +177,7 @@ def group_nanvar(values, labels, ddof, out):
 
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
-def group_nanstd(values, labels, ddof, out):
+def group_nanstd(values: FloatArray, labels: IntArray, ddof: int, out: FloatArray) -> None:
     sums = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
@@ -206,7 +207,7 @@ def group_nanstd(values, labels, ddof, out):
 
 
 @groupndreduce.wrap()
-def group_nanmin(values, labels, out):
+def group_nanmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     # Floats could save an allocation by writing directly to `out`
     min_values = np.full(out.shape, np.nan)
 
@@ -224,7 +225,7 @@ def group_nanmin(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanmax(values, labels, out):
+def group_nanmax(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     # Floats could save an allocation by writing directly to `out`
     max_values = np.full(out.shape, np.nan)
 
@@ -242,7 +243,7 @@ def group_nanmax(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanany(values, labels, out):
+def group_nanany(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 0  # assuming 0 is 'False' for the given dtype
 
     for indices in np.ndindex(values.shape):
@@ -255,7 +256,7 @@ def group_nanany(values, labels, out):
 
 
 @groupndreduce.wrap()
-def group_nanall(values, labels, out):
+def group_nanall(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     out[:] = 1  # assuming 1 is 'True' for the given dtype
 
     for indices in np.ndindex(values.shape):

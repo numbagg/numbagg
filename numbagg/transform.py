@@ -1,8 +1,12 @@
 import ast
 import inspect
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def rewrite_ndreduce(func):
+def rewrite_ndreduce(func: Callable[P, R]) -> Callable[P, R]:
     """Transforms aggregation functions into something numba can handle.
 
     To be more precise, it converts functions with source that looks like
@@ -28,19 +32,19 @@ _OUT_NAME = "__numbagg_out"
 _TRANSFORMED_FUNC_NAME = "__numbagg_transformed_func"
 
 
-def _apply_ast_rewrite(func, node_transformer):
+def _apply_ast_rewrite(func: Callable[P, R], node_transformer: "_NDReduceTransformer") -> Callable[P, R]:
     """A hack to make the syntax for writing aggregators more Pythonic.
 
     This should go away once numba is more fully featured.
     """
-    orig_source = inspect.getsource(func)
+    orig_source: str = inspect.getsource(func)
 
-    tree = ast.parse(orig_source)
+    tree: ast.Module = ast.parse(orig_source)
     tree = node_transformer.visit(tree)
     ast.fix_missing_locations(tree)
     source = compile(tree, filename="<ast>", mode="exec")
 
-    scope: dict = {}
+    scope: dict[str, object] = {}
     exec(source, func.__globals__, scope)
     try:
         return scope[_TRANSFORMED_FUNC_NAME]
@@ -49,8 +53,8 @@ def _apply_ast_rewrite(func, node_transformer):
 
 
 class _NDReduceTransformer(ast.NodeTransformer):
-    def visit_FunctionDef(self, node):
-        args = node.args.args + [ast.arg(arg=_OUT_NAME, annotation=None)]
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        args: list[ast.arg] = node.args.args + [ast.arg(arg=_OUT_NAME, annotation=None)]
         arguments = ast.arguments(
             args=args,
             vararg=None,
