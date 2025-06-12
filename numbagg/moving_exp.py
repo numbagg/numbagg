@@ -41,6 +41,9 @@ def move_exp_nancount[T: FloatArray](a: T, alpha: FloatArray, min_weight: float,
     ]
 )
 def move_exp_nanmean[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    """
+    Exponentially weighted moving mean
+    """
     N: int = len(a)
 
     numer = denom = weight = 0.0
@@ -156,6 +159,16 @@ def move_exp_nanvar[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, o
     ]
 )
 def move_exp_nanstd[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    """
+    Calculates the exponentially decayed standard deviation.
+
+    Note that technically the unbiased weighted standard deviation is not exactly the
+    same as the square root of the unbiased weighted variance, since the bias is
+    concave. But it's close, and it's what pandas does.
+
+    (If anyone knows the math well and wants to take a pass at improving it,
+    contributions are welcome.)
+    """
     # This is very similar to `move_exp_nanvar`, but square-roots in the final step. It
     # could be implemented as a wrapper around `move_exp_nanvar`, but it causes a couple
     # of small complications around warnings for `np.sqrt` on invalid values, and passing
