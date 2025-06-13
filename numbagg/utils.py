@@ -1,7 +1,7 @@
 from typing import Literal
 
 import numpy as np
-from numba.core.types import Type
+from numba.core.types import Type  # type: ignore[import]
 from numpy.typing import NDArray
 
 Targets = Literal["cpu", "parallel"]

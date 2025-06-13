@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from typing import overload
+
 import numpy as np
-from numba import bool_, float32, float64, int32, int64
+from numba import bool_, float32, float64, int32, int64  # type: ignore[import]
 from numpy.typing import NDArray
 
 from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
@@ -283,6 +285,20 @@ def nanquantile(
         out[i] = result
 
 
+@overload
+def bfill(
+    arr: NDArray[np.float64] | NDArray[np.int32] | NDArray[np.int64],
+    limit: int | None = None,
+    axis: int = -1,
+) -> NDArray[np.float64]: ...
+@overload
+def bfill(
+    arr: NDArray[np.float32],
+    limit: int | None = None,
+    axis: int = -1,
+) -> NDArray[np.float32]: ...
+
+
 @ndfill.wrap()
 def bfill[T: FloatArray](a: T, limit: int, out: T) -> None:
     lives_remaining = limit
@@ -299,6 +315,20 @@ def bfill[T: FloatArray](a: T, limit: int, out: T) -> None:
             lives_remaining = limit
             current = val
         out[i] = current
+
+
+@overload
+def ffill(
+    arr: NDArray[np.float64] | NDArray[np.int32] | NDArray[np.int64],
+    limit: int | None = None,
+    axis: int = -1,
+) -> NDArray[np.float64]: ...
+@overload
+def ffill(
+    arr: NDArray[np.float32],
+    limit: int | None = None,
+    axis: int = -1,
+) -> NDArray[np.float32]: ...
 
 
 @ndfill.wrap()

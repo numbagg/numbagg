@@ -1,5 +1,5 @@
 import numpy as np
-from numba import float32, float64
+from numba import float32, float64  # type: ignore[import]
 
 from .decorators import ndmoveexp
 from .utils import FloatArray

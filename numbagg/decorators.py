@@ -10,8 +10,10 @@ from collections.abc import Callable, Iterable
 from functools import cache, cached_property
 from typing import Any, Literal, TypeVar
 
-import numba
+import numba  # type: ignore[import]
 import numpy as np
+from numba.core.types import Type  # type: ignore[import]
+from numba.np.ufunc.gufunc import GUFunc  # type: ignore[import]
 from numpy.typing import NDArray
 
 from numbagg.utils import (
@@ -29,38 +31,47 @@ from .transform import rewrite_ndreduce
 logger = logging.getLogger(__name__)
 
 
-def ndim(arg):
-    return getattr(arg, "ndim", 0)
+def _set_fast_math() -> set[str] | bool:
+    """
+    If "NUMBAGG_FASTMATH" is set to True, enable fastmath optimizations.\n
+    We exclude the "no nans" and "no infs" flags.\n
+    see https://llvm.org/docs/LangRef.html#fast-math-flags
+    """
+    if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
+        warnings.warn(
+            "Fastmath optimizations are enabled in numbagg. "
+            "This may result in different results than numpy due to reduced precision.",
+            UserWarning,
+        )
+        return {"nsz", "arcp", "contract", "afn", "reassoc"}
+    else:
+        return False
+
+
+def _set_cache() -> bool:
+    """https://github.com/numba/numba/issues/4807"""
+    if os.getenv("NUMBAGG_CACHE", "False").lower() in ("true", "1", "t"):
+        warnings.warn(
+            "Numba caching is enabled in numbagg. "
+            "This will likely cause segfaults when used with multiprocessing. "
+            "See https://github.com/numba/numba/issues/4807",
+            UserWarning,
+        )
+        return True
+    else:
+        return False
 
 
 _ALPHABET = "abcdefghijkmnopqrstuvwxyz"
-
-if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
-    # we exclude the "no nans" and "no infs" flags
-    # see https://llvm.org/docs/LangRef.html#fast-math-flags
-    _FASTMATH = {"nsz", "arcp", "contract", "afn", "reassoc"}
-    warnings.warn(
-        "Fastmath optimizations are enabled in numbagg. "
-        "This may result in different results than numpy due to reduced precision.",
-        UserWarning,
-    )
-else:
-    _FASTMATH = False  # type: ignore[assignment]
-
-# https://github.com/numba/numba/issues/4807
-if os.getenv("NUMBAGG_CACHE", "False").lower() in ("true", "1", "t"):
-    _ENABLE_CACHE = True
-    warnings.warn(
-        "Numba caching is enabled in numbagg. "
-        "This will likely cause segfaults when used with multiprocessing. "
-        "See https://github.com/numba/numba/issues/4807",
-        UserWarning,
-    )
-else:
-    _ENABLE_CACHE = False
+_FASTMATH = _set_fast_math()
+_ENABLE_CACHE = _set_cache()
 
 
-def _gufunc_arg_str(arg) -> str:
+def ndim(arg: Type) -> int:
+    return getattr(arg, "ndim", 0)
+
+
+def _gufunc_arg_str(arg: Type) -> str:
     return f"({','.join(_ALPHABET[: ndim(arg)])})"
 
 
@@ -134,9 +145,9 @@ class NumbaBase:
                 return "parallel"
 
     @cache
-    def gufunc(self, *, target: Targets):
+    def gufunc(self, *, target: Targets) -> GUFunc:
         gufunc_sig: str = gufunc_string_signature(self.signature[0])
-        vectorize = numba.guvectorize(
+        vectorize: Callable[..., GUFunc | Any] = numba.guvectorize(
             self.signature,
             gufunc_sig,
             nopython=True,
@@ -217,7 +228,7 @@ class ndaggregate(NumbaBaseSimple):
         gufunc_sig: str = gufunc_string_signature(
             self.signature[0], returns_scalar=True
         )
-        vectorize = numba.guvectorize(
+        vectorize: Callable[..., GUFunc | Any] = numba.guvectorize(
             self.signature,
             gufunc_sig,
             nopython=True,
@@ -425,7 +436,7 @@ class groupndreduce(NumbaBase):
             numba_sig = [(values_type[slices], labels_type[slices], values_type[:])]
             gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(z)"
 
-        vectorize = numba.guvectorize(
+        vectorize: Callable[..., GUFunc | Any] = numba.guvectorize(
             numba_sig,
             gufunc_sig,
             nopython=True,
@@ -614,7 +625,7 @@ class ndquantile(NumbaBase):
         # We don't use `NumbaBaseSimple`'s here, because we need to specify different
         # core axes for the two inputs, which it doesn't support.
 
-        vectorize = numba.guvectorize(
+        vectorize: Callable[..., GUFunc | Any] = numba.guvectorize(
             # For nanquantile, `self.signature` is a tuple of both the "`float64`" and
             # the "`(n),(m)->(m)`" parts, because it has different core dims for its
             # operands, so doesn't work with the standard `gufunc_string_signature`
