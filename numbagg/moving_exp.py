@@ -42,7 +42,9 @@ def move_exp_nancount[T: FloatArray](
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanmean[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nanmean[T: FloatArray](
+    a: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     """
     Exponentially weighted moving mean
     """
@@ -164,7 +166,9 @@ def move_exp_nanvar[T: FloatArray](
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanstd[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nanstd[T: FloatArray](
+    a: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     """
     Calculates the exponentially decayed standard deviation.
 

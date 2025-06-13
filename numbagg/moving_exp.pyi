@@ -15,9 +15,7 @@ def move_exp_nanmean[T: FloatArray](
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-) -> T:
-    ...
-
+) -> T: ...
 def move_exp_nansum[T: FloatArray](
     arr: T,
     /,
@@ -38,9 +36,7 @@ def move_exp_nanstd[T: FloatArray](
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-) -> T:
-    ...
-
+) -> T: ...
 def move_exp_nancov[T: FloatScalar](
     a1: NDArray[T],
     a2: NDArray[T],

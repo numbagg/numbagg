@@ -32,7 +32,6 @@ def move_var[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-
 def move_cov[T: FloatArray](
     a: T,
     b: T,

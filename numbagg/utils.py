@@ -14,6 +14,7 @@ type FloatArray = NDArray[np.float64] | NDArray[np.float32]
 type NumericArray = IntArray | FloatArray
 type GenericArray = NumericArray | NDArray[np.bool_]
 
+
 def move_axes[T: NumericScalar](arr: NDArray[T], axes: tuple[int, ...]) -> NDArray[T]:
     """
     Move & reshape a tuple of axes to an array's final axis, handling zero-length axes.
