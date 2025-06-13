@@ -235,7 +235,9 @@ def nanmin(a: NumericScalar):
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr: NDArray[np.float64], quantile: NDArray[np.float64], out: NDArray[np.float64]) -> None:
+def nanquantile(
+    arr: NDArray[np.float64], quantile: NDArray[np.float64], out: NDArray[np.float64]
+) -> None:
     nans = np.isnan(arr)
     valid_obs = arr.size - np.sum(nans)
 

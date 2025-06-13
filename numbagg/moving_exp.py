@@ -11,7 +11,9 @@ from .utils import FloatArray
         (float64[:], float64[:], float64, float64[:]),
     ],
 )
-def move_exp_nancount[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nancount[T: FloatArray](
+    a: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     N: int = len(a)
 
     count = weight = 0.0
@@ -74,7 +76,9 @@ def move_exp_nanmean[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, 
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nansum[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nansum[T: FloatArray](
+    a: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     N: int = len(a)
 
     numer = weight = 0.0
@@ -105,7 +109,9 @@ def move_exp_nansum[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, o
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanvar[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nanvar[T: FloatArray](
+    a: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     N: int = len(a)
 
     # sum_x: decayed sum of the sequence values.
@@ -226,7 +232,9 @@ def move_exp_nanstd[T: FloatArray](a: T, alpha: FloatArray, min_weight: float, o
         (float64[:], float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nancov[T: FloatArray](a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nancov[T: FloatArray](
+    a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     N: int = len(a1)
 
     # sum_x1: decayed sum of the sequence values for a1.
@@ -275,7 +283,9 @@ def move_exp_nancov[T: FloatArray](a1: T, a2: T, alpha: FloatArray, min_weight: 
         (float64[:], float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nancorr[T: FloatArray](a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+def move_exp_nancorr[T: FloatArray](
+    a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
     N: int = len(a1)
 
     sum_x1 = sum_x2 = sum_x1x2 = sum_weight = sum_weight_2 = 0
