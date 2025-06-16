@@ -324,6 +324,7 @@ For example, here is how we wrote `nansum`:
 import numpy as np
 from numbagg.decorators import ndreduce
 
+
 @ndreduce.wrap()
 def nansum(a):
     asum = 0.0
