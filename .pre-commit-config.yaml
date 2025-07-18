@@ -8,13 +8,13 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
+    rev: v0.12.3
     hooks:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.9
+    rev: v0.4.1
     hooks:
       - id: blackdoc
   - repo: https://github.com/Carreau/velin
@@ -29,12 +29,10 @@ repos:
   #    - id: mypy
   #      additional_dependencies:
   #        [types-setuptools, numpy, types-Pygments, types-colorama]
-  - repo: https://github.com/crate-ci/typos
-    rev: dictgen-v0.3.1
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.27.3
     hooks:
       - id: typos
-        # https://github.com/crate-ci/typos/issues/347
-        pass_filenames: false
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.7
     hooks:

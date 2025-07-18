@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import functools
-import itertools
 import logging
 import os
 import threading
@@ -313,7 +312,7 @@ class ndmoveexp(NumbaBaseSimple):
     def __call__(
         self,
         *arr: np.ndarray,
-        alpha: float,
+        alpha: float | np.ndarray,
         min_weight: float = 0,
         axis: int = -1,
         **kwargs,
@@ -387,75 +386,31 @@ class groupndreduce(NumbaBase):
     def __init__(
         self,
         func,
-        signature: list[tuple] | None = None,
         *,
         supports_ddof=False,
-        supports_nd=True,
         supports_bool=True,
         supports_ints=True,
     ):
-        self.supports_nd = supports_nd
         self.supports_bool = supports_bool
         self.supports_ints = supports_ints
         self.supports_ddof = supports_ddof
         self.func = func
-
-        if signature is None:
-            values_dtypes: tuple[numba.dtype, ...] = (numba.float32, numba.float64)
-            labels_dtypes = (numba.int8, numba.int16, numba.int32, numba.int64)
-            if supports_ints:
-                values_dtypes += (numba.int32, numba.int64)
-
-            signature = [
-                (
-                    (value_type, label_type, numba.int64, value_type)
-                    if supports_ddof
-                    else (value_type, label_type, value_type)
-                )
-                for value_type, label_type in itertools.product(
-                    values_dtypes, labels_dtypes
-                )
-            ]
-        for sig in signature:
-            if not isinstance(sig, tuple):
-                raise TypeError(
-                    f"signatures for {self.__class__} must be tuples: {signature}"
-                )
-            n_args = 3 + supports_ddof
-            if len(sig) != n_args:
-                raise TypeError(
-                    f"signature has wrong number of arguments != {n_args}: {signature}"
-                )
-            if any(ndim(arg) != 0 for arg in sig):
-                raise ValueError(
-                    f"all arguments in signature for ndreduce must be scalars: {signature}"
-                )
-
-        self.signature = signature
-
         super().__init__(func=func)
 
     @cache
-    def gufunc(self, core_ndim, *, target):
-        # compiling gufuncs has some significant overhead (~130ms per function
-        # and number of dimensions to aggregate), so do this in a lazy fashion
-        numba_sig: list[tuple] = []
+    def gufunc(self, core_ndim, values_dtype, labels_dtype, *, target):
+        values_type = numba.from_dtype(values_dtype)
+        labels_type = numba.from_dtype(labels_dtype)
+
         slices = (slice(None),) * core_ndim
-        # This is pretty messy. We could inherit from this class for the `ddof` methods.
-        # But probably we want to make it more abstract, and take advantage of
-        # forthcoming numba features such as dynamic signatures.
         if self.supports_ddof:
-            for input_sig in self.signature:
-                values, labels, ddof, out = input_sig
-                numba_sig += [(values[slices], labels[slices], ddof, out[:])]
-            first_sig = numba_sig[0]
-            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(),(z)"
+            numba_sig: list[tuple] = [
+                (values_type[slices], labels_type[slices], numba.int64, values_type[:])
+            ]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(),(z)"
         else:
-            for input_sig in self.signature:
-                values, labels, out = input_sig
-                numba_sig += [(values[slices], labels[slices], out[:])]
-            first_sig = numba_sig[0]
-            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(first_sig[0])])},(z)"
+            numba_sig = [(values_type[slices], labels_type[slices], values_type[:])]
+            gufunc_sig = f"{','.join(2 * [_gufunc_arg_str(numba_sig[0][0])])},(z)"
 
         vectorize = numba.guvectorize(
             numba_sig,
@@ -487,19 +442,6 @@ class groupndreduce(NumbaBase):
                 "labels must be an integer array; it's expected to have already been factorized with a function such as `pd.factorize`"
             )
 
-        # TODO: I think we can rendmove this, now that every function supports ND...
-        if not self.supports_nd and (values.ndim != 1 or labels.ndim != 1):
-            # TODO: it might be possible to allow returning an extra dimension for the
-            # indices by using the technique at
-            # https://stackoverflow.com/a/66372474/3064736. Or we could have the numba
-            # function return indices for the flattened array, and we stack them into nd
-            # indices.
-            raise ValueError(
-                f"values and labels must be 1-dimensional for {self.func.__name__}. "
-                f"Arguments had {values.ndim} & {labels.ndim} dimensions. "
-                "Please raise an issue if this feature would be particularly helpful."
-            )
-
         # We need to be careful that we don't overflow `counts` in the grouping
         # function. So the labels need to be a big enough integer type to hold the
         # maximum possible count, since we generate the counts array based on the labels
@@ -525,13 +467,31 @@ class groupndreduce(NumbaBase):
 
         target = self.target
 
+        # Use a float type. But TODO: I'm not confident when exactly numba will coerce
+        # vs. raise an error. If this is important we should decide + add tests
+        # (currently tests skip these cases, and IIUC the behavior changed when we added
+        # our own pre-type caching).
+        if (not self.supports_ints and np.issubdtype(values.dtype, np.integer)) or (
+            not self.supports_bool and values.dtype == np.bool_
+        ):
+            values_dtype = values.dtype
+            result_dtype: np.dtype = np.dtype(np.float64)
+        else:
+            values_dtype = values.dtype
+            result_dtype = values.dtype
+
         if axis is None:
             if values.shape != labels.shape:
                 raise ValueError(
                     "axis required if values and labels have different "
                     f"shapes: {values.shape} vs {labels.shape}"
                 )
-            gufunc = self.gufunc(values.ndim, target=target)
+            gufunc = self.gufunc(
+                core_ndim=values.ndim,
+                values_dtype=values_dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
         elif isinstance(axis, int):
             if labels.shape != (values.shape[axis],):
                 raise ValueError(
@@ -539,7 +499,12 @@ class groupndreduce(NumbaBase):
                     f"{(values.shape[axis],)} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(1, target=target)
+            gufunc = self.gufunc(
+                core_ndim=1,
+                values_dtype=values_dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
         else:
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
@@ -548,14 +513,19 @@ class groupndreduce(NumbaBase):
                     f"{values_shape} vs {labels.shape}"
                 )
             values = np.moveaxis(values, axis, range(-len(axis), 0, 1))
-            gufunc = self.gufunc(len(axis), target=target)
+            gufunc = self.gufunc(
+                core_ndim=len(axis),
+                values_dtype=values_dtype,
+                labels_dtype=labels.dtype,
+                target=target,
+            )
 
         broadcast_ndim = values.ndim - labels.ndim
         broadcast_shape = values.shape[:broadcast_ndim]
         # Different functions initialize with different values — e.g. `sum` uses 0,
         # while `prod` uses 1. So we don't initialize with a value here, and instead
         # rely on the function to do so.
-        result = np.empty(broadcast_shape + (num_labels,), values.dtype)
+        result = np.empty(broadcast_shape + (num_labels,), result_dtype)
         args: tuple = (values, labels)
 
         if self.supports_ddof:

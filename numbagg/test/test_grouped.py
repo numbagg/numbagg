@@ -114,17 +114,18 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
     # Pandas uses `NaN` rather than `-1` for missing labels
     pandas_labels = np.where(labels >= 0, labels, np.nan)
     expected = pandas_func(pd.Series(values).groupby(pandas_labels))
-    result = numbagg_func(values, labels)
     if dtype in [np.int32, np.int64]:
         if not numbagg_func.supports_ints:
             pytest.skip(f"{numbagg_func} doesn't support ints")
         if numbagg_func == group_nanprod:
             pytest.skip("group_nanprod result too large")
+        result = numbagg_func(values, labels)
         assert_almost_equal(result, expected.values.astype(np.int32))
     elif dtype == np.bool_:
         if not numbagg_func.supports_bool:
             pytest.skip(f"{numbagg_func} doesn't support bools")
     else:
+        result = numbagg_func(values, labels)
         assert_almost_equal(result, expected.values)
 
 
@@ -240,7 +241,7 @@ def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
     assert_almost_equal(result, expected.values)
 
 
-@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS if f[0].supports_nd])
+@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS])
 def test_additional_dim_equivalence(func, values, labels, dtype):
     if dtype == np.bool_ and not func.supports_bool:
         pytest.skip(f"{func} doesn't support bools")
