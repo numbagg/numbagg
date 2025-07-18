@@ -83,6 +83,11 @@ class NumbaBase:
     def __init__(self, func: Callable, supports_parallel: bool = True):
         self.func = func
 
+        from numba.core.typed_passes import _reload_parfors
+
+        # https://github.com/numba/numba/issues/4807
+        _reload_parfors()
+
         self.cache = _ENABLE_CACHE
         self.supports_parallel = supports_parallel
         self._target_cpu = not supports_parallel
@@ -426,6 +431,9 @@ class groupndreduce(NumbaBase):
         num_labels: int | None = None,
         axis: int | tuple[int, ...] | None = None,
     ):
+        from numba.core.typed_passes import _reload_parfors
+
+        _reload_parfors()
         values = np.asarray(values)
         labels = np.asarray(labels)
 
