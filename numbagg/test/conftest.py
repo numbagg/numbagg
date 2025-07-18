@@ -499,11 +499,11 @@ def func_callable(library, func, array):
     if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
         if library == "numpy" and array.ndim > 2:
             pytest.skip(
-                f"numpy {func.__name__} doesn't support arrays with more than 2 dimensions"
+                f"numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
             )
         if library == "pandas" and array.size >= 100000:
             pytest.skip(
-                f"pandas {func.__name__} would create too large matrix ({array.size}x{array.size})"
+                f"pandas would create too large matrix ({array.size}x{array.size})"
             )
 
     try:
