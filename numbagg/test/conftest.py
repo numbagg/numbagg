@@ -499,7 +499,7 @@ def func_callable(library, func, array):
     if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
         if library == "numpy" and array.ndim > 2:
             pytest.skip(
-                f"numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
+                "numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
             )
         if library == "pandas" and array.size >= 100000:
             pytest.skip(
