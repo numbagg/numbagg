@@ -130,3 +130,33 @@ class TestNanCorrMatrix:
         assert_allclose(np.diag(result), np.ones(50), rtol=1e-10)
         assert_allclose(result, result.T, rtol=1e-10)
         assert np.all((result >= -1) & (result <= 1) | np.isnan(result))
+
+    def test_broadcasting_higher_dims(self):
+        # Test that gufunc broadcasting works correctly for higher dimensional arrays
+        np.random.seed(42)
+
+        # 4D array: (2, 3, 4, 10) -> broadcast dims (2, 3) + core dims (4, 10)
+        data_4d = np.random.randn(2, 3, 4, 10)
+        result_4d = nancorrmatrix(data_4d)
+        assert result_4d.shape == (2, 3, 4, 4)
+
+        # Check each broadcast element is a valid correlation matrix
+        for i in range(2):
+            for j in range(3):
+                corr_matrix = result_4d[i, j]
+                # Check diagonal is 1
+                assert_allclose(np.diag(corr_matrix), np.ones(4), rtol=1e-10)
+                # Check symmetry
+                assert_allclose(corr_matrix, corr_matrix.T, rtol=1e-10)
+                # Check bounds
+                assert np.all((corr_matrix >= -1) & (corr_matrix <= 1))
+
+        # 5D array: (2, 2, 2, 5, 20) -> broadcast dims (2, 2, 2) + core dims (5, 20)
+        data_5d = np.random.randn(2, 2, 2, 5, 20)
+        result_5d = nancorrmatrix(data_5d)
+        assert result_5d.shape == (2, 2, 2, 5, 5)
+
+        # Verify a specific correlation matches manual calculation
+        # Compare first broadcast element
+        manual_corr = np.corrcoef(data_5d[0, 0, 0])
+        assert_allclose(result_5d[0, 0, 0], manual_corr, rtol=1e-10)

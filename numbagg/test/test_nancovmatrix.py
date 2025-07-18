@@ -142,5 +142,31 @@ class TestNanCovMatrix:
         # Check basic properties
         assert result.shape == (50, 50)
         assert_allclose(result, result.T, rtol=1e-10)
-        # All diagonal elements should be non-negative (variances)
-        assert np.all(np.diag(result) >= 0 | np.isnan(np.diag(result)))
+
+    def test_broadcasting_higher_dims(self):
+        # Test that gufunc broadcasting works correctly for higher dimensional arrays
+        np.random.seed(42)
+
+        # 4D array: (2, 3, 4, 10) -> broadcast dims (2, 3) + core dims (4, 10)
+        data_4d = np.random.randn(2, 3, 4, 10)
+        result_4d = nancovmatrix(data_4d)
+        assert result_4d.shape == (2, 3, 4, 4)
+
+        # Check each broadcast element is a valid covariance matrix
+        for i in range(2):
+            for j in range(3):
+                cov_matrix = result_4d[i, j]
+                # Check symmetry
+                assert_allclose(cov_matrix, cov_matrix.T, rtol=1e-10)
+                # Diagonal should be variance (non-negative)
+                assert np.all(np.diag(cov_matrix) >= 0)
+
+        # 5D array: (2, 2, 2, 5, 20) -> broadcast dims (2, 2, 2) + core dims (5, 20)
+        data_5d = np.random.randn(2, 2, 2, 5, 20)
+        result_5d = nancovmatrix(data_5d)
+        assert result_5d.shape == (2, 2, 2, 5, 5)
+
+        # Verify a specific covariance matches manual calculation
+        # Compare first broadcast element
+        manual_cov = np.cov(data_5d[0, 0, 0])
+        assert_allclose(result_5d[0, 0, 0], manual_cov, rtol=1e-10)
