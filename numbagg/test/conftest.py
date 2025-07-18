@@ -47,7 +47,9 @@ from .. import (
     move_var,
     nanargmax,
     nanargmin,
+    nancorrmatrix,
     nancount,
+    nancovmatrix,
     nanmax,
     nanmean,
     nanmedian,
@@ -430,6 +432,16 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     #         run=numbagg_move_run
     #     ),
     # ),
+    nancorrmatrix: dict(
+        numbagg=lambda a, axis=-1: partial(nancorrmatrix, a, axis=axis),
+        pandas=lambda a: lambda: pd.DataFrame(a).T.corr(),
+        numpy=lambda a: lambda: np.corrcoef(a),
+    ),
+    nancovmatrix: dict(
+        numbagg=lambda a, axis=-1: partial(nancovmatrix, a, axis=axis),
+        pandas=lambda a: lambda: pd.DataFrame(a).T.cov(),
+        numpy=lambda a: lambda: np.cov(a),
+    ),
 }
 
 
@@ -482,6 +494,18 @@ def func_callable(library, func, array):
     """
     if len(array.shape) > 2 and library == "pandas":
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
+
+    # Skip matrix functions for certain conditions
+    if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
+        if library == "numpy" and array.ndim > 2:
+            pytest.skip(
+                "numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
+            )
+        if library == "pandas" and array.size >= 100000:
+            pytest.skip(
+                f"pandas would create too large matrix ({array.size}x{array.size})"
+            )
+
     try:
         callable_ = COMPARISONS[func][library](array)
         assert callable(callable_)

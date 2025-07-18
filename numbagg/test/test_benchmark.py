@@ -37,6 +37,15 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
         pytest.skip(
             "These functions need a different approach to benchmarking; so we're currently excluding them"
         )
+    # Skip matrix functions for very large arrays as they create n×n outputs
+    if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
+        # For matrix functions, the output size is proportional to n^2 where n is the second-to-last dimension
+        if len(shape) >= 2:
+            n_vars = shape[-2]
+            if n_vars > 100 or np.prod(shape) > 1_000_000:
+                pytest.skip(
+                    f"Skipping matrix function benchmark for large array (would create {n_vars}×{n_vars} matrix)"
+                )
     benchmark.group = f"{func}|{shape}"
     benchmark(func_callable)
 

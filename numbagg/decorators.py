@@ -528,6 +528,68 @@ class groupndreduce(NumbaBase):
         return result
 
 
+class ndmatrix(NumbaBase):
+    """
+    Decorator for functions that produce matrix outputs.
+
+    These functions take an array and produce a square matrix output
+    (e.g., correlation matrix, covariance matrix).
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        axis: int | tuple[int, ...] | None = None,
+        **kwargs,
+    ):
+        if axis is None:
+            axis = -1
+
+        if isinstance(axis, tuple):
+            if len(axis) != 1:
+                raise ValueError(
+                    f"Matrix function requires exactly one axis, got {len(axis)}"
+                )
+            axis = axis[0]
+
+        # Handle 1D input by treating it as a single variable
+        if a.ndim == 1:
+            a = a.reshape(1, -1)
+
+        # Move the correlation axis to the last position
+        a = np.moveaxis(a, axis, -1)
+
+        gufunc = self.gufunc(target=self.target)
+        # axes specifies which axes contain the core dimensions
+        # For our signature "(n,m)->(n,n)":
+        # - Input has 2 core dims: second-to-last (n) and last (m)
+        # - Output has 2 core dims: last two dimensions (n,n)
+        result = gufunc(a, axes=[(-2, -1), (-2, -1)], **kwargs)
+
+        # Return result as-is, let numba handle the output shape
+        return result
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
+
+
 class ndquantile(NumbaBase):
     def __init__(
         self,

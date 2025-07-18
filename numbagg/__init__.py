@@ -8,7 +8,9 @@ from .funcs import (
     ffill,
     nanargmax,
     nanargmin,
+    nancorrmatrix,
     nancount,
+    nancovmatrix,
     nanmax,
     nanmean,
     nanmedian,
@@ -93,6 +95,8 @@ AGGREGATION_FUNCS = [
     nanvar,
 ]
 
+MATRIX_FUNCS = [nancorrmatrix, nancovmatrix]
+
 OTHER_FUNCS = [bfill, ffill]
 
 
@@ -125,7 +129,9 @@ __all__ = [
     "move_sum",
     "nanargmax",
     "nanargmin",
+    "nancorrmatrix",
     "nancount",
+    "nancovmatrix",
     "nanmax",
     "group_nanall",
     "group_nanany",

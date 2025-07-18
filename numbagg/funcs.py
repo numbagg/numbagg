@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
 
-from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
+from numbagg.decorators import ndaggregate, ndfill, ndmatrix, ndquantile, ndreduce
 
 
 @ndaggregate.wrap(
@@ -316,3 +316,133 @@ count = nancount
 
 def nanmedian(a: np.ndarray, **kwargs):
     return nanquantile(a, quantiles=0.5, **kwargs)
+
+
+@ndmatrix.wrap(
+    signature=(
+        [(float32[:, :], float32[:, :]), (float64[:, :], float64[:, :])],
+        "(n,m)->(n,n)",
+    )
+)
+def nancorrmatrix(a, out):
+    """
+    Compute correlation matrix treating NaN as missing values.
+
+    For 2D input, correlates variables (rows) across observations (columns).
+    Uses pairwise complete observations (like pandas.DataFrame.corr).
+    """
+    n_vars, n_obs = a.shape
+
+    # Compute correlation matrix
+    for i in range(n_vars):
+        for j in range(i, n_vars):  # Only compute upper triangle
+            if i == j:
+                # Diagonal: correlation with itself is 1.0 if any valid values exist
+                for k in range(n_obs):
+                    if not np.isnan(a[i, k]):
+                        out[i, j] = 1.0
+                        break
+                else:
+                    # No valid values found
+                    out[i, j] = np.nan
+                continue
+
+            # Find pairwise complete observations and compute sums in one pass
+            sum_i = 0.0
+            sum_j = 0.0
+            count = 0
+
+            for k in range(n_obs):
+                val_i = a[i, k]
+                val_j = a[j, k]
+                if not np.isnan(val_i) and not np.isnan(val_j):
+                    sum_i += val_i
+                    sum_j += val_j
+                    count += 1
+
+            if count > 1:
+                # Compute means using only pairwise complete observations
+                mean_i = sum_i / count
+                mean_j = sum_j / count
+
+                # Compute correlation components in second pass
+                cov_sum = 0.0
+                var_i_sum = 0.0
+                var_j_sum = 0.0
+
+                for k in range(n_obs):
+                    val_i = a[i, k]
+                    val_j = a[j, k]
+                    if not np.isnan(val_i) and not np.isnan(val_j):
+                        diff_i = val_i - mean_i
+                        diff_j = val_j - mean_j
+                        cov_sum += diff_i * diff_j
+                        var_i_sum += diff_i * diff_i
+                        var_j_sum += diff_j * diff_j
+
+                # Use count - 1 for sample correlation
+                var_i = var_i_sum / (count - 1)
+                var_j = var_j_sum / (count - 1)
+
+                if var_i > 0 and var_j > 0:
+                    corr = cov_sum / (count - 1) / np.sqrt(var_i * var_j)
+                    out[i, j] = corr
+                    out[j, i] = corr  # Symmetric
+                else:
+                    out[i, j] = np.nan
+                    out[j, i] = np.nan
+            else:
+                out[i, j] = np.nan
+                out[j, i] = np.nan
+
+
+@ndmatrix.wrap(
+    signature=(
+        [(float32[:, :], float32[:, :]), (float64[:, :], float64[:, :])],
+        "(n,m)->(n,n)",
+    )
+)
+def nancovmatrix(a, out):
+    """
+    Compute covariance matrix treating NaN as missing values.
+
+    For 2D input, computes covariance between variables (rows) across observations (columns).
+    Uses pairwise complete observations (like pandas.DataFrame.cov).
+    """
+    n_vars, n_obs = a.shape
+
+    # Compute covariance matrix
+    for i in range(n_vars):
+        for j in range(i, n_vars):  # Only compute upper triangle
+            # Find pairwise complete observations and compute sums in one pass
+            sum_i = 0.0
+            sum_j = 0.0
+            count = 0
+
+            for k in range(n_obs):
+                val_i = a[i, k]
+                val_j = a[j, k]
+                if not np.isnan(val_i) and not np.isnan(val_j):
+                    sum_i += val_i
+                    sum_j += val_j
+                    count += 1
+
+            if count > 1:
+                # Compute means using only pairwise complete observations
+                mean_i = sum_i / count
+                mean_j = sum_j / count
+
+                # Compute covariance in second pass
+                cov_sum = 0.0
+                for k in range(n_obs):
+                    val_i = a[i, k]
+                    val_j = a[j, k]
+                    if not np.isnan(val_i) and not np.isnan(val_j):
+                        cov_sum += (val_i - mean_i) * (val_j - mean_j)
+
+                # Use count - 1 for sample covariance
+                out[i, j] = cov_sum / (count - 1)
+                out[j, i] = out[i, j]  # Symmetric
+            else:
+                out[i, j] = np.nan
+                out[j, i] = np.nan
