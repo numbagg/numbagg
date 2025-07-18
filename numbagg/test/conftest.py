@@ -47,7 +47,9 @@ from .. import (
     move_var,
     nanargmax,
     nanargmin,
+    nancorrmatrix,
     nancount,
+    nancovmatrix,
     nanmax,
     nanmean,
     nanmedian,
@@ -430,6 +432,16 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     #         run=numbagg_move_run
     #     ),
     # ),
+    nancorrmatrix: dict(
+        numbagg=lambda a, axis=-1: partial(nancorrmatrix, a, axis=axis),
+        pandas=lambda a: lambda: pd.DataFrame(a).T.corr(),
+        numpy=lambda a: lambda: np.corrcoef(a),
+    ),
+    nancovmatrix: dict(
+        numbagg=lambda a, axis=-1: partial(nancovmatrix, a, axis=axis),
+        pandas=lambda a: lambda: pd.DataFrame(a).T.cov(),
+        numpy=lambda a: lambda: np.cov(a),
+    ),
 }
 
 
