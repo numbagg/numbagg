@@ -327,7 +327,7 @@ dependencies = [
     { name = "numpy" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "bottleneck" },
     { name = "hypothesis" },
@@ -344,21 +344,24 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bottleneck", marker = "extra == 'dev'" },
-    { name = "hypothesis", marker = "extra == 'dev'" },
-    { name = "jq", marker = "sys_platform != 'win32' and extra == 'dev'" },
-    { name = "mypy", marker = "extra == 'dev'" },
     { name = "numba" },
     { name = "numpy" },
-    { name = "pandas", marker = "extra == 'dev'" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-benchmark", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "setuptools-scm", marker = "extra == 'dev'" },
-    { name = "tabulate", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bottleneck" },
+    { name = "hypothesis" },
+    { name = "jq", marker = "sys_platform != 'win32'" },
+    { name = "mypy" },
+    { name = "pandas" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "ruff" },
+    { name = "setuptools-scm" },
+    { name = "tabulate" },
+]
 
 [[package]]
 name = "numpy"
