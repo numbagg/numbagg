@@ -63,10 +63,10 @@ jobs:
           sleep 5
           # Install dependencies from trusted PyPI first
           uv pip install numpy numba
-          
+
           # Install numbagg from TestPyPI without dependencies to ensure we get the test package
           uv pip install --index-url https://test.pypi.org/simple --no-deps numbagg
-          
+
           # Verify installation works
           python -c "import numbagg; print(f'Successfully installed numbagg {numbagg.__version__} from TestPyPI')"
 

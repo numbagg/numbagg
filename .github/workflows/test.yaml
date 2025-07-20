@@ -31,7 +31,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies and project
-        run: uv sync --group dev
+        run: uv sync
 
       - name: Run tests
         run: uv run pytest --durations=20 -W error
@@ -50,7 +50,7 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies and project
-        run: uv sync --group dev
+        run: uv sync
 
       - name: Run mypy
         run: uv run mypy
@@ -75,7 +75,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies and project
-        run: uv sync --group dev
+        run: uv sync
 
       - name: Run benchmarks
         run: uv run python numbagg/test/run_benchmarks.py
@@ -95,7 +95,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies and project
-        run: uv sync --group dev
+        run: uv sync
 
       - name: Run nightly benchmarks
         run: uv run pytest --durations=20 -W error --run-nightly --benchmark-enable
