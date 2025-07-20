@@ -357,4 +357,3 @@ that others will follow.
 
 3-clause BSD. Includes portions of Bottleneck, which is distributed under a
 Simplified BSD license.
-# Testing CI trigger

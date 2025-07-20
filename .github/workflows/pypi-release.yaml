@@ -61,6 +61,8 @@ jobs:
       - name: Test installation
         run: |
           sleep 5
+          # Install numbagg from TestPyPI, but get dependencies from main PyPI
+          # This verifies the package structure while using stable dependencies
           uv pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple numbagg
 
   pypi:
