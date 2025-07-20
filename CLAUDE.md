@@ -49,5 +49,5 @@ uv run pytest numbagg/test/test_funcs.py
 ## Before Returning
 
 Always run lints and tests before returning to the user:
-- `uv run pre-commit run --all-files` 
+- `uv run pre-commit run --all-files`
 - `uv run pytest`
