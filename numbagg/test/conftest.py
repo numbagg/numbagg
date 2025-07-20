@@ -42,6 +42,8 @@ from .. import (
     move_exp_nansum,
     move_exp_nanvar,
     move_mean,
+    move_nancorrmatrix,
+    move_nancovmatrix,
     move_std,
     move_sum,
     move_var,
@@ -99,6 +101,52 @@ def pandas_move_2_array_setup(func, a, window=20, min_count=None):
     df1 = _df_of_array(a1).rolling(window=window, min_periods=min_count)
     df2 = _df_of_array(a2)
     return lambda: func(df1, df2)
+
+
+def pandas_matrix_setup(a):
+    """Setup for matrix functions (corr/cov) that need transposed DataFrame."""
+    # Transpose so variables are columns (pandas expects this)
+    df = pd.DataFrame(a.T)
+    return df
+
+
+def pandas_static_corrmatrix(a):
+    """Compute correlation matrix using pandas."""
+    df = pandas_matrix_setup(a)
+    return lambda: df.corr()
+
+
+def pandas_static_covmatrix(a):
+    """Compute covariance matrix using pandas."""
+    df = pandas_matrix_setup(a)
+    return lambda: df.cov()
+
+
+def pandas_rolling_matrix_setup(a, window=20, min_count=None):
+    """Setup rolling window for matrix operations (corr/cov)."""
+    df = pandas_matrix_setup(a)
+    rolling = df.rolling(window, min_periods=min_count)
+    return rolling
+
+
+def pandas_rolling_corrmatrix(a, window=20, min_count=None):
+    """Compute rolling correlation matrix using pandas.
+
+    Note: Returns pandas MultiIndex DataFrame, not numbagg's 3D array format.
+    For benchmark purposes, we compare the raw computation without format conversion.
+    """
+    rolling = pandas_rolling_matrix_setup(a, window, min_count)
+    return lambda: rolling.corr()
+
+
+def pandas_rolling_covmatrix(a, window=20, min_count=None):
+    """Compute rolling covariance matrix using pandas.
+
+    Note: Returns pandas MultiIndex DataFrame, not numbagg's 3D array format.
+    For benchmark purposes, we compare the raw computation without format conversion.
+    """
+    rolling = pandas_rolling_matrix_setup(a, window, min_count)
+    return lambda: rolling.cov()
 
 
 def numbagg_two_array_setup(func, a, **kwargs):
@@ -434,13 +482,29 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     # ),
     nancorrmatrix: dict(
         numbagg=lambda a, axis=-1: partial(nancorrmatrix, a, axis=axis),
-        pandas=lambda a: lambda: pd.DataFrame(a).T.corr(),
+        pandas=pandas_static_corrmatrix,
         numpy=lambda a: lambda: np.corrcoef(a),
     ),
     nancovmatrix: dict(
         numbagg=lambda a, axis=-1: partial(nancovmatrix, a, axis=axis),
-        pandas=lambda a: lambda: pd.DataFrame(a).T.cov(),
+        pandas=pandas_static_covmatrix,
         numpy=lambda a: lambda: np.cov(a),
+    ),
+    move_nancorrmatrix: dict(
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_nancorrmatrix, a, window=window, **kwargs
+        ),
+        pandas=lambda a, window=20, **kwargs: pandas_rolling_corrmatrix(
+            a, window=window, min_count=kwargs.get("min_count", None)
+        ),
+    ),
+    move_nancovmatrix: dict(
+        numbagg=lambda a, window=20, **kwargs: partial(
+            move_nancovmatrix, a, window=window, **kwargs
+        ),
+        pandas=lambda a, window=20, **kwargs: pandas_rolling_covmatrix(
+            a, window=window, min_count=kwargs.get("min_count", None)
+        ),
     ),
 }
 
@@ -496,15 +560,30 @@ def func_callable(library, func, array):
         pytest.skip("pandas doesn't support array with more than 2 dimensions")
 
     # Skip matrix functions for certain conditions
-    if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
-        if library == "numpy" and array.ndim > 2:
-            pytest.skip(
-                "numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
-            )
-        if library == "pandas" and array.size >= 100000:
-            pytest.skip(
-                f"pandas would create too large matrix ({array.size}x{array.size})"
-            )
+    if func.__name__ in [
+        "nancorrmatrix",
+        "nancovmatrix",
+        "move_nancorrmatrix",
+        "move_nancovmatrix",
+    ]:
+        # Matrix functions need 2D input
+        if array.ndim == 1:
+            pytest.skip(f"{func.__name__} requires at least 2D input")
+
+        if func.__name__ in ["nancorrmatrix", "nancovmatrix"]:
+            if library == "numpy" and array.ndim > 2:
+                pytest.skip(
+                    "numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
+                )
+            if library == "pandas" and array.size >= 100000:
+                pytest.skip(
+                    f"pandas would create too large matrix ({array.size}x{array.size})"
+                )
+        else:  # move_ functions
+            if library == "numpy":
+                pytest.skip("numpy doesn't have rolling matrix functions")
+            if library == "bottleneck":
+                pytest.skip("bottleneck doesn't have rolling matrix functions")
 
     try:
         callable_ = COMPARISONS[func][library](array)

@@ -561,9 +561,12 @@ class ndmatrix(NumbaBase):
                 )
             axis = axis[0]
 
-        # Handle 1D input by treating it as a single variable
+        # Require at least 2D input
         if a.ndim == 1:
-            a = a.reshape(1, -1)
+            raise ValueError(
+                f"{self.func.__name__} requires at least a 2D array. "
+                "For 1D arrays, use nanvar for variance calculations."
+            )
 
         # Move the correlation axis to the last position
         a = np.moveaxis(a, axis, -1)
@@ -577,6 +580,62 @@ class ndmatrix(NumbaBase):
 
         # Return result as-is, let numba handle the output shape
         return result
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
+
+
+class ndmovematrix(NumbaBase):
+    """Create moving window matrix functions.
+
+    These functions take a 2D array and produce a 3D array of matrices
+    for each window position (e.g., moving correlation/covariance matrices).
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        window: int,
+        min_count: int | None = None,
+        axis: int = -1,
+        **kwargs,
+    ):
+        a = np.asarray(a)
+
+        if a.ndim < 2:
+            raise ValueError(f"{self.func.__name__} requires at least a 2D array.")
+
+        if min_count is None:
+            min_count = window
+        elif min_count < 0:
+            raise ValueError(f"min_count must be positive: {min_count}")
+
+        # Move the axis to the last position for the gufunc
+        a = np.moveaxis(a, axis, -1)
+
+        # Check window size
+        if not 0 < window <= a.shape[-1]:
+            raise ValueError(f"window not in valid range: {window}")
+
+        gufunc = self.gufunc(target=self.target)
+        return gufunc(a, window, min_count, **kwargs)
 
     @cache
     def gufunc(self, *, target):
