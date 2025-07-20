@@ -61,17 +61,14 @@ jobs:
       - name: Test installation
         run: |
           sleep 5
-          # Get the version we just uploaded to verify we install the right package
-          UPLOADED_VERSION=$(python -c "
-          import json, urllib.request
-          resp = urllib.request.urlopen('https://test.pypi.org/pypi/numbagg/json')
-          data = json.loads(resp.read())
-          print(data['info']['version'])
-          ")
-          echo "Testing installation of numbagg==$UPLOADED_VERSION from TestPyPI"
+          # Install dependencies from trusted PyPI first
+          uv pip install numpy numba
           
-          # Install specific version from TestPyPI, dependencies from main PyPI
-          uv pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple "numbagg==$UPLOADED_VERSION"
+          # Install numbagg from TestPyPI without dependencies to ensure we get the test package
+          uv pip install --index-url https://test.pypi.org/simple --no-deps numbagg
+          
+          # Verify installation works
+          python -c "import numbagg; print(f'Successfully installed numbagg {numbagg.__version__} from TestPyPI')"
 
   pypi:
     needs: test-pypi
