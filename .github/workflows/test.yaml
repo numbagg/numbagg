@@ -3,7 +3,7 @@ name: Test
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, python-version]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
