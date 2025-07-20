@@ -37,7 +37,16 @@ from .grouped import (
     group_nansum_of_squares,
     group_nanvar,
 )
-from .moving import move_corr, move_cov, move_mean, move_std, move_sum, move_var
+from .moving import (
+    move_corr,
+    move_cov,
+    move_mean,
+    move_nancorrmatrix,
+    move_nancovmatrix,
+    move_std,
+    move_sum,
+    move_var,
+)
 from .moving_exp import (
     move_exp_nancorr,
     move_exp_nancount,
@@ -76,7 +85,16 @@ MOVE_EXP_FUNCS = [
     move_exp_nanvar,
 ]
 
-MOVE_FUNCS = [move_corr, move_cov, move_mean, move_std, move_sum, move_var]
+MOVE_FUNCS = [
+    move_corr,
+    move_cov,
+    move_mean,
+    move_nancorrmatrix,
+    move_nancovmatrix,
+    move_std,
+    move_sum,
+    move_var,
+]
 
 AGGREGATION_FUNCS = [
     allnan,
@@ -127,6 +145,8 @@ __all__ = [
     "move_cov",
     "move_corr",
     "move_sum",
+    "move_nancorrmatrix",
+    "move_nancovmatrix",
     "nanargmax",
     "nanargmin",
     "nancorrmatrix",
