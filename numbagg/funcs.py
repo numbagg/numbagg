@@ -336,17 +336,6 @@ def nancorrmatrix(a, out):
     # Compute correlation matrix
     for i in range(n_vars):
         for j in range(i, n_vars):  # Only compute upper triangle
-            if i == j:
-                # Diagonal: correlation with itself is 1.0 if any valid values exist
-                for k in range(n_obs):
-                    if not np.isnan(a[i, k]):
-                        out[i, j] = 1.0
-                        break
-                else:
-                    # No valid values found
-                    out[i, j] = np.nan
-                continue
-
             # Find pairwise complete observations and compute sums in one pass
             sum_i = 0.0
             sum_j = 0.0
