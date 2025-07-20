@@ -855,6 +855,58 @@ class ndreduce(NumbaBase):
             return f(arr, *args)
 
 
+class ndmoveexpmatrix(NumbaBase):
+    """Create exponential moving window matrix functions.
+
+    These functions take a 2D array and produce a 3D array of matrices
+    for each time position using exponential decay (e.g., moving correlation/covariance matrices).
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        alpha: float | np.ndarray,
+        min_weight: float = 0,
+        axis: int = -1,
+        **kwargs,
+    ):
+        a = np.asarray(a)
+
+        if a.ndim < 2:
+            raise ValueError(f"{self.func.__name__} requires at least a 2D array.")
+
+        # Move the axis to the last position for the gufunc
+        a = np.moveaxis(a, axis, -1)
+
+        # Handle alpha parameter similar to ndmoveexp
+        if not isinstance(alpha, np.ndarray):
+            alpha = np.broadcast_to(alpha, a.shape[-1])  # type: ignore[assignment,unused-ignore]
+
+        gufunc = self.gufunc(target=self.target)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return gufunc(a, alpha, min_weight, **kwargs)
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
+
+
 def _is_in_unsafe_thread_pool() -> bool:
     current_thread = threading.current_thread()
     # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
