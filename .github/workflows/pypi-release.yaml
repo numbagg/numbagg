@@ -1,13 +1,11 @@
-# Copied from xarray
-
 name: Release to PyPI
+
 on:
   push:
-    tags:
-      - "*"
+    tags: ["*"]
 
 jobs:
-  build-artifacts:
+  build:
     runs-on: ubuntu-latest
     if: github.repository == 'numbagg/numbagg'
     steps:
@@ -17,78 +15,65 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.9
+        run: uv python install 3.11
 
-      - name: Install build dependencies
-        run: uv tool install build
-
-      - name: Build tarball and wheels
+      - name: Build package
         run: |
           git clean -xdf
           git restore -SW .
-          uv tool run build --sdist --wheel .
+          uv build
 
-      - name: Check built artifacts
+      - name: Check artifacts
         run: |
-          uv tool install twine
-          uv tool run twine check dist/*
-          pwd
+          uv tool run --from twine twine check dist/*
           if [ -f dist/numbagg-0.0.0.tar.gz ]; then
-            echo "❌ INVALID VERSION NUMBER"
+            echo "❌ Invalid version number"
             exit 1
-          else
-            echo "✅ Looks good"
           fi
+
       - uses: actions/upload-artifact@v4
         with:
-          name: releases
+          name: dist
           path: dist
 
-  test-built-dist:
-    needs: build-artifacts
+  test-pypi:
+    needs: build
     runs-on: ubuntu-latest
+    environment: test-pypi
     permissions:
       id-token: write
     steps:
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Set up Python
-        run: uv python install 3.9
-
       - uses: actions/download-artifact@v4
         with:
-          name: releases
+          name: dist
           path: dist
 
-      - name: List contents of built dist
-        run: |
-          ls -ltrh
-          ls -ltrh dist
-
-      - name: Publish package to TestPyPI
+      - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           repository-url: https://test.pypi.org/legacy/
 
-      - name: Check uploaded package
-        run: |
-          sleep 3
-          uv pip install --extra-index-url https://test.pypi.org/simple --upgrade numbagg
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
-  upload-to-pypi:
-    needs: test-built-dist
+      - name: Test installation
+        run: |
+          sleep 5
+          uv pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple numbagg
+
+  pypi:
+    needs: test-pypi
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: releases
+          name: dist
           path: dist
-      - name: Publish package to PyPI
+
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.12.4

@@ -1,14 +1,9 @@
-# Inspired by xarray
-
 name: Test
 
 on:
   pull_request:
-    branches:
-      - "*"
   push:
-    branches:
-      - main
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,42 +16,51 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.13"]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install dependencies and project
         run: uv sync --group dev
-
-      - name: Install numbagg
-        run: uv pip install -e .
 
       - name: Run tests
         run: uv run pytest --durations=20 -W error
 
-  benchmark:
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.13"]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          fetch-depth: 0
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies and project
+        run: uv sync --group dev
+
+      - name: Run mypy
+        run: uv run mypy
+
+      - name: Run pre-commit
+        run: uv run pre-commit run --all-files
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -65,79 +69,32 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python
+        run: uv python install 3.13
 
-      - name: Install dependencies
+      - name: Install dependencies and project
         run: uv sync --group dev
-
-      - name: Install numbagg
-        run: uv pip install -e .
 
       - name: Run benchmarks
         run: uv run python numbagg/test/run_benchmarks.py
 
   nightly:
-    # Only run on merges to main (could also add a schedule or something similar)
-    # All is copied from above apart from the `--run-nightly` & `--benchmark-enable` flags
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.13"]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python
+        run: uv python install 3.13
 
-      - name: Install dependencies
+      - name: Install dependencies and project
         run: uv sync --group dev
 
-      - name: Install numbagg
-        run: uv pip install -e .
-
-      - name: Run benchmarks
+      - name: Run nightly benchmarks
         run: uv run pytest --durations=20 -W error --run-nightly --benchmark-enable
-
-  mypy:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.11"]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Install numbagg
-        run: uv pip install -e .
-
-      - name: Mypy
-        run: uv run mypy
