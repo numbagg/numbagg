@@ -32,7 +32,7 @@ requires-python = ">=3.9"
 [project.urls]
 homepage = "https://github.com/numbagg/numbagg"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "bottleneck",
   "hypothesis",
