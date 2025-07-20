@@ -76,39 +76,30 @@ def move_nancorrmatrix(a, window, min_count, out):
         # Compute correlation matrix for current window
         for i in range(n_vars):
             for j in range(n_vars):
-                if i == j:
-                    # Diagonal is 1 when we have enough data for correlation
-                    # Correlation requires at least 2 observations to compute variance
-                    if counts[i] >= max(min_count, 2):
-                        out[t, i, j] = 1.0
+                # Compute correlation
+                n = pair_counts[i, j]
+                # Need at least 2 observations for correlation (to compute variance)
+                if n >= max(min_count, 2) and counts[i] >= 2 and counts[j] >= 2:
+                    mean_i = sums[i] / counts[i]
+                    mean_j = sums[j] / counts[j]
+
+                    # Compute variances
+                    var_i = sums_sq[i] / counts[i] - mean_i * mean_i
+                    var_j = sums_sq[j] / counts[j] - mean_j * mean_j
+
+                    # Compute covariance
+                    cov = prods[i, j] / n - (sums[i] / counts[i]) * (
+                        sums[j] / counts[j]
+                    )
+
+                    # Compute correlation
+                    if var_i > 0 and var_j > 0:
+                        corr = cov / np.sqrt(var_i * var_j)
+                        out[t, i, j] = corr
                     else:
                         out[t, i, j] = np.nan
                 else:
-                    # Compute correlation
-                    n = pair_counts[i, j]
-                    # Need at least 2 observations for correlation (to compute variance)
-                    if n >= max(min_count, 2) and counts[i] >= 2 and counts[j] >= 2:
-                        mean_i = sums[i] / counts[i]
-                        mean_j = sums[j] / counts[j]
-
-                        # Compute variances
-                        var_i = sums_sq[i] / counts[i] - mean_i * mean_i
-                        var_j = sums_sq[j] / counts[j] - mean_j * mean_j
-
-                        # Compute covariance
-                        cov = prods[i, j] / n - (sums[i] / counts[i]) * (
-                            sums[j] / counts[j]
-                        )
-
-                        # Compute correlation
-                        if var_i > 0 and var_j > 0:
-                            corr = cov / np.sqrt(var_i * var_j)
-                            # Clamp to [-1, 1] for numerical stability
-                            out[t, i, j] = max(-1.0, min(1.0, corr))
-                        else:
-                            out[t, i, j] = np.nan
-                    else:
-                        out[t, i, j] = np.nan
+                    out[t, i, j] = np.nan
 
 
 @ndmovematrix.wrap(
@@ -270,34 +261,29 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                 )
 
                 if pair_weights[i, j] >= min_weight and bias > 0:
-                    if i == j:
-                        # Diagonal is always 1 for correlation
-                        out[t, i, j] = 1.0
+                    # Compute correlation using pairwise statistics
+                    n = pair_sum_weights[i, j]
+                    mean_i = sums_i[i, j] / n
+                    mean_j = sums_j[i, j] / n
+
+                    # Compute variances (biased)
+                    var_i_biased = (sums_sq_i[i, j] / n) - (mean_i * mean_i)
+                    var_j_biased = (sums_sq_j[i, j] / n) - (mean_j * mean_j)
+
+                    # Compute covariance (biased)
+                    cov_biased = (prods[i, j] / n) - (mean_i * mean_j)
+
+                    # Apply bias correction
+                    var_i = var_i_biased / bias
+                    var_j = var_j_biased / bias
+                    cov = cov_biased / bias
+
+                    # Compute correlation
+                    if var_i > 0 and var_j > 0:
+                        corr = cov / np.sqrt(var_i * var_j)
+                        out[t, i, j] = corr
                     else:
-                        # Compute correlation using pairwise statistics
-                        n = pair_sum_weights[i, j]
-                        mean_i = sums_i[i, j] / n
-                        mean_j = sums_j[i, j] / n
-
-                        # Compute variances (biased)
-                        var_i_biased = (sums_sq_i[i, j] / n) - (mean_i * mean_i)
-                        var_j_biased = (sums_sq_j[i, j] / n) - (mean_j * mean_j)
-
-                        # Compute covariance (biased)
-                        cov_biased = (prods[i, j] / n) - (mean_i * mean_j)
-
-                        # Apply bias correction
-                        var_i = var_i_biased / bias
-                        var_j = var_j_biased / bias
-                        cov = cov_biased / bias
-
-                        # Compute correlation
-                        if var_i > 0 and var_j > 0:
-                            corr = cov / np.sqrt(var_i * var_j)
-                            # Clamp to [-1, 1] for numerical stability
-                            out[t, i, j] = max(-1.0, min(1.0, corr))
-                        else:
-                            out[t, i, j] = np.nan
+                        out[t, i, j] = np.nan
                 else:
                     out[t, i, j] = np.nan
 
