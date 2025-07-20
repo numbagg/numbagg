@@ -38,7 +38,12 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
             "These functions need a different approach to benchmarking; so we're currently excluding them"
         )
     # Skip matrix functions for very large arrays as they create n×n outputs
-    if func.__name__ in ["nancorrmatrix", "nancovmatrix", "move_nancorrmatrix", "move_nancovmatrix"]:
+    if func.__name__ in [
+        "nancorrmatrix",
+        "nancovmatrix",
+        "move_nancorrmatrix",
+        "move_nancovmatrix",
+    ]:
         # For matrix functions, the output size is proportional to n^2 where n is the second-to-last dimension
         if len(shape) >= 2:
             n_vars = shape[-2]
