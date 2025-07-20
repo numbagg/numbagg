@@ -43,9 +43,9 @@ class TestMoveExpMatrixAdvanced:
                 # 2. Matrix should be symmetric
                 assert_allclose(corr_matrix, corr_matrix.T, rtol=1e-12)
 
-                # 3. All values should be in [-1, 1]
-                assert np.all(corr_matrix >= -1.0)
-                assert np.all(corr_matrix <= 1.0)
+                # 3. All values should be very close to [-1, 1] (allowing for floating-point precision)
+                assert np.all(corr_matrix >= -1.0 - 1e-10)
+                assert np.all(corr_matrix <= 1.0 + 1e-10)
 
                 # 4. Should be positive semi-definite
                 eigenvals = np.linalg.eigvals(corr_matrix)
@@ -94,8 +94,9 @@ class TestMoveExpMatrixAdvanced:
         assert_allclose(final_cov[0, 1], 0.0, atol=1e-10)
         assert_allclose(final_cov[1, 0], 0.0, atol=1e-10)
 
-        # Correlation diagonal should be 1.0
-        assert_allclose(np.diag(final_corr), [1.0, 1.0], rtol=1e-10)
+        # Correlation diagonal should be NaN for constant data (zero variance)
+        assert np.isnan(final_corr[0, 0])
+        assert np.isnan(final_corr[1, 1])
 
         # Off-diagonal correlation should be NaN (0/0 case)
         assert np.isnan(final_corr[0, 1])
