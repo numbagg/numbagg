@@ -271,7 +271,7 @@ def move_corr(a, b, window, min_count, out):
 
 
 # Re-export matrix functions for backward compatibility
-from .moving_matrix import move_nancorrmatrix, move_nancovmatrix
+from .moving_matrix import move_corrmatrix, move_covmatrix
 
 __all__ = [
     "move_mean",
@@ -280,6 +280,6 @@ __all__ = [
     "move_var",
     "move_cov",
     "move_corr",
-    "move_nancorrmatrix",
-    "move_nancovmatrix",
+    "move_corrmatrix",
+    "move_covmatrix",
 ]

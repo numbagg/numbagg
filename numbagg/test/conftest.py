@@ -32,7 +32,9 @@ from .. import (
     group_nansum_of_squares,
     group_nanvar,
     move_corr,
+    move_corrmatrix,
     move_cov,
+    move_covmatrix,
     # move_count,
     move_exp_nancorr,
     move_exp_nancount,
@@ -42,8 +44,6 @@ from .. import (
     move_exp_nansum,
     move_exp_nanvar,
     move_mean,
-    move_nancorrmatrix,
-    move_nancovmatrix,
     move_std,
     move_sum,
     move_var,
@@ -494,9 +494,9 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
         pandas=pandas_static_covmatrix,
         numpy=lambda a: lambda: np.cov(a),
     ),
-    move_nancorrmatrix: dict(
+    move_corrmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
-            move_nancorrmatrix,
+            move_corrmatrix,
             a.T,
             window=window,
             **kwargs,  # Transpose for new (obs, vars) convention
@@ -505,9 +505,9 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
             a, window=window, min_count=kwargs.get("min_count", None)
         ),
     ),
-    move_nancovmatrix: dict(
+    move_covmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
-            move_nancovmatrix,
+            move_covmatrix,
             a.T,
             window=window,
             **kwargs,  # Transpose for new (obs, vars) convention
@@ -573,8 +573,8 @@ def func_callable(library, func, array):
     if func.__name__ in [
         "nancorrmatrix",
         "nancovmatrix",
-        "move_nancorrmatrix",
-        "move_nancovmatrix",
+        "move_corrmatrix",
+        "move_covmatrix",
     ]:
         # Matrix functions need 2D input
         if array.ndim == 1:

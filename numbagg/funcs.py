@@ -337,7 +337,7 @@ def nancorrmatrix(a, out):
     - obs_axis: -1 (observations dimension gets reduced)
     - Input signature: (..., vars, obs) -> (..., vars, vars)
 
-    Moving Matrix Functions (move_nancorrmatrix, etc.):
+    Moving Matrix Functions (move_corrmatrix, etc.):
     - obs_axis: -2 (observations dimension preserved as time axis)
     - vars_axis: -1 (variables dimension duplicated to end as matrix dims)
     - Input signature: (..., obs, vars) -> (..., obs, vars, vars)
