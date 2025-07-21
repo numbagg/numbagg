@@ -134,14 +134,17 @@ def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
 @pytest.mark.parametrize("min_count", [1, 3, 5, 10])
 def test_move_matrix_min_count(array, window, min_count):
     """Test that matrix functions handle min_count correctly."""
+    # Transpose array for new (obs, vars) convention
+    array_T = array.T
+
     # Test correlation matrix
-    result_corr = move_nancorrmatrix(array, window=window, min_count=min_count)
+    result_corr = move_nancorrmatrix(array_T, window=window, min_count=min_count)
 
     # Test covariance matrix
-    result_cov = move_nancovmatrix(array, window=window, min_count=min_count)
+    result_cov = move_nancovmatrix(array_T, window=window, min_count=min_count)
 
     # Check that results are NaN where we don't have enough observations
-    n_obs = array.shape[-1]
+    n_obs = array_T.shape[0]  # obs dimension in (obs, vars) format
 
     for t in range(n_obs):
         window_size = min(t + 1, window)
@@ -209,7 +212,6 @@ def test_numerical_results_identical(func, func0):
         decimal = 5
     for i, a in enumerate(arrays(func_name)):
         if a.size >= 1_000:
-            print(f"{func_name}: skipping large array with shape {a.shape}")
             continue
         axes = range(-1, a.ndim)
         for axis in axes:
