@@ -41,8 +41,8 @@ def test_benchmark_main(benchmark, func, func_callable, shape):
     if func.__name__ in [
         "nancorrmatrix",
         "nancovmatrix",
-        "move_nancorrmatrix",
-        "move_nancovmatrix",
+        "move_corrmatrix",
+        "move_covmatrix",
     ]:
         # For matrix functions, the output size is proportional to n^2 where n is the second-to-last dimension
         if len(shape) >= 2:

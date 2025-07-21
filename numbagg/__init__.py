@@ -55,10 +55,10 @@ from .moving_exp import (
     move_exp_nanvar,
 )
 from .moving_matrix import (
+    move_corrmatrix,
+    move_covmatrix,
     move_exp_nancorrmatrix,
     move_exp_nancovmatrix,
-    move_nancorrmatrix,
-    move_nancovmatrix,
 )
 
 GROUPED_FUNCS = [
@@ -98,8 +98,8 @@ MOVE_FUNCS = [
     move_corr,
     move_cov,
     move_mean,
-    move_nancorrmatrix,
-    move_nancovmatrix,
+    move_corrmatrix,
+    move_covmatrix,
     move_std,
     move_sum,
     move_var,
@@ -156,8 +156,8 @@ __all__ = [
     "move_cov",
     "move_corr",
     "move_sum",
-    "move_nancorrmatrix",
-    "move_nancovmatrix",
+    "move_corrmatrix",
+    "move_covmatrix",
     "nanargmax",
     "nanargmin",
     "nancorrmatrix",

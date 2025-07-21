@@ -6,12 +6,12 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numbagg import (
+    move_corrmatrix,
+    move_covmatrix,
     move_exp_nancorr,
     move_exp_nancorrmatrix,
     move_exp_nancov,
     move_exp_nancovmatrix,
-    move_nancorrmatrix,
-    move_nancovmatrix,
     nancorrmatrix,
     nancovmatrix,
 )
@@ -190,13 +190,13 @@ class TestCorrelationCovarianceMatrices:
 
 
 class TestMovingMatrices:
-    """Test moving window matrix functions (move_nancorrmatrix, move_nancovmatrix)."""
+    """Test moving window matrix functions (move_corrmatrix, move_covmatrix)."""
 
     @pytest.mark.parametrize(
         "move_func,static_func,window",
         [
-            (move_nancorrmatrix, nancorrmatrix, 3),
-            (move_nancovmatrix, nancovmatrix, 3),
+            (move_corrmatrix, nancorrmatrix, 3),
+            (move_covmatrix, nancovmatrix, 3),
         ],
     )
     def test_rolling_simple(self, move_func, static_func, window):
@@ -215,13 +215,13 @@ class TestMovingMatrices:
             assert_allclose(result[t], result[t].T, equal_nan=True)
 
         # For perfect linear relationship, correlation should be 1
-        if move_func == move_nancorrmatrix:
+        if move_func == move_corrmatrix:
             for i in range(1, 6):  # From second window onwards (min_count=2)
                 assert_allclose(result[i], [[1.0, 1.0], [1.0, 1.0]], rtol=1e-10)
 
     @pytest.mark.parametrize(
         "move_func,window",
-        [(move_nancorrmatrix, 5), (move_nancovmatrix, 5)],
+        [(move_corrmatrix, 5), (move_covmatrix, 5)],
     )
     def test_rolling_comparison_with_pandas(self, move_func, window):
         """Compare rolling functions with pandas."""
@@ -236,7 +236,7 @@ class TestMovingMatrices:
 
         # Pandas result - data is already in (obs, vars) format that pandas expects
         df = pd.DataFrame(data)
-        if move_func == move_nancorrmatrix:
+        if move_func == move_corrmatrix:
             pandas_result = df.rolling(window, min_periods=window).corr()
         else:
             pandas_result = df.rolling(window, min_periods=window).cov()
@@ -248,7 +248,7 @@ class TestMovingMatrices:
             # Compare
             assert_allclose(numbagg_result[t], pandas_matrix, rtol=1e-10)
 
-    @pytest.mark.parametrize("move_func", [move_nancorrmatrix, move_nancovmatrix])
+    @pytest.mark.parametrize("move_func", [move_corrmatrix, move_covmatrix])
     def test_rolling_1d_array_raises_error(self, move_func):
         """Test that 1D arrays raise an appropriate error for rolling functions."""
         data_1d = np.array([1, 2, 3, 4, 5], dtype=np.float64)
@@ -259,8 +259,8 @@ class TestMovingMatrices:
     @pytest.mark.parametrize(
         "move_func,expected_diag",
         [
-            (move_nancorrmatrix, 1.0),
-            (move_nancovmatrix, None),
+            (move_corrmatrix, 1.0),
+            (move_covmatrix, None),
         ],
     )
     def test_rolling_zero_variance_windows(self, move_func, expected_diag):
@@ -272,7 +272,7 @@ class TestMovingMatrices:
         result = move_func(data, window=3, min_count=2)
 
         # First full window has constant values
-        if move_func == move_nancorrmatrix:
+        if move_func == move_corrmatrix:
             # Correlation undefined for zero variance
             assert np.isnan(result[2, 0, 1])
         else:
@@ -284,7 +284,7 @@ class TestMovingMatrices:
         # Later windows have variance
         assert not np.all(np.isnan(result[5]))
 
-    @pytest.mark.parametrize("move_func", [move_nancorrmatrix, move_nancovmatrix])
+    @pytest.mark.parametrize("move_func", [move_corrmatrix, move_covmatrix])
     def test_rolling_broadcasting_higher_dims(self, move_func):
         """Test that rolling functions broadcast correctly over higher dimensions."""
         np.random.seed(42)
@@ -317,7 +317,7 @@ class TestMovingMatrices:
         corr_basic = nancorrmatrix(data_basic)
 
         # Moving correlation using full window
-        corr_moving = move_nancorrmatrix(data_moving, window=50)
+        corr_moving = move_corrmatrix(data_moving, window=50)
 
         # Last timestep should match basic result
         assert_allclose(corr_moving[-1], corr_basic, rtol=1e-14)
@@ -328,15 +328,15 @@ class TestMovingMatrices:
 
         # Basic test: (obs, vars) -> (obs, vars, vars)
         data_moving = np.random.randn(100, 3)  # (obs, vars)
-        corr_moving = move_nancorrmatrix(data_moving, window=10)
-        cov_moving = move_nancovmatrix(data_moving, window=10)
+        corr_moving = move_corrmatrix(data_moving, window=10)
+        cov_moving = move_covmatrix(data_moving, window=10)
 
         assert corr_moving.shape == (100, 3, 3)
         assert cov_moving.shape == (100, 3, 3)
 
         # Broadcasting test: (batch, obs, vars) -> (batch, obs, vars, vars)
         data_moving_3d = np.random.randn(2, 100, 3)  # (batch, obs, vars)
-        corr_moving_3d = move_nancorrmatrix(data_moving_3d, window=10)
+        corr_moving_3d = move_corrmatrix(data_moving_3d, window=10)
 
         assert corr_moving_3d.shape == (2, 100, 3, 3)
 
@@ -640,7 +640,7 @@ class TestMatrixDtypePreservation:
 
     @pytest.mark.parametrize(
         "func",
-        [nancorrmatrix, nancovmatrix, move_nancorrmatrix, move_nancovmatrix],
+        [nancorrmatrix, nancovmatrix, move_corrmatrix, move_covmatrix],
     )
     def test_dtype_preservation(self, func):
         """Test that dtypes are preserved."""

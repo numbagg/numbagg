@@ -6,8 +6,8 @@ from numba import float32, float64, int64
 from .decorators import ndmoveexpmatrix, ndmovematrix
 
 __all__ = [
-    "move_nancorrmatrix",
-    "move_nancovmatrix",
+    "move_corrmatrix",
+    "move_covmatrix",
     "move_exp_nancorrmatrix",
     "move_exp_nancovmatrix",
 ]
@@ -22,7 +22,7 @@ __all__ = [
         "(m,n),(),()->(m,n,n)",
     )
 )
-def move_nancorrmatrix(a, window, min_count, out):
+def move_corrmatrix(a, window, min_count, out):
     """
     Moving window correlation matrix gufunc.
 
@@ -122,7 +122,7 @@ def move_nancorrmatrix(a, window, min_count, out):
         "(m,n),(),()->(m,n,n)",
     )
 )
-def move_nancovmatrix(a, window, min_count, out):
+def move_covmatrix(a, window, min_count, out):
     """
     Moving window covariance matrix gufunc.
 

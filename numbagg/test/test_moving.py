@@ -7,9 +7,9 @@ from numpy.testing import assert_allclose
 
 from numbagg import (
     MOVE_FUNCS,
+    move_corrmatrix,
+    move_covmatrix,
     move_mean,
-    move_nancorrmatrix,
-    move_nancovmatrix,
     move_sum,
 )
 
@@ -30,7 +30,7 @@ def rs():
 @pytest.mark.parametrize("window", [10, 50])
 @pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
 def test_move_pandas_comp(array, func, window, min_count):
-    if func.__name__ in ["move_nancorrmatrix", "move_nancovmatrix"]:
+    if func.__name__ in ["move_corrmatrix", "move_covmatrix"]:
         pytest.skip(
             "Matrix functions tested separately in test_move_matrix_pandas_comp"
         )
@@ -53,7 +53,7 @@ def test_move_pandas_comp(array, func, window, min_count):
         assert_allclose(result, expected_bottleneck)
 
 
-@pytest.mark.parametrize("func", [move_nancorrmatrix, move_nancovmatrix], indirect=True)
+@pytest.mark.parametrize("func", [move_corrmatrix, move_covmatrix], indirect=True)
 @pytest.mark.parametrize("shape", [(5, 100)], indirect=True)
 @pytest.mark.parametrize("window", [10, 30])
 @pytest.mark.parametrize("min_count", [None, "window"])
@@ -93,7 +93,7 @@ def test_move_matrix_pandas_comp(array, func, window, min_count):
     assert_allclose(result, expected_pandas)
 
 
-@pytest.mark.parametrize("func_name", ["move_nancorrmatrix", "move_nancovmatrix"])
+@pytest.mark.parametrize("func_name", ["move_corrmatrix", "move_covmatrix"])
 @pytest.mark.parametrize("window", [5])
 @pytest.mark.parametrize("min_count", [1, 2, 3, 4, 5])
 def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
@@ -103,9 +103,7 @@ def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
     array = rs.rand(4, 15)
 
     # Get the function
-    func = (
-        move_nancorrmatrix if func_name == "move_nancorrmatrix" else move_nancovmatrix
-    )
+    func = move_corrmatrix if func_name == "move_corrmatrix" else move_covmatrix
 
     # Get comparisons
     c = COMPARISONS[func]
@@ -138,10 +136,10 @@ def test_move_matrix_min_count(array, window, min_count):
     array_T = array.T
 
     # Test correlation matrix
-    result_corr = move_nancorrmatrix(array_T, window=window, min_count=min_count)
+    result_corr = move_corrmatrix(array_T, window=window, min_count=min_count)
 
     # Test covariance matrix
-    result_cov = move_nancovmatrix(array_T, window=window, min_count=min_count)
+    result_cov = move_covmatrix(array_T, window=window, min_count=min_count)
 
     # Check that results are NaN where we don't have enough observations
     n_obs = array_T.shape[0]  # obs dimension in (obs, vars) format
