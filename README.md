@@ -27,8 +27,7 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 - More functions (though bottleneck has some functions we don't have, and pandas' functions
   have many more parameters)
-- Functions work for >3 dimensions. All functions take an arbitrary axis or
-  tuple of axes to calculate over
+- Functions work for >3 dimensions with flexible axis handling (see [Axis Parameter Behavior](#axis-parameter-behavior) below)
 - Written in numba — way less code, simple to inspect, simple to improve
 
 ## Functions & benchmarks
@@ -311,6 +310,58 @@ numbagg/test/run_benchmarks.py -- --benchmark-max-time=10`. They run in CI,
 [^5]:
     This function is not currently parallelized, so exhibits worse performance
     on parallelizable arrays.
+
+## Axis parameter behavior
+
+The `axis` parameter in numbagg has three different behaviors depending on the function type:
+
+### Aggregation functions
+
+Includes: `nanmean`, `nansum`, `nanstd`, `nanvar`, `nanmin`, `nanmax`, `nancount`, `nanargmin`, `nanargmax`, `nanquantile`, `allnan`, `anynan`
+
+- Specify dimensions to reduce/aggregate over
+- Support multiple axes, e.g. `axis=(0, 1)`
+- Remove the specified dimensions from output shape
+
+```python
+# Example with 3D array
+arr = np.random.rand(4, 3, 5)
+result = nb.nanmean(arr, axis=(0, 2))  # Reduces over dimensions 0 and 2
+# result.shape is (3,)
+```
+
+### Moving window functions
+
+Includes: `move_mean`, `move_sum`, `move_std`, `move_var`, `move_corr`, `move_cov`, and exponential variants like `move_exp_nanmean`
+
+- Specify the dimension along which the window moves
+- Single axis only
+- Preserve input shape
+
+```python
+# Moving average along axis 1
+arr = np.random.rand(4, 3, 5)
+result = nb.move_mean(arr, window=2, axis=1)
+# result.shape is (4, 3, 5) - same as input
+```
+
+### Grouped functions
+
+Includes: `group_nanmean`, `group_nansum`, `group_nanstd`, `group_nanvar`, `group_nanmin`, `group_nanmax`, and others
+
+- Specify dimension along which groups are defined
+- Single axis only
+- Group consecutive identical labels along the axis
+
+```python
+# Group operations along axis 0
+arr = np.random.rand(4, 3, 5)
+labels = np.array([0, 0, 1, 1])  # Groups for axis 0
+result = nb.group_nanmean(arr, labels, axis=0)
+# result.shape is (2, 3, 5) - 2 groups along axis 0
+```
+
+Aggregation functions are compatible with NumPy's axis parameter behavior, while moving window and grouped functions provide functionality not available in NumPy.
 
 ## Example implementation
 
