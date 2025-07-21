@@ -328,8 +328,64 @@ def nancorrmatrix(a, out):
     """
     Compute correlation matrix treating NaN as missing values.
 
-    For 2D input, correlates variables (rows) across observations (columns).
-    Uses pairwise complete observations (like pandas.DataFrame.corr).
+    Matrix Function Dimensional Conventions:
+
+    Due to NumPy gufunc constraints, matrix functions have fixed axis assignments:
+
+    Static Matrix Functions (nancorrmatrix, nancovmatrix):
+    - vars_axis: -2 (variables dimension gets duplicated into n×n matrix)
+    - obs_axis: -1 (observations dimension gets reduced)
+    - Input signature: (..., vars, obs) -> (..., vars, vars)
+
+    Moving Matrix Functions (move_nancorrmatrix, etc.):
+    - obs_axis: -2 (observations dimension preserved as time axis)
+    - vars_axis: -1 (variables dimension duplicated to end as matrix dims)
+    - Input signature: (..., obs, vars) -> (..., obs, vars, vars)
+
+    This asymmetry exists because:
+    - Static: gufunc "(vars,obs)->(vars,vars)" needs obs at end to reduce
+    - Moving: gufunc "(obs,vars)->(obs,vars,vars)" needs vars at end to add matrix dims
+
+    Parameters
+    ----------
+    a : array_like
+        Input array with shape (..., vars, obs) where:
+        - vars (axis=-2): variables to compute correlations between
+        - obs (axis=-1): observations to aggregate over (gets reduced)
+
+    Returns
+    -------
+    ndarray
+        Shape (..., vars, vars) - correlation matrix with same leading
+        dimensions as input, plus vars×vars correlation matrix at the end.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import numbagg as nb
+    >>> # Standard: 3 variables, 100 observations
+    >>> data = np.random.randn(3, 100)
+    >>> corr = nb.nancorrmatrix(data)
+    >>> corr.shape
+    (3, 3)
+    >>>
+    >>> # Broadcasting: batch of correlation matrices
+    >>> data_3d = np.random.randn(5, 3, 100)
+    >>> corr_3d = nb.nancorrmatrix(data_3d)
+    >>> corr_3d.shape
+    (5, 3, 3)
+    >>>
+    >>> # Wrong arrangement: transpose first
+    >>> data_wrong = np.random.randn(100, 3)  # obs, vars
+    >>> data_correct = data_wrong.T  # vars, obs
+    >>> corr = nb.nancorrmatrix(data_correct)
+
+    Notes
+    -----
+    - Uses pairwise complete observations (like pandas.DataFrame.corr)
+    - Unlike NumPy's corrcoef, this broadcasts over arbitrary leading dimensions
+    - For other dimension arrangements, transpose your data first
+    - axis parameter removed - dimensions are now fixed for consistency
     """
     n_vars, n_obs = a.shape
 
@@ -395,8 +451,18 @@ def nancovmatrix(a, out):
     """
     Compute covariance matrix treating NaN as missing values.
 
-    For 2D input, computes covariance between variables (rows) across observations (columns).
+    Dimension conventions:
+    - Input: (n_vars, n_obs) - variables as rows, observations as columns
+    - Output: (n_vars, n_vars) - square covariance matrix
+    - Broadcasting: Supports arbitrary leading dimensions via NumPy's gufunc system
+
     Uses pairwise complete observations (like pandas.DataFrame.cov).
+    Unlike NumPy's cov, this function broadcasts over higher dimensions:
+
+    Examples:
+    - 2D: (3, 100) -> (3, 3)
+    - 3D: (batch=5, vars=3, obs=100) -> (5, 3, 3)
+    - 4D: (2, 5, 3, 100) -> (2, 5, 3, 3)
     """
     n_vars, n_obs = a.shape
 

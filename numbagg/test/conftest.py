@@ -481,18 +481,25 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     #     ),
     # ),
     nancorrmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(nancorrmatrix, a, axis=axis),
+        numbagg=lambda a, axis=-1: partial(
+            nancorrmatrix, a
+        ),  # No axis parameter, uses fixed (vars, obs) convention
         pandas=pandas_static_corrmatrix,
         numpy=lambda a: lambda: np.corrcoef(a),
     ),
     nancovmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(nancovmatrix, a, axis=axis),
+        numbagg=lambda a, axis=-1: partial(
+            nancovmatrix, a
+        ),  # No axis parameter, uses fixed (vars, obs) convention
         pandas=pandas_static_covmatrix,
         numpy=lambda a: lambda: np.cov(a),
     ),
     move_nancorrmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
-            move_nancorrmatrix, a, window=window, **kwargs
+            move_nancorrmatrix,
+            a.T,
+            window=window,
+            **kwargs,  # Transpose for new (obs, vars) convention
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_corrmatrix(
             a, window=window, min_count=kwargs.get("min_count", None)
@@ -500,7 +507,10 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     ),
     move_nancovmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
-            move_nancovmatrix, a, window=window, **kwargs
+            move_nancovmatrix,
+            a.T,
+            window=window,
+            **kwargs,  # Transpose for new (obs, vars) convention
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_covmatrix(
             a, window=window, min_count=kwargs.get("min_count", None)

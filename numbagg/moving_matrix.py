@@ -19,17 +19,28 @@ __all__ = [
             (float32[:, :], int64, int64, float32[:, :, :]),
             (float64[:, :], int64, int64, float64[:, :, :]),
         ],
-        "(n,m),(),()->(m,n,n)",
+        "(m,n),(),()->(m,n,n)",
     )
 )
 def move_nancorrmatrix(a, window, min_count, out):
     """
     Moving window correlation matrix gufunc.
 
-    For 2D input, correlates variables (rows) across observations (columns in the window).
+    Dimension conventions (fixed for consistency):
+    - Input: (n_obs, n_vars) - observations as rows, variables as columns
+    - Output: (n_obs, n_vars, n_vars) - correlation matrix at each time step
+    - Broadcasting: Supports arbitrary leading dimensions via NumPy's gufunc system
+
+    For each time step, computes correlation matrix using the rolling window ending at that time.
+    Unlike NumPy's corrcoef (2D only), this broadcasts over higher dimensions:
+
+    Examples:
+    - 2D: (100, 3) -> (100, 3, 3) - matrix for each of 100 time steps
+    - 3D: (batch=5, obs=100, vars=3) -> (5, 100, 3, 3)
+    - 4D: (2, 5, 100, 3) -> (2, 5, 100, 3, 3)
     """
-    n_vars = a.shape[0]
-    n_obs = a.shape[1]
+    n_obs = a.shape[0]
+    n_vars = a.shape[1]
     min_count = max(min_count, 1)
 
     # Initialize running statistics
@@ -45,7 +56,7 @@ def move_nancorrmatrix(a, window, min_count, out):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val = a[i, t - window]
+                old_val = a[t - window, i]
                 if not np.isnan(old_val):
                     sums[i] -= old_val
                     sums_sq[i] -= old_val * old_val
@@ -53,14 +64,14 @@ def move_nancorrmatrix(a, window, min_count, out):
 
                     # Update pairwise products
                     for j in range(n_vars):
-                        old_val_j = a[j, t - window]
+                        old_val_j = a[t - window, j]
                         if not np.isnan(old_val_j):
                             prods[i, j] -= old_val * old_val_j
                             pair_counts[i, j] -= 1
 
         # Add new values
         for i in range(n_vars):
-            new_val = a[i, t]
+            new_val = a[t, i]
             if not np.isnan(new_val):
                 sums[i] += new_val
                 sums_sq[i] += new_val * new_val
@@ -68,7 +79,7 @@ def move_nancorrmatrix(a, window, min_count, out):
 
                 # Update pairwise products
                 for j in range(n_vars):
-                    new_val_j = a[j, t]
+                    new_val_j = a[t, j]
                     if not np.isnan(new_val_j):
                         prods[i, j] += new_val * new_val_j
                         pair_counts[i, j] += 1
@@ -108,17 +119,28 @@ def move_nancorrmatrix(a, window, min_count, out):
             (float32[:, :], int64, int64, float32[:, :, :]),
             (float64[:, :], int64, int64, float64[:, :, :]),
         ],
-        "(n,m),(),()->(m,n,n)",
+        "(m,n),(),()->(m,n,n)",
     )
 )
 def move_nancovmatrix(a, window, min_count, out):
     """
     Moving window covariance matrix gufunc.
 
-    For 2D input, computes covariance between variables (rows) across observations (columns in the window).
+    Dimension conventions (fixed for consistency):
+    - Input: (n_obs, n_vars) - observations as rows, variables as columns
+    - Output: (n_obs, n_vars, n_vars) - covariance matrix at each time step
+    - Broadcasting: Supports arbitrary leading dimensions via NumPy's gufunc system
+
+    For each time step, computes covariance matrix using the rolling window ending at that time.
+    Unlike NumPy's cov (2D only), this broadcasts over higher dimensions:
+
+    Examples:
+    - 2D: (100, 3) -> (100, 3, 3) - matrix for each of 100 time steps
+    - 3D: (batch=5, obs=100, vars=3) -> (5, 100, 3, 3)
+    - 4D: (2, 5, 100, 3) -> (2, 5, 100, 3, 3)
     """
-    n_vars = a.shape[0]
-    n_obs = a.shape[1]
+    n_obs = a.shape[0]
+    n_vars = a.shape[1]
     min_count = max(min_count, 1)
 
     # Initialize running statistics
@@ -133,28 +155,28 @@ def move_nancovmatrix(a, window, min_count, out):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val = a[i, t - window]
+                old_val = a[t - window, i]
                 if not np.isnan(old_val):
                     sums[i] -= old_val
                     counts[i] -= 1
 
                     # Update pairwise products
                     for j in range(n_vars):
-                        old_val_j = a[j, t - window]
+                        old_val_j = a[t - window, j]
                         if not np.isnan(old_val_j):
                             prods[i, j] -= old_val * old_val_j
                             pair_counts[i, j] -= 1
 
         # Add new values
         for i in range(n_vars):
-            new_val = a[i, t]
+            new_val = a[t, i]
             if not np.isnan(new_val):
                 sums[i] += new_val
                 counts[i] += 1
 
                 # Update pairwise products
                 for j in range(n_vars):
-                    new_val_j = a[j, t]
+                    new_val_j = a[t, j]
                     if not np.isnan(new_val_j):
                         prods[i, j] += new_val * new_val_j
                         pair_counts[i, j] += 1
@@ -181,17 +203,30 @@ def move_nancovmatrix(a, window, min_count, out):
             (float32[:, :], float32[:], float32, float32[:, :, :]),
             (float64[:, :], float64[:], float64, float64[:, :, :]),
         ],
-        "(n,m),(m),()->(m,n,n)",
+        "(m,n),(m),()->(m,n,n)",
     )
 )
 def move_exp_nancorrmatrix(a, alpha, min_weight, out):
     """
     Exponential moving window correlation matrix gufunc.
 
-    For 2D input, correlates variables (rows) across observations (columns) with exponential decay.
+    Dimension conventions (fixed for consistency):
+    - Input: (n_obs, n_vars) - observations as rows, variables as columns
+    - Output: (n_obs, n_vars, n_vars) - correlation matrix at each time step
+    - Broadcasting: Supports arbitrary leading dimensions via NumPy's gufunc system
+    - Alpha parameter: Supports scalar or array broadcasting
+
+    For each time step, computes correlation matrix using exponentially weighted observations
+    up to that time. Recent observations have higher weight based on the alpha parameter.
+    Unlike NumPy's corrcoef (2D only), this broadcasts over higher dimensions:
+
+    Examples:
+    - 2D: (100, 3) -> (100, 3, 3) - matrix for each of 100 time steps
+    - 3D: (batch=5, obs=100, vars=3) -> (5, 100, 3, 3)
+    - 4D: (2, 5, 100, 3) -> (2, 5, 100, 3, 3)
     """
-    n_vars = a.shape[0]
-    n_obs = a.shape[1]
+    n_obs = a.shape[0]
+    n_vars = a.shape[1]
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # This is necessary for consistency with non-matrix exponential functions
@@ -235,8 +270,8 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
             for j in range(n_vars):
-                new_val_i = a[i, t]
-                new_val_j = a[j, t]
+                new_val_i = a[t, i]
+                new_val_j = a[t, j]
 
                 # Only update if BOTH values are non-NaN (consistent with non-matrix functions)
                 if not (np.isnan(new_val_i) or np.isnan(new_val_j)):
@@ -294,17 +329,30 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
             (float32[:, :], float32[:], float32, float32[:, :, :]),
             (float64[:, :], float64[:], float64, float64[:, :, :]),
         ],
-        "(n,m),(m),()->(m,n,n)",
+        "(m,n),(m),()->(m,n,n)",
     )
 )
 def move_exp_nancovmatrix(a, alpha, min_weight, out):
     """
     Exponential moving window covariance matrix gufunc.
 
-    For 2D input, computes covariance between variables (rows) across observations (columns) with exponential decay.
+    Dimension conventions (fixed for consistency):
+    - Input: (n_obs, n_vars) - observations as rows, variables as columns
+    - Output: (n_obs, n_vars, n_vars) - covariance matrix at each time step
+    - Broadcasting: Supports arbitrary leading dimensions via NumPy's gufunc system
+    - Alpha parameter: Supports scalar or array broadcasting
+
+    For each time step, computes covariance matrix using exponentially weighted observations
+    up to that time. Recent observations have higher weight based on the alpha parameter.
+    Unlike NumPy's cov (2D only), this broadcasts over higher dimensions:
+
+    Examples:
+    - 2D: (100, 3) -> (100, 3, 3) - matrix for each of 100 time steps
+    - 3D: (batch=5, obs=100, vars=3) -> (5, 100, 3, 3)
+    - 4D: (2, 5, 100, 3) -> (2, 5, 100, 3, 3)
     """
-    n_vars = a.shape[0]
-    n_obs = a.shape[1]
+    n_obs = a.shape[0]
+    n_vars = a.shape[1]
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # This is necessary for consistency with non-matrix exponential functions
@@ -340,8 +388,8 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
             for j in range(n_vars):
-                new_val_i = a[i, t]
-                new_val_j = a[j, t]
+                new_val_i = a[t, i]
+                new_val_j = a[t, j]
 
                 # Only update if BOTH values are non-NaN (consistent with non-matrix functions)
                 if not (np.isnan(new_val_i) or np.isnan(new_val_j)):
