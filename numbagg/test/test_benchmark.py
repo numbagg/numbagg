@@ -1,7 +1,16 @@
 import numpy as np
 import pytest
 
-from .. import bfill, ffill
+from .. import (
+    bfill,
+    ffill,
+    move_corrmatrix,
+    move_covmatrix,
+    move_exp_nancorrmatrix,
+    move_exp_nancovmatrix,
+    nancorrmatrix,
+    nancovmatrix,
+)
 
 
 @pytest.fixture(
@@ -81,6 +90,39 @@ def test_benchmark_f_bfill(benchmark, func_callable):
 
 # Because this clears the cache, it really slows down running the tests. So we only run
 # it selectively.
+@pytest.mark.parametrize(
+    "func",
+    [
+        nancorrmatrix,
+        nancovmatrix,
+        move_corrmatrix,
+        move_covmatrix,
+        move_exp_nancorrmatrix,
+        move_exp_nancovmatrix,
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        pytest.param((5, 100000), marks=pytest.mark.slow),  # 5×5 matrix, target ~10ms
+        pytest.param((50, 500), marks=pytest.mark.slow),  # 50×50 matrix, target >2ms
+        pytest.param(
+            (3000, 1000, 5), marks=pytest.mark.slow
+        ),  # 3000 independent 5×5 matrices, 1000 obs each, target ~50ms
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize("library", ["numbagg", "pandas", "numpy"], indirect=True)
+@pytest.mark.benchmark(warmup=True, warmup_iterations=1)
+def test_benchmark_matrix(benchmark, func, func_callable, shape):
+    """
+    Benchmark matrix functions on matrix-friendly shapes.
+    """
+    benchmark.group = f"{func}|{shape}"
+    benchmark(func_callable)
+
+
 @pytest.mark.nightly
 @pytest.mark.parametrize("shape", [(1, 20)], indirect=True)
 def test_benchmark_compile(benchmark, clear_numba_cache, func_callable):
