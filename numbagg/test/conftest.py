@@ -37,8 +37,10 @@ from .. import (
     move_covmatrix,
     # move_count,
     move_exp_nancorr,
+    move_exp_nancorrmatrix,
     move_exp_nancount,
     move_exp_nancov,
+    move_exp_nancovmatrix,
     move_exp_nanmean,
     move_exp_nanstd,
     move_exp_nansum,
@@ -123,8 +125,13 @@ def pandas_static_covmatrix(a):
 
 
 def pandas_rolling_matrix_setup(a, window=20, min_count=None):
-    """Setup rolling window for matrix operations (corr/cov)."""
-    df = pandas_matrix_setup(a)
+    """Setup rolling window for matrix operations (corr/cov).
+
+    For rolling functions, expect (..., obs, vars) format.
+    Observations as rows (time series), variables as columns.
+    """
+    # For rolling: DON'T transpose - we want (obs, vars) as (rows, cols)
+    df = pd.DataFrame(a)
     rolling = df.rolling(window, min_periods=min_count)
     return rolling
 
@@ -194,6 +201,15 @@ def pandas_nan_sum_of_squares_setup(a):
     labels = generate_labels(a.shape[-1])
     df = _df_of_array(a)
     return lambda: df.pipe(lambda x: x**2).groupby(labels).sum().T
+
+
+def _transform_for_moving_matrix(a):
+    """Transform array for moving matrix functions.
+
+    Benchmark arrays are in (..., vars, obs) format.
+    Moving functions need (..., obs, vars) so we swap the last two dimensions.
+    """
+    return a.swapaxes(-2, -1)
 
 
 def _df_of_array(a):
@@ -481,39 +497,55 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     #     ),
     # ),
     nancorrmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(
-            nancorrmatrix, a
-        ),  # No axis parameter, uses fixed (vars, obs) convention
+        numbagg=lambda a, axis=-1: partial(nancorrmatrix, a),
         pandas=pandas_static_corrmatrix,
-        numpy=lambda a: lambda: np.corrcoef(a),
+        # Note: np.corrcoef doesn't handle NaNs (returns all NaN), so no numpy comparison
     ),
     nancovmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(
-            nancovmatrix, a
-        ),  # No axis parameter, uses fixed (vars, obs) convention
+        numbagg=lambda a, axis=-1: partial(nancovmatrix, a),
         pandas=pandas_static_covmatrix,
-        numpy=lambda a: lambda: np.cov(a),
+        # Note: np.cov doesn't handle NaNs (returns all NaN), so no numpy comparison
     ),
     move_corrmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
             move_corrmatrix,
-            a.T,
+            _transform_for_moving_matrix(a),
             window=window,
-            **kwargs,  # Transpose for new (obs, vars) convention
+            **kwargs,
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_corrmatrix(
-            a, window=window, min_count=kwargs.get("min_count", None)
+            _transform_for_moving_matrix(a),
+            window=window,
+            min_count=kwargs.get("min_count", None),
         ),
     ),
     move_covmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
             move_covmatrix,
-            a.T,
+            _transform_for_moving_matrix(a),
             window=window,
-            **kwargs,  # Transpose for new (obs, vars) convention
+            **kwargs,
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_covmatrix(
-            a, window=window, min_count=kwargs.get("min_count", None)
+            _transform_for_moving_matrix(a),
+            window=window,
+            min_count=kwargs.get("min_count", None),
+        ),
+    ),
+    move_exp_nancorrmatrix: dict(
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nancorrmatrix,
+            _transform_for_moving_matrix(a),
+            alpha=alpha,
+            **kwargs,
+        ),
+    ),
+    move_exp_nancovmatrix: dict(
+        numbagg=lambda a, alpha=0.5, **kwargs: partial(
+            move_exp_nancovmatrix,
+            _transform_for_moving_matrix(a),
+            alpha=alpha,
+            **kwargs,
         ),
     ),
 }
@@ -575,6 +607,8 @@ def func_callable(library, func, array):
         "nancovmatrix",
         "move_corrmatrix",
         "move_covmatrix",
+        "move_exp_nancorrmatrix",
+        "move_exp_nancovmatrix",
     ]:
         # Matrix functions need 2D input
         if array.ndim == 1:
@@ -585,15 +619,18 @@ def func_callable(library, func, array):
                 pytest.skip(
                     "numpy's corrcoef/cov doesn't support >2D arrays (but numbagg does!)"
                 )
-            if library == "pandas" and array.size >= 100000:
+            if library == "pandas" and array.size >= 10_000_000:
                 pytest.skip(
-                    f"pandas would create too large matrix ({array.size}x{array.size})"
+                    f"pandas matrix operation on large array (size={array.size}) may be too slow"
                 )
         else:  # move_ functions
             if library == "numpy":
                 pytest.skip("numpy doesn't have rolling matrix functions")
             if library == "bottleneck":
                 pytest.skip("bottleneck doesn't have rolling matrix functions")
+            # For exponential matrix functions, only numbagg is supported
+            if func.__name__.startswith("move_exp_") and library == "pandas":
+                pytest.skip("pandas doesn't have exponential moving matrix functions")
 
     try:
         callable_ = COMPARISONS[func][library](array)

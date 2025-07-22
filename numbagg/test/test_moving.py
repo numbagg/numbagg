@@ -54,7 +54,9 @@ def test_move_pandas_comp(array, func, window, min_count):
 
 
 @pytest.mark.parametrize("func", [move_corrmatrix, move_covmatrix], indirect=True)
-@pytest.mark.parametrize("shape", [(5, 100)], indirect=True)
+@pytest.mark.parametrize(
+    "shape", [(5, 100)], indirect=True
+)  # (vars, obs) benchmark convention
 @pytest.mark.parametrize("window", [10, 30])
 @pytest.mark.parametrize("min_count", [None, "window"])
 def test_move_matrix_pandas_comp(array, func, window, min_count):
@@ -75,8 +77,9 @@ def test_move_matrix_pandas_comp(array, func, window, min_count):
     pandas_result = pandas_callable()
 
     # Convert pandas MultiIndex DataFrame to 3D array for comparison
-    n_obs = array.shape[-1]
-    n_vars = array.shape[-2]
+    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
+    n_obs = result.shape[-3]  # obs dimension
+    n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
     expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
 
     # Only include windows where we have at least min_count observations
@@ -98,9 +101,9 @@ def test_move_matrix_pandas_comp(array, func, window, min_count):
 @pytest.mark.parametrize("min_count", [1, 2, 3, 4, 5])
 def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
     """Test matrix functions against pandas with different min_count values."""
-    # Create test array directly
+    # Create test array directly in benchmark format (vars, obs)
     rs = np.random.RandomState(0)
-    array = rs.rand(4, 15)
+    array = rs.rand(4, 15)  # (vars=4, obs=15)
 
     # Get the function
     func = move_corrmatrix if func_name == "move_corrmatrix" else move_covmatrix
@@ -116,8 +119,9 @@ def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
     pandas_result = pandas_callable()
 
     # Convert pandas MultiIndex DataFrame to 3D array
-    n_obs = array.shape[-1]
-    n_vars = array.shape[-2]
+    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
+    n_obs = result.shape[-3]  # obs dimension
+    n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
     expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
 
     for t in range(n_obs):
