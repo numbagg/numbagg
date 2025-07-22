@@ -113,7 +113,7 @@ def test_benchmark_f_bfill(benchmark, func_callable):
         pytest.param((5, 100000), marks=pytest.mark.slow),  # 5×5 matrix, target ~10ms
         pytest.param((50, 500), marks=pytest.mark.slow),  # 50×50 matrix, target >2ms
         pytest.param(
-            (3000, 1000, 5), marks=pytest.mark.slow
+            (3000, 5, 1000), marks=pytest.mark.slow
         ),  # 3000 independent 5×5 matrices, 1000 obs each, target ~50ms
     ],
     indirect=True,

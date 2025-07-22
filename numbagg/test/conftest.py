@@ -203,12 +203,11 @@ def pandas_nan_sum_of_squares_setup(a):
     return lambda: df.pipe(lambda x: x**2).groupby(labels).sum().T
 
 
-def _transform_for_matrix_function(a):
-    """Transform array for STATIC matrix functions expecting (..., vars, obs) convention.
+def _transform_for_moving_matrix(a):
+    """Transform array for moving matrix functions.
 
-    Input convention (from benchmark): (..., obs, vars) - batch dims at front
-    Output convention (for static funcs): (..., vars, obs) - swap last two dimensions
-    Moving functions use input as-is since they expect (..., obs, vars).
+    Benchmark arrays are in (..., vars, obs) format.
+    Moving functions need (..., obs, vars) so we swap the last two dimensions.
     """
     return a.swapaxes(-2, -1)
 
@@ -498,45 +497,45 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     #     ),
     # ),
     nancorrmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(
-            nancorrmatrix, _transform_for_matrix_function(a)
-        ),  # Static functions need (vars, obs) convention
+        numbagg=lambda a, axis=-1: partial(nancorrmatrix, a),
         pandas=pandas_static_corrmatrix,
         # Note: np.corrcoef doesn't handle NaNs (returns all NaN), so no numpy comparison
     ),
     nancovmatrix: dict(
-        numbagg=lambda a, axis=-1: partial(
-            nancovmatrix, _transform_for_matrix_function(a)
-        ),  # Static functions need (vars, obs) convention
+        numbagg=lambda a, axis=-1: partial(nancovmatrix, a),
         pandas=pandas_static_covmatrix,
         # Note: np.cov doesn't handle NaNs (returns all NaN), so no numpy comparison
     ),
     move_corrmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
             move_corrmatrix,
-            a,
+            _transform_for_moving_matrix(a),
             window=window,
             **kwargs,
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_corrmatrix(
-            a, window=window, min_count=kwargs.get("min_count", None)
+            _transform_for_moving_matrix(a),
+            window=window,
+            min_count=kwargs.get("min_count", None),
         ),
     ),
     move_covmatrix: dict(
         numbagg=lambda a, window=20, **kwargs: partial(
             move_covmatrix,
-            a,
+            _transform_for_moving_matrix(a),
             window=window,
             **kwargs,
         ),
         pandas=lambda a, window=20, **kwargs: pandas_rolling_covmatrix(
-            a, window=window, min_count=kwargs.get("min_count", None)
+            _transform_for_moving_matrix(a),
+            window=window,
+            min_count=kwargs.get("min_count", None),
         ),
     ),
     move_exp_nancorrmatrix: dict(
         numbagg=lambda a, alpha=0.5, **kwargs: partial(
             move_exp_nancorrmatrix,
-            a,
+            _transform_for_moving_matrix(a),
             alpha=alpha,
             **kwargs,
         ),
@@ -544,7 +543,7 @@ COMPARISONS: dict[Callable, dict[str, Callable]] = {
     move_exp_nancovmatrix: dict(
         numbagg=lambda a, alpha=0.5, **kwargs: partial(
             move_exp_nancovmatrix,
-            a,
+            _transform_for_moving_matrix(a),
             alpha=alpha,
             **kwargs,
         ),
