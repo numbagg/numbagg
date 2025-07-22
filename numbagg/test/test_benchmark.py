@@ -11,6 +11,11 @@ from .. import bfill, ffill
         pytest.param((100, 100_000), marks=pytest.mark.slow),
         pytest.param((100, 1000, 1000), marks=pytest.mark.nightly),
         pytest.param((10, 10, 10, 10, 1000), marks=pytest.mark.nightly),
+        # Additional matrix-friendly shapes for benchmarking
+        pytest.param((20, 1000), marks=pytest.mark.slow),  # 20×20 matrix, larger size
+        pytest.param(
+            (3, 5000), marks=pytest.mark.slow
+        ),  # 3×3 matrix, many observations
     ],
     scope="module",
 )
