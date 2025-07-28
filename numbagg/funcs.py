@@ -330,7 +330,7 @@ def nanmedian(a: NDArray[np.float64], **kwargs) -> NDArray[np.float64]:
         "(n,m)->(n,n)",
     )
 )
-def nancorrmatrix(a, out):
+def nancorrmatrix(a: F, out: F) -> None:
     """
     Compute correlation matrix treating NaN as missing values.
 
@@ -460,7 +460,7 @@ def nancorrmatrix(a, out):
         "(n,m)->(n,n)",
     )
 )
-def nancovmatrix(a, out):
+def nancovmatrix(a: F, out: F) -> None:
     """
     Compute covariance matrix treating NaN as missing values.
 
