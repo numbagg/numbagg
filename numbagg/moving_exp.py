@@ -1,7 +1,12 @@
+from typing import TypeVar
+
 import numpy as np
 from numba import float32, float64
 
 from .decorators import ndmoveexp
+from .utils import FloatArray
+
+T = TypeVar("T", bound=FloatArray)
 
 
 @ndmoveexp.wrap(
@@ -10,8 +15,8 @@ from .decorators import ndmoveexp
         (float64[:], float64[:], float64, float64[:]),
     ],
 )
-def move_exp_nancount(a, alpha, min_weight, out):
-    N = len(a)
+def move_exp_nancount(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    N: int = len(a)
 
     count = weight = 0.0
 
@@ -39,11 +44,11 @@ def move_exp_nancount(a, alpha, min_weight, out):
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanmean(a, alpha, min_weight, out):
+def move_exp_nanmean(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
     """
     Exponentially weighted moving mean
     """
-    N = len(a)
+    N: int = len(a)
 
     numer = denom = weight = 0.0
 
@@ -73,8 +78,8 @@ def move_exp_nanmean(a, alpha, min_weight, out):
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nansum(a, alpha, min_weight, out):
-    N = len(a)
+def move_exp_nansum(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    N: int = len(a)
 
     numer = weight = 0.0
     zero_count = True
@@ -104,8 +109,8 @@ def move_exp_nansum(a, alpha, min_weight, out):
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanvar(a, alpha, min_weight, out):
-    N = len(a)
+def move_exp_nanvar(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    N: int = len(a)
 
     # sum_x: decayed sum of the sequence values.
     # sum_x2: decayed sum of the squared sequence values.
@@ -157,7 +162,7 @@ def move_exp_nanvar(a, alpha, min_weight, out):
         (float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nanstd(a, alpha, min_weight, out):
+def move_exp_nanstd(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
     """
     Calculates the exponentially decayed standard deviation.
 
@@ -173,7 +178,7 @@ def move_exp_nanstd(a, alpha, min_weight, out):
     # of small complications around warnings for `np.sqrt` on invalid values, and passing
     # the `axis` parameter, such that it was easier to just copy-pasta.
 
-    N = len(a)
+    N: int = len(a)
 
     # sum_x: decayed sum of the sequence values.
     # sum_x2: decayed sum of the squared sequence values.
@@ -225,8 +230,8 @@ def move_exp_nanstd(a, alpha, min_weight, out):
         (float64[:], float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nancov(a1, a2, alpha, min_weight, out):
-    N = len(a1)
+def move_exp_nancov(a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T) -> None:
+    N: int = len(a1)
 
     # sum_x1: decayed sum of the sequence values for a1.
     # sum_x2: decayed sum of the sequence values for a2.
@@ -274,8 +279,10 @@ def move_exp_nancov(a1, a2, alpha, min_weight, out):
         (float64[:], float64[:], float64[:], float64, float64[:]),
     ]
 )
-def move_exp_nancorr(a1, a2, alpha, min_weight, out):
-    N = len(a1)
+def move_exp_nancorr(
+    a1: T, a2: T, alpha: FloatArray, min_weight: float, out: T
+) -> None:
+    N: int = len(a1)
 
     sum_x1 = sum_x2 = sum_x1x2 = sum_weight = sum_weight_2 = 0
     weight = sum_x1_2 = sum_x2_2 = 0

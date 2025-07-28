@@ -246,6 +246,6 @@ def test_nanquantile_no_valid_obs():
 
 
 def test_wraps():
-    assert move_exp_nanmean.__name__ == "move_exp_nanmean"  # type: ignore
+    assert move_exp_nanmean.__name__ == "move_exp_nanmean"
     assert move_exp_nanmean.__repr__() == "numbagg.move_exp_nanmean"
     assert "Exponentially" in move_exp_nanmean.__doc__  # type: ignore

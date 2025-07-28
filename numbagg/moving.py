@@ -1,13 +1,18 @@
+from typing import TypeVar
+
 import numpy as np
 from numba import float32, float64, int64
 
 from .decorators import ndmove
+from .utils import FloatArray
+
+T = TypeVar("T", bound=FloatArray)
 
 
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_mean(a, window, min_count, out):
+def move_mean(a: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     count = 0
     min_count = max(min_count, 1)
@@ -26,8 +31,8 @@ def move_mean(a, window, min_count, out):
         ai = a[i]
         aold = a[i - window]
 
-        ai_valid = not np.isnan(ai)
-        aold_valid = not np.isnan(aold)
+        ai_valid: bool = not np.isnan(ai)
+        aold_valid: bool = not np.isnan(aold)
 
         # We previously had a single operation where both variables are valid, but it
         # caused some numerical instability for float32 values. For example the
@@ -53,7 +58,7 @@ def move_mean(a, window, min_count, out):
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_sum(a, window, min_count, out):
+def move_sum(a: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     count = 0
 
@@ -71,8 +76,8 @@ def move_sum(a, window, min_count, out):
         ai = a[i]
         aold = a[i - window]
 
-        ai_valid = not np.isnan(ai)
-        aold_valid = not np.isnan(aold)
+        ai_valid: bool = not np.isnan(ai)
+        aold_valid: bool = not np.isnan(aold)
 
         # Similar to the comment in `move_mean`, we previously had a single operation if
         # both were valid. That causes numerical instability for float32 values with a
@@ -118,7 +123,7 @@ def move_sum(a, window, min_count, out):
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_std(a, window, min_count, out):
+def move_std(a: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     asum_sq = 0.0
     count = 0
@@ -149,7 +154,7 @@ def move_std(a, window, min_count, out):
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_var(a, window, min_count, out):
+def move_var(a: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     asum_sq = 0.0
     count = 0
@@ -182,7 +187,7 @@ def move_var(a, window, min_count, out):
         (float64[:], float64[:], int64, int64, float64[:]),
     ]
 )
-def move_cov(a, b, window, min_count, out):
+def move_cov(a: T, b: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     bsum = 0.0
     prodsum = (
@@ -221,7 +226,7 @@ def move_cov(a, b, window, min_count, out):
         (float64[:], float64[:], int64, int64, float64[:]),
     ]
 )
-def move_corr(a, b, window, min_count, out):
+def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
     asum = 0.0
     bsum = 0.0
     prodsum = 0.0
