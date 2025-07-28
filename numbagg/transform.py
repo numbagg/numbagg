@@ -47,7 +47,7 @@ def _apply_ast_rewrite(
     ast.fix_missing_locations(tree)
     source = compile(tree, filename="<ast>", mode="exec")
 
-    scope: dict[str, object] = {}
+    scope: dict[str, Callable[P, R]] = {}
     exec(source, func.__globals__, scope)
     try:
         return scope[_TRANSFORMED_FUNC_NAME]

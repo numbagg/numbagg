@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from typing import overload
+from typing import TypeVar
 
 import numpy as np
-from numba import bool_, float32, float64, int32, int64  # type: ignore[import]
+from numba import bool_, float32, float64, int32, int64
 from numpy.typing import NDArray
 
 from numbagg.decorators import ndaggregate, ndfill, ndquantile, ndreduce
 
-from .utils import FloatArray, NumericArray, NumericScalar
+from .utils import FloatArray, NumericArray
+
+T = TypeVar("T", bound=NumericArray)
+F = TypeVar("F", bound=FloatArray)
 
 
 @ndaggregate.wrap(
@@ -49,7 +52,7 @@ def anynan(a: NumericArray, out: NumericArray) -> None:
         (float64[:], int64[:]),
     ]
 )
-def nancount[T: NumericArray](a: T, out: T) -> None:
+def nancount(a: T, out: T) -> None:
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
@@ -65,7 +68,7 @@ def nancount[T: NumericArray](a: T, out: T) -> None:
         (float64[:], float64[:]),
     ]
 )
-def nansum[T: NumericArray](a: T, out: T) -> None:
+def nansum(a, out):
     asum = a.dtype.type(0)
     for ai in a.flat:
         if not np.isnan(ai):
@@ -79,7 +82,7 @@ def nansum[T: NumericArray](a: T, out: T) -> None:
         (float64[:], float64[:]),
     ]
 )
-def nanmean[T: FloatArray](a: T, out: T) -> None:
+def nanmean(a, out):
     asum = 0.0
     count = 0
     for ai in a.flat:
@@ -99,11 +102,7 @@ def nanmean[T: FloatArray](a: T, out: T) -> None:
     ],
     supports_ddof=True,
 )
-def nanvar[T: FloatArray](
-    a: T,
-    ddof: int,
-    out: T,
-) -> None:
+def nanvar(a: F, ddof: int, out: F) -> None:
     # Running two loops might seem inefficient, but it's 3x faster than a Welford's
     # algorithm. And if we don't compute the mean first, we get numerical instability
     # (which our tests capture so is easy to observe).
@@ -134,7 +133,7 @@ def nanvar[T: FloatArray](
     ],
     supports_ddof=True,
 )
-def nanstd[T: FloatArray](a: T, ddof: int, out: T) -> None:
+def nanstd(a: F, ddof: int, out: F) -> None:
     asum = 0
     count = 0
     for ai in a:
@@ -158,7 +157,7 @@ def nanstd[T: FloatArray](a: T, ddof: int, out: T) -> None:
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanargmax(a: NumericScalar) -> int:
+def nanargmax(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
     amax = -np.inf
@@ -179,7 +178,7 @@ def nanargmax(a: NumericScalar) -> int:
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanargmin(a: NumericScalar) -> int:
+def nanargmin(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
     amin = np.inf
@@ -198,7 +197,7 @@ def nanargmin(a: NumericScalar) -> int:
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanmax(a: NumericScalar):
+def nanmax(a):
     if not a.size:
         raise ValueError(
             "zero-size array to reduction operation fmax which has no identity"
@@ -220,7 +219,7 @@ def nanmax(a: NumericScalar):
     # https://github.com/numba/numba/issues/7350
     supports_parallel=False,
 )
-def nanmin(a: NumericScalar):
+def nanmin(a):
     if not a.size:
         raise ValueError(
             "zero-size array to reduction operation fmin which has no identity"
@@ -285,22 +284,8 @@ def nanquantile(
         out[i] = result
 
 
-@overload
-def bfill(
-    arr: NDArray[np.float64] | NDArray[np.int32] | NDArray[np.int64],
-    limit: int | None = None,
-    axis: int = -1,
-) -> NDArray[np.float64]: ...
-@overload
-def bfill(
-    arr: NDArray[np.float32],
-    limit: int | None = None,
-    axis: int = -1,
-) -> NDArray[np.float32]: ...
-
-
 @ndfill.wrap()
-def bfill[T: FloatArray](a: T, limit: int, out: T) -> None:
+def bfill(a: F, limit: int, out: F) -> None:
     lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
@@ -317,22 +302,8 @@ def bfill[T: FloatArray](a: T, limit: int, out: T) -> None:
         out[i] = current
 
 
-@overload
-def ffill(
-    arr: NDArray[np.float64] | NDArray[np.int32] | NDArray[np.int64],
-    limit: int | None = None,
-    axis: int = -1,
-) -> NDArray[np.float64]: ...
-@overload
-def ffill(
-    arr: NDArray[np.float32],
-    limit: int | None = None,
-    axis: int = -1,
-) -> NDArray[np.float32]: ...
-
-
 @ndfill.wrap()
-def ffill[T: FloatArray](a: T, limit: int, out: T) -> None:
+def ffill(a: F, limit: int, out: F) -> None:
     lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):

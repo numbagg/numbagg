@@ -1,55 +1,57 @@
-from numpy.typing import NDArray
+from typing import TypeVar
 
-from numbagg.utils import FloatArray, FloatScalar
+from numbagg.utils import FloatArray
 
-def move_exp_nancount[T: FloatArray](
+T = TypeVar("T", bound=FloatArray)
+
+def move_exp_nancount(
     arr: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
 ) -> T: ...
-def move_exp_nanmean[T: FloatArray](
+def move_exp_nanmean(
     arr: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
 ) -> T: ...
-def move_exp_nansum[T: FloatArray](
+def move_exp_nansum(
     arr: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
 ) -> T: ...
-def move_exp_nanvar[T: FloatArray](
+def move_exp_nanvar(
     arr: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
 ) -> T: ...
-def move_exp_nanstd[T: FloatArray](
+def move_exp_nanstd(
     arr: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
 ) -> T: ...
-def move_exp_nancov[T: FloatScalar](
-    a1: NDArray[T],
-    a2: NDArray[T],
+def move_exp_nancov(
+    a1: T,
+    a2: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-) -> NDArray[T]: ...
-def move_exp_nancorr[T: FloatScalar](
-    a1: NDArray[T],
-    a2: NDArray[T],
+) -> T: ...
+def move_exp_nancorr(
+    a1: T,
+    a2: T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-) -> NDArray[T]: ...
+) -> T: ...

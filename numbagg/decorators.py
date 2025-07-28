@@ -10,16 +10,14 @@ from collections.abc import Callable, Iterable
 from functools import cache, cached_property
 from typing import Any, Literal, TypeVar
 
-import numba  # type: ignore[import]
+import numba
 import numpy as np
-from numba.core.types import Type  # type: ignore[import]
-from numba.np.ufunc.gufunc import GUFunc  # type: ignore[import]
+from numba.core.types import Type
+from numba.np.ufunc.gufunc import GUFunc
 from numpy.typing import NDArray
 
 from numbagg.utils import (
     FloatArray,
-    GenericArray,
-    IntArray,
     NumbaTypes,
     NumericArray,
     Targets,
@@ -96,6 +94,7 @@ def gufunc_string_signature(
 
 
 T = TypeVar("T", bound="NumbaBase")
+A = TypeVar("A", bound=FloatArray)
 
 
 class NumbaBase:
@@ -388,14 +387,14 @@ class ndfill(NumbaBaseSimple):
     ) -> None:
         super().__init__(func, signature, **kwargs)
 
-    def __call__[T: FloatArray](
+    def __call__(
         self,
-        arr: T,
+        arr: A,
         *,
         limit: None | int = None,
         axis: int = -1,
         **kwargs,
-    ) -> T:
+    ) -> A:
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:
@@ -448,8 +447,8 @@ class groupndreduce(NumbaBase):
 
     def __call__(
         self,
-        values: GenericArray,
-        labels: IntArray,
+        values: NDArray[Any],
+        labels: NDArray[Any],
         *,
         ddof: int = 1,
         num_labels: int | None = None,
@@ -614,7 +613,7 @@ class ndquantile(NumbaBase):
             result = gufunc(a, quantiles, axes=axes, **kwargs)
 
         # numpy returns quantiles as the first axis, so we move ours to that position too
-        result: NDArray[np.float64] = np.moveaxis(result, -1, 0)
+        result = np.moveaxis(result, -1, 0)
         if squeeze:
             result = result.squeeze(axis=0)
 
@@ -738,7 +737,7 @@ class ndreduce(NumbaBase):
         return vectorize(self.transformed_func)
 
     def __call__(
-        self, arr: NumericArray, *args, axis: tuple[int, ...] | int | None = None
+        self, arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None
     ):
         # TODO: `nanmin` & `nanmix` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it

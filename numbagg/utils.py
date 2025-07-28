@@ -1,21 +1,23 @@
-from typing import Literal
+from typing import Literal, TypeAlias, TypeVar
 
 import numpy as np
-from numba.core.types import Type  # type: ignore[import]
+from numba.core.types import Type
 from numpy.typing import NDArray
 
 Targets = Literal["cpu", "parallel"]
-type NumbaTypes = tuple[Type, ...]
-type FloatScalar = np.float64 | np.float32
-type IntScalar = np.int64 | np.int32
-type NumericScalar = FloatScalar | IntScalar
-type IntArray = NDArray[np.int64] | NDArray[np.int32]
-type FloatArray = NDArray[np.float64] | NDArray[np.float32]
-type NumericArray = IntArray | FloatArray
-type GenericArray = NumericArray | NDArray[np.bool_]
+NumbaTypes: TypeAlias = tuple[Type, ...]
+FloatScalar: TypeAlias = np.float64 | np.float32
+IntScalar: TypeAlias = np.int64 | np.int32
+NumericScalar: TypeAlias = FloatScalar | IntScalar
+IntArray: TypeAlias = NDArray[np.int64] | NDArray[np.int32]
+FloatArray: TypeAlias = NDArray[np.float64] | NDArray[np.float32]
+NumericArray: TypeAlias = IntArray | FloatArray
+GenericArray: TypeAlias = NumericArray | NDArray[np.bool_]
+
+T = TypeVar("T", bound=NumericScalar)
 
 
-def move_axes[T: NumericScalar](arr: NDArray[T], axes: tuple[int, ...]) -> NDArray[T]:
+def move_axes(arr: NDArray[T], axes: tuple[int, ...]):
     """
     Move & reshape a tuple of axes to an array's final axis, handling zero-length axes.
     """
@@ -23,9 +25,7 @@ def move_axes[T: NumericScalar](arr: NDArray[T], axes: tuple[int, ...]) -> NDArr
     axes = tuple(a % arr.ndim for a in axes)
 
     # Move specified axes to the end
-    moved_arr: NDArray[T] = np.moveaxis(
-        arr, axes, range(arr.ndim - len(axes), arr.ndim)
-    )
+    moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))
     final_axis: Literal[0, -1] = 0 if 0 in arr.shape else -1
 
     # Calculate the new shape

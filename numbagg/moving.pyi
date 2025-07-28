@@ -1,6 +1,10 @@
+from typing import TypeVar
+
 from numbagg.utils import FloatArray
 
-def move_mean[T: FloatArray](
+T = TypeVar("T", bound=FloatArray)
+
+def move_mean(
     arr: T,
     /,
     *,
@@ -8,7 +12,7 @@ def move_mean[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-def move_sum[T: FloatArray](
+def move_sum(
     arr: T,
     /,
     *,
@@ -16,7 +20,7 @@ def move_sum[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-def move_std[T: FloatArray](
+def move_std(
     arr: T,
     /,
     *,
@@ -24,7 +28,7 @@ def move_std[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-def move_var[T: FloatArray](
+def move_var(
     arr: T,
     /,
     *,
@@ -32,7 +36,7 @@ def move_var[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-def move_cov[T: FloatArray](
+def move_cov(
     a: T,
     b: T,
     /,
@@ -41,7 +45,7 @@ def move_cov[T: FloatArray](
     min_count: int | None = None,
     axis: int = -1,
 ) -> T: ...
-def move_corr[T: FloatArray](
+def move_corr(
     a: T,
     b: T,
     /,
