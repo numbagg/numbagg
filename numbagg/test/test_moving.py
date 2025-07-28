@@ -50,7 +50,7 @@ def test_move_pandas_comp(array, func, window, min_count):
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
 def test_move_mean_window(array):
     with pytest.raises(TypeError):
-        move_mean(array, window=0.5) # type: ignore
+        move_mean(array, window=0.5)  # type: ignore
     with pytest.raises(ValueError):
         move_mean(array, window=-1)
     with pytest.raises(ValueError):

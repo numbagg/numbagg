@@ -19,7 +19,6 @@ from numpy.typing import NDArray
 from numbagg.utils import (
     FloatArray,
     NumbaTypes,
-    NumericArray,
     Targets,
     move_axes,
 )
