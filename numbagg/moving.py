@@ -273,3 +273,18 @@ def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
 
         else:
             out[i] = np.nan
+
+
+# Re-export matrix functions for backward compatibility
+from .moving_matrix import move_corrmatrix, move_covmatrix
+
+__all__ = [
+    "move_mean",
+    "move_sum",
+    "move_std",
+    "move_var",
+    "move_cov",
+    "move_corr",
+    "move_corrmatrix",
+    "move_covmatrix",
+]

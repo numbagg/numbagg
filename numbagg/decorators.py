@@ -555,6 +555,146 @@ class groupndreduce(NumbaBase):
         return result
 
 
+class ndmatrix(NumbaBase):
+    """
+    Decorator for functions that produce matrix outputs.
+
+    These functions take an array and produce a square matrix output
+    (e.g., correlation matrix, covariance matrix).
+
+    Broadcasting and Dimension Conventions:
+    - Core dimensions: `(n, m) -> (n, n)` where n=variables, m=observations
+    - Conceptual: The observations dimension (last) gets reduced through aggregation,
+      and an additional variables dimension is added at the end to form the n×n matrix
+    - Broadcasting: Works with arbitrary leading dimensions
+
+    Examples:
+    - 2D input `(3, 100)` -> output `(3, 3)`
+    - 3D input `(batch=2, vars=3, obs=100)` -> output `(2, 3, 3)`
+    - 4D input `(2, 5, 3, 100)` -> output `(2, 5, 3, 3)`
+
+    This provides an advantage over NumPy's `corrcoef`/`cov` which only
+    support 2D input. NumBagg functions broadcast over arbitrary leading dimensions,
+    allowing efficient computation on batched data.
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        **kwargs,
+    ):
+        # Require at least 2D input
+        if a.ndim < 2:
+            raise ValueError(
+                f"{self.func.__name__} requires at least a 2D array with shape (..., vars, obs). "
+                "For 1D arrays, use nanvar for variance calculations."
+            )
+
+        # Static matrix functions use fixed convention: (..., vars, obs) -> (..., vars, vars)
+        # No axis parameter - dimensions are fixed for consistency
+        # vars_axis=-2, obs_axis=-1 (obs gets reduced by gufunc)
+
+        gufunc = self.gufunc(target=self.target)
+        # axes specifies which axes contain the core dimensions
+        # For our signature "(vars,obs)->(vars,vars)":
+        # - Input has 2 core dims: second-to-last (vars) and last (obs)
+        # - Output has 2 core dims: last two dimensions (vars,vars)
+        result = gufunc(a, axes=[(-2, -1), (-2, -1)], **kwargs)
+
+        return result
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
+
+
+class ndmovematrix(NumbaBase):
+    """Create moving window matrix functions.
+
+    These functions take a 2D array and produce a 3D array of matrices
+    for each window position (e.g., moving correlation/covariance matrices).
+
+    Broadcasting and Dimension Conventions:
+    - Core dimensions: `(n, m), (), () -> (m, n, n)` where n=variables, m=observations
+    - Conceptual: The observations dimension is preserved and becomes the time axis,
+      with n×n variable matrices added at the end for each time point
+    - Broadcasting: Works with arbitrary leading dimensions
+
+    Examples:
+    - 2D input `(3, 100)` -> output `(100, 3, 3)` - matrix at each time
+    - 3D input `(batch=2, vars=3, obs=100)` -> output `(2, 100, 3, 3)`
+    - 4D input `(2, 5, 3, 100)` -> output `(2, 5, 100, 3, 3)`
+
+    Each time step contains a matrix computed from the rolling window ending at that time.
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        window: int,
+        min_count: int | None = None,
+        **kwargs,
+    ):
+        a = np.asarray(a)
+
+        if a.ndim < 2:
+            raise ValueError(
+                f"{self.func.__name__} requires at least a 2D array with shape (..., obs, vars)."
+            )
+
+        if min_count is None:
+            min_count = window
+        elif min_count < 0:
+            raise ValueError(f"min_count must be positive: {min_count}")
+
+        # Moving matrix functions use fixed convention: (..., obs, vars) -> (..., obs, vars, vars)
+        # No axis parameter - dimensions are fixed for consistency
+        # obs_axis=-2 (preserved as time dimension), vars_axis=-1 (duplicated to matrix dims)
+
+        # Check window size against observations dimension (second-to-last)
+        if not 0 < window <= a.shape[-2]:
+            raise ValueError(f"window not in valid range: {window}")
+
+        gufunc = self.gufunc(target=self.target)
+        return gufunc(a, window, min_count, **kwargs)
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
+
+
 class ndquantile(NumbaBase):
     def __init__(
         self,
@@ -761,6 +901,75 @@ class ndreduce(NumbaBase):
                 arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
                 f = self.gufunc(len(axis), target=self.target)
             return f(arr, *args)
+
+
+class ndmoveexpmatrix(NumbaBase):
+    """Create exponential moving window matrix functions.
+
+    These functions take a 2D array and produce a 3D array of matrices
+    for each time position using exponential decay (e.g., moving correlation/covariance matrices).
+
+    Broadcasting and Dimension Conventions:
+    - Core dimensions: `(n, m), (m), () -> (m, n, n)` where n=variables, m=observations
+    - Conceptual: The observations dimension is preserved and becomes the time axis,
+      with n×n variable matrices added at the end for each time point
+    - Broadcasting: Works with arbitrary leading dimensions
+    - Alpha parameter: Supports scalar or array broadcasting
+
+    Examples:
+    - 2D input `(3, 100)` -> output `(100, 3, 3)` - matrix at each time
+    - 3D input `(batch=2, vars=3, obs=100)` -> output `(2, 100, 3, 3)`
+    - 4D input `(2, 5, 3, 100)` -> output `(2, 5, 100, 3, 3)`
+
+    Each time step contains a matrix computed using exponentially weighted observations
+    up to that time, with more recent observations having higher weight.
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        signature: tuple[list[tuple], str],
+        **kwargs,
+    ):
+        self.signature = signature
+        super().__init__(func, **kwargs)
+
+    def __call__(
+        self,
+        a: np.ndarray,
+        alpha: float | np.ndarray,
+        min_weight: float = 0,
+        **kwargs,
+    ):
+        a = np.asarray(a)
+
+        if a.ndim < 2:
+            raise ValueError(
+                f"{self.func.__name__} requires at least a 2D array with shape (..., obs, vars)."
+            )
+
+        # Exponential moving matrix functions use fixed convention: (..., obs, vars) -> (..., obs, vars, vars)
+        # No axis parameter - dimensions are fixed for consistency
+        # obs_axis=-2 (preserved as time dimension), vars_axis=-1 (duplicated to matrix dims)
+
+        # Handle alpha parameter - broadcast to observations dimension (second-to-last)
+        if not isinstance(alpha, np.ndarray):
+            alpha = np.broadcast_to(alpha, a.shape[-2])  # type: ignore[assignment,unused-ignore]
+
+        gufunc = self.gufunc(target=self.target)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return gufunc(a, alpha, min_weight, **kwargs)
+
+    @cache
+    def gufunc(self, *, target):
+        vectorize = numba.guvectorize(
+            *self.signature,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+        return vectorize(self.func)
 
 
 def _is_in_unsafe_thread_pool() -> bool:

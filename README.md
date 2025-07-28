@@ -27,8 +27,7 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 
 - More functions (though bottleneck has some functions we don't have, and pandas' functions
   have many more parameters)
-- Functions work for >3 dimensions. All functions take an arbitrary axis or
-  tuple of axes to calculate over
+- Functions work for >3 dimensions with flexible axis handling (see [Axis Parameter Behavior](#axis-parameter-behavior) below)
 - Written in numba — way less code, simple to inspect, simple to improve
 
 ## Functions & benchmarks
@@ -36,7 +35,7 @@ ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html)
 ### Summary benchmark
 
 Two benchmarks summarize numbagg's performance — the first with a 1D array of 10M elements without
-parallelization, and a second with a 2D array of 100x10K elements with parallelization. Numbagg's relative
+parallelization, and a second with a 2D array of 100x10K elements with parallelization[^6]. Numbagg's relative
 performance is much higher where parallelization is possible. A wider range of arrays is
 listed in the full set of benchmarks below.
 
@@ -281,7 +280,7 @@ higher means numbagg is faster.)
 
 </details>
 
-[^1][^2][^3][^4]
+[^1][^2][^3][^4][^5][^6]
 
 [^1]:
     Benchmarks were run on a Mac M3 Max laptop in September 2024 on numbagg's HEAD,
@@ -312,6 +311,75 @@ numbagg/test/run_benchmarks.py -- --benchmark-max-time=10`. They run in CI,
     This function is not currently parallelized, so exhibits worse performance
     on parallelizable arrays.
 
+[^6]:
+    Matrix functions (correlation/covariance matrices) use different array shapes
+    in the summary benchmark: their **largest 2D shape** appears in the 1D column
+    and their **largest 3D shape** appears in the 2D column to demonstrate
+    parallelization across multiple independent matrices.
+
+## Axis parameter behavior
+
+The `axis` parameter in numbagg has three different behaviors depending on the function type:
+
+### Aggregation functions
+
+Includes: `nanmean`, `nansum`, `nanstd`, `nanvar`, `nanmin`, `nanmax`, `nancount`, `nanargmin`, `nanargmax`, `nanquantile`, `allnan`, `anynan`
+
+- Specify dimensions to reduce/aggregate over
+- Support multiple axes, e.g. `axis=(0, 1)`
+- Remove the specified dimensions from output shape
+
+```python
+# Example with 3D array
+arr = np.random.rand(4, 3, 5)
+result = nb.nanmean(arr, axis=(0, 2))  # Reduces over dimensions 0 and 2
+# result.shape is (3,)
+```
+
+### Moving window functions
+
+Includes: `move_mean`, `move_sum`, `move_std`, `move_var`, `move_corr`, `move_cov`, and exponential variants like `move_exp_nanmean`
+
+- Specify the dimension along which the window moves
+- Single axis only
+- Preserve input shape
+
+```python
+# Moving average along axis 1
+arr = np.random.rand(4, 3, 5)
+result = nb.move_mean(arr, window=2, axis=1)
+# result.shape is (4, 3, 5) - same as input
+```
+
+### Grouped functions
+
+Includes: `group_nanmean`, `group_nansum`, `group_nanstd`, `group_nanvar`, `group_nanmin`, `group_nanmax`, and others
+
+- Specify dimension along which groups are defined
+- Single axis only
+- Group consecutive identical labels along the axis
+
+```python
+# Group operations along axis 0
+arr = np.random.rand(4, 3, 5)
+labels = np.array([0, 0, 1, 1])  # Groups for axis 0
+result = nb.group_nanmean(arr, labels, axis=0)
+# result.shape is (2, 3, 5) - 2 groups along axis 0
+```
+
+Aggregation functions are compatible with NumPy's axis parameter behavior, while moving window and grouped functions provide functionality not available in NumPy.
+
+### Matrix functions
+
+Includes: `nancorrmatrix`, `nancovmatrix` (static), and `move_corrmatrix`, `move_covmatrix`, `move_exp_nancorrmatrix`, `move_exp_nancovmatrix` (moving)
+
+Matrix functions use different dimension conventions:
+
+- **Static matrix functions** (`nancorrmatrix`, `nancovmatrix`): expect `(..., vars, obs)` → `(..., vars, vars)`
+- **Moving matrix functions** (`move_corrmatrix`, `move_covmatrix`, `move_exp_nancorrmatrix`, `move_exp_nancovmatrix`): expect `(..., obs, vars)` → `(..., obs, vars, vars)`
+
+The different conventions follow a simple principle: dimensions should only be added or removed at the end of the array shape. Static functions both remove (the `obs` dimension) and add (a second `vars` dimension), so they need `obs` at the end. Moving functions only add (a second `vars` dimension), so they can keep the natural time-series ordering with `obs` before `vars`.
+
 ## Example implementation
 
 Numbagg makes it easy to write, in pure Python/NumPy, flexible aggregation
@@ -323,6 +391,7 @@ For example, here is how we wrote `nansum`:
 ```python
 import numpy as np
 from numbagg.decorators import ndreduce
+
 
 @ndreduce.wrap()
 def nansum(a):

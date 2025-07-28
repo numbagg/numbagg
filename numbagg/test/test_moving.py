@@ -7,6 +7,8 @@ from numpy.testing import assert_allclose
 
 from numbagg import (
     MOVE_FUNCS,
+    move_corrmatrix,
+    move_covmatrix,
     move_mean,
     move_sum,
 )
@@ -28,6 +30,10 @@ def rs():
 @pytest.mark.parametrize("window", [10, 50])
 @pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
 def test_move_pandas_comp(array, func, window, min_count):
+    if func.__name__ in ["move_corrmatrix", "move_covmatrix"]:
+        pytest.skip(
+            "Matrix functions tested separately in test_move_matrix_pandas_comp"
+        )
     c = COMPARISONS[func]
 
     if min_count == "window":
@@ -45,6 +51,121 @@ def test_move_pandas_comp(array, func, window, min_count):
             array, window=window, min_count=min_count
         )()
         assert_allclose(result, expected_bottleneck)
+
+
+@pytest.mark.parametrize("func", [move_corrmatrix, move_covmatrix], indirect=True)
+@pytest.mark.parametrize(
+    "shape", [(5, 100)], indirect=True
+)  # (vars, obs) benchmark convention
+@pytest.mark.parametrize("window", [10, 30])
+@pytest.mark.parametrize("min_count", [None, "window"])
+def test_move_matrix_pandas_comp(array, func, window, min_count):
+    """Test matrix functions against pandas with various parameters."""
+    if array.ndim < 2:
+        pytest.skip("Matrix functions require at least 2D input")
+
+    c = COMPARISONS[func]
+
+    if min_count == "window":
+        min_count = window
+
+    # Get numbagg result
+    result = c["numbagg"](array, window=window, min_count=min_count)()
+
+    # Get pandas result - need to handle the different output format
+    pandas_callable = c["pandas"](array, window=window, min_count=min_count)
+    pandas_result = pandas_callable()
+
+    # Convert pandas MultiIndex DataFrame to 3D array for comparison
+    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
+    n_obs = result.shape[-3]  # obs dimension
+    n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
+    expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
+
+    # Only include windows where we have at least min_count observations
+    actual_min_count = min_count if min_count is not None else window
+    for t in range(n_obs):
+        # Check if we have enough observations in this window
+        window_size = min(t + 1, window)
+        if (
+            window_size >= actual_min_count
+            and t in pandas_result.index.get_level_values(0)
+        ):
+            expected_pandas[t] = pandas_result.loc[t].values
+
+    assert_allclose(result, expected_pandas)
+
+
+@pytest.mark.parametrize("func_name", ["move_corrmatrix", "move_covmatrix"])
+@pytest.mark.parametrize("window", [5])
+@pytest.mark.parametrize("min_count", [1, 2, 3, 4, 5])
+def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
+    """Test matrix functions against pandas with different min_count values."""
+    # Create test array directly in benchmark format (vars, obs)
+    rs = np.random.RandomState(0)
+    array = rs.rand(4, 15)  # (vars=4, obs=15)
+
+    # Get the function
+    func = move_corrmatrix if func_name == "move_corrmatrix" else move_covmatrix
+
+    # Get comparisons
+    c = COMPARISONS[func]
+
+    # Get numbagg result
+    result = c["numbagg"](array, window=window, min_count=min_count)()
+
+    # Get pandas result and convert to our format
+    pandas_callable = c["pandas"](array, window=window, min_count=min_count)
+    pandas_result = pandas_callable()
+
+    # Convert pandas MultiIndex DataFrame to 3D array
+    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
+    n_obs = result.shape[-3]  # obs dimension
+    n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
+    expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
+
+    for t in range(n_obs):
+        if t in pandas_result.index.get_level_values(0):
+            expected_pandas[t] = pandas_result.loc[t].values
+
+    assert_allclose(result, expected_pandas)
+
+
+@pytest.mark.parametrize("shape", [(5, 20)], indirect=True)
+@pytest.mark.parametrize("window", [5, 10])
+@pytest.mark.parametrize("min_count", [1, 3, 5, 10])
+def test_move_matrix_min_count(array, window, min_count):
+    """Test that matrix functions handle min_count correctly."""
+    # Transpose array for new (obs, vars) convention
+    array_T = array.T
+
+    # Test correlation matrix
+    result_corr = move_corrmatrix(array_T, window=window, min_count=min_count)
+
+    # Test covariance matrix
+    result_cov = move_covmatrix(array_T, window=window, min_count=min_count)
+
+    # Check that results are NaN where we don't have enough observations
+    n_obs = array_T.shape[0]  # obs dimension in (obs, vars) format
+
+    for t in range(n_obs):
+        window_size = min(t + 1, window)
+
+        if window_size < min_count:
+            # Should be all NaN when we don't have enough observations
+            assert np.all(np.isnan(result_corr[t])), (
+                f"Expected NaN at position {t} for correlation"
+            )
+            assert np.all(np.isnan(result_cov[t])), (
+                f"Expected NaN at position {t} for covariance"
+            )
+        else:
+            # Check correlation matrix properties when we have enough data
+            # Diagonal should be 1 for correlation (where not NaN)
+            diag_corr = np.diag(result_corr[t])
+            valid_diag = ~np.isnan(diag_corr)
+            if np.any(valid_diag):
+                assert_allclose(diag_corr[valid_diag], 1.0, rtol=1e-7)
 
 
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
@@ -93,7 +214,6 @@ def test_numerical_results_identical(func, func0):
         decimal = 5
     for i, a in enumerate(arrays(func_name)):
         if a.size >= 1_000:
-            print(f"{func_name}: skipping large array with shape {a.shape}")
             continue
         axes = range(-1, a.ndim)
         for axis in axes:

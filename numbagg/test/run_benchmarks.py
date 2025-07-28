@@ -45,7 +45,7 @@ def run(k_filter, run_tests, extra_args):
         )
 
     json = jq.compile(
-        r'.benchmarks[] | select(.name | index("test_benchmark_main[")) | .params + {group, library: .params.library, func: .params.func | match("\\[numbagg.(.*?)\\]").captures[0].string, time: .stats.median, }'
+        r'.benchmarks[] | select(.name | test("test_benchmark_(main|matrix)\\[")) | .params + {group, library: .params.library, func: .params.func | match("\\[numbagg.(.*?)\\]").captures[0].string, time: .stats.median, }'
     ).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())
@@ -79,7 +79,7 @@ def run(k_filter, run_tests, extra_args):
         .reset_index()
         .assign(
             func=lambda x: x["func"].map(
-                lambda x: f"`{x}`{'[^5]' if not getattr(numbagg, x).supports_parallel else ''}"
+                lambda func_name: f"`{func_name}`{'[^6]' if 'matrix' in func_name else '[^5]' if not getattr(numbagg, func_name).supports_parallel else ''}"
             )
         )
     )
@@ -110,46 +110,173 @@ def run(k_filter, run_tests, extra_args):
     ].rename_axis(columns=None)
 
     def make_summary_df(df, nd: int):
-        shape = df[lambda x: x["ndim"] == nd].sort_values(by="size")["shape"].iloc[-1]
+        """Create summary DataFrame for benchmark results.
 
-        return (
-            df.query(f"shape == '{shape}'")
-            .reset_index()
-            .set_index(["func", "shape"])
-            .unstack("shape")
-            .pipe(
-                lambda x: x[
-                    [
-                        c
-                        for c in x.columns
-                        if c[0].endswith("ratio") and c[0] not in ["numbagg_ratio"]
+        Matrix functions require special handling to appear in main summary columns:
+        - nd=1 (1D column): Use their LARGEST 2D matrix shape
+        - nd=2 (2D column): Use their LARGEST 3D matrix shape (demonstrates parallelization)
+
+        This allows matrix functions to demonstrate parallelization without separate columns.
+        """
+
+        def process_functions(func_df, target_ndim, source_df=None):
+            """Process a subset of functions with target dimensionality."""
+            if source_df is None:
+                source_df = func_df
+
+            filtered = func_df[lambda x: x["ndim"] == target_ndim]
+            if filtered.empty:
+                return None
+
+            # Use largest array shape for performance comparison
+            shape = filtered.sort_values(by="size")["shape"].iloc[-1]
+            return (
+                source_df.query(f"shape == '{shape}'")
+                .reset_index()
+                .set_index(["func", "shape"])
+                .unstack("shape")  # Pivot: functions as rows, shapes as columns
+                .pipe(
+                    lambda x: x[
+                        [
+                            c
+                            for c in x.columns
+                            if c[0].endswith("ratio") and c[0] not in ["numbagg_ratio"]
+                        ]
                     ]
-                ]
+                )
             )
-        )
 
+        # Split data by matrix vs non-matrix functions
+        matrix_df = df[df["func"].str.contains("matrix", na=False)]
+        non_matrix_df = df[~df["func"].str.contains("matrix", na=False)]
+
+        results = []
+
+        # Process non-matrix functions: use regular dimensionality (1D→1D, 2D→2D)
+        if not non_matrix_df.empty:
+            regular_result = process_functions(non_matrix_df, nd)
+            if regular_result is not None:
+                results.append(regular_result)
+
+        # Process matrix functions: use special dimensionality mapping
+        if not matrix_df.empty:
+            matrix_target_ndim = {1: 2, 2: 3}.get(nd)  # 1D→2D, 2D→3D
+            if matrix_target_ndim:
+                matrix_result = process_functions(
+                    matrix_df, matrix_target_ndim, matrix_df
+                )
+                if matrix_result is not None:
+                    results.append(matrix_result)
+
+        # Combine all results into single DataFrame
+        return pd.concat(results, axis=0) if results else pd.DataFrame()
+
+    def get_column_value(summary_df, func, lib, dimension, matrix_shape_exclusions):
+        """Extract column value for a function/library pair with matrix function handling."""
+        matching_cols = [
+            col for col in summary_df.columns if col[0].removesuffix("_ratio") == lib
+        ]
+
+        if not matching_cols or func not in summary_df.index:
+            return "n/a"
+
+        # For matrix functions, try to find matrix-specific column first
+        value = None
+        if "matrix" in func:
+            matrix_cols = [
+                col
+                for col in matching_cols
+                if not any(exclusion in col[1] for exclusion in matrix_shape_exclusions)
+            ]
+            if matrix_cols:
+                value = summary_df.loc[func, matrix_cols[0]]
+
+        # Fallback to first column if no matrix-specific column found
+        if value is None:
+            value = summary_df.loc[func, matching_cols[0]]
+
+        return value if not pd.isna(value) else "n/a"
+
+    def process_dimension_data(
+        summary_df, func, dimension, all_libs, matrix_shape_exclusions
+    ):
+        """Process data for a single dimension (1D or 2D) for a specific function."""
+        if summary_df.empty:
+            return {f"{dimension}_{lib}": "n/a" for lib in all_libs}
+
+        return {
+            f"{dimension}_{lib}": get_column_value(
+                summary_df, func, lib, dimension, matrix_shape_exclusions
+            )
+            for lib in all_libs
+        }
+
+    # Create summaries including matrix functions in main 1D/2D columns
     summary_1d = make_summary_df(df, 1)
     summary_2d = make_summary_df(df, 2)
-    summary = pd.concat([summary_1d, summary_2d], axis=1).fillna("n/a")
-    summary = summary.reset_index()
 
-    values = summary.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
-    summary_markdown = tabulate(
-        values,
-        headers=["func"]
-        + [
-            # Kinda a horrible expression; we're converting the string to a tuple with
-            # `eval` and then formatting its elements as scientific notation.
-            # f"`({', '.join(f'{s:.0e}' for s in eval(c[1]))})`<br>{c[0].removesuffix('_ratio')}".replace(
-            #     "e+0", "e"
-            # )
-            f"{len(eval(c[1]))}D<br>{c[0].removesuffix('_ratio')}".replace("e+0", "e")
-            for c in summary.columns[1:]
-        ],
-        disable_numparse=True,
-        colalign=["left"] + ["right"] * (len(summary.columns) - 1),
-        tablefmt="pipe",
-    )
+    # Matrix function shape exclusion patterns
+    matrix_exclusions = {"1D": ["(10000000,)"], "2D": ["(100, 100000)"]}
+
+    # Combine summaries properly - reorganize to have 1D/2D structure
+    if summary_1d.empty and summary_2d.empty:
+        summary = pd.DataFrame()
+    else:
+        # Extract unique libraries and functions
+        libs_1d = (
+            set(col[0].removesuffix("_ratio") for col in summary_1d.columns)
+            if not summary_1d.empty
+            else set()
+        )
+        libs_2d = (
+            set(col[0].removesuffix("_ratio") for col in summary_2d.columns)
+            if not summary_2d.empty
+            else set()
+        )
+        all_libs = sorted(libs_1d | libs_2d)
+        all_functions = set(summary_1d.index if not summary_1d.empty else []) | set(
+            summary_2d.index if not summary_2d.empty else []
+        )
+
+        # Create properly structured summary
+        summary_data = []
+        for func in all_functions:
+            row = {"func": func}
+
+            # Process 1D and 2D dimensions
+            for dim, summary_df, exclusions in [
+                ("1D", summary_1d, matrix_exclusions["1D"]),
+                ("2D", summary_2d, matrix_exclusions["2D"]),
+            ]:
+                dim_data = process_dimension_data(
+                    summary_df, func, dim, all_libs, exclusions
+                )
+                row.update(dim_data)
+
+            summary_data.append(row)
+
+        summary = pd.DataFrame(summary_data).set_index("func")
+
+    if not summary.empty:
+        summary = summary.reset_index()
+        values = summary.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
+
+        # Generate headers from the new column structure (1D_pandas, 2D_pandas, etc.)
+        headers = ["func"]
+        for col in summary.columns[1:]:
+            # Column names are like "1D_pandas", "2D_numpy"
+            dimension, library = col.split("_", 1)
+            headers.append(f"{dimension}<br>{library}")
+
+        summary_markdown = tabulate(
+            values,
+            headers=headers,
+            disable_numparse=True,
+            colalign=["left"] + ["right"] * (len(summary.columns) - 1),
+            tablefmt="pipe",
+        )
+    else:
+        summary_markdown = "No benchmark data available for summary."
 
     full = df.assign(
         func=lambda x: x.reset_index()["func"].where(lambda x: ~x.duplicated(), "")
@@ -167,7 +294,7 @@ def run(k_filter, run_tests, extra_args):
 ### Summary benchmark
 
 Two benchmarks summarize numbagg's performance — the first with a 1D array of 10M elements without
-parallelization, and a second with a 2D array of 100x10K elements with parallelization. Numbagg's relative
+parallelization, and a second with a 2D array of 100x10K elements with parallelization[^6]. Numbagg's relative
 performance is much higher where parallelization is possible. A wider range of arrays is
 listed in the full set of benchmarks below.
 
@@ -197,7 +324,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-k",
         "--filter",
-        default="test_benchmark_main",
+        default="test_benchmark_main or test_benchmark_matrix",
         help="Filter for pytest -k option; for example `test_benchmark_main and group_nanmean and numbagg`",
     )
     parser.add_argument(

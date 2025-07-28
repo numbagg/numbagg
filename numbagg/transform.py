@@ -72,6 +72,9 @@ class _NDReduceTransformer(ast.NodeTransformer):
             args=arguments,
             body=node.body,
             decorator_list=[],
+            returns=None,
+            type_comment=None,
+            type_params=[],
         )
         return self.generic_visit(function_def)
 

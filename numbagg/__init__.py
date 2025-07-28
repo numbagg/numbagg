@@ -8,7 +8,9 @@ from .funcs import (
     ffill,
     nanargmax,
     nanargmin,
+    nancorrmatrix,
     nancount,
+    nancovmatrix,
     nanmax,
     nanmean,
     nanmedian,
@@ -35,7 +37,14 @@ from .grouped import (
     group_nansum_of_squares,
     group_nanvar,
 )
-from .moving import move_corr, move_cov, move_mean, move_std, move_sum, move_var
+from .moving import (
+    move_corr,
+    move_cov,
+    move_mean,
+    move_std,
+    move_sum,
+    move_var,
+)
 from .moving_exp import (
     move_exp_nancorr,
     move_exp_nancount,
@@ -44,6 +53,12 @@ from .moving_exp import (
     move_exp_nanstd,
     move_exp_nansum,
     move_exp_nanvar,
+)
+from .moving_matrix import (
+    move_corrmatrix,
+    move_covmatrix,
+    move_exp_nancorrmatrix,
+    move_exp_nancovmatrix,
 )
 
 GROUPED_FUNCS = [
@@ -74,7 +89,21 @@ MOVE_EXP_FUNCS = [
     move_exp_nanvar,
 ]
 
-MOVE_FUNCS = [move_corr, move_cov, move_mean, move_std, move_sum, move_var]
+MOVE_EXP_MATRIX_FUNCS = [
+    move_exp_nancorrmatrix,
+    move_exp_nancovmatrix,
+]
+
+MOVE_FUNCS = [
+    move_corr,
+    move_cov,
+    move_mean,
+    move_corrmatrix,
+    move_covmatrix,
+    move_std,
+    move_sum,
+    move_var,
+]
 
 AGGREGATION_FUNCS = [
     allnan,
@@ -92,6 +121,8 @@ AGGREGATION_FUNCS = [
     nansum,
     nanvar,
 ]
+
+MATRIX_FUNCS = [nancorrmatrix, nancovmatrix]
 
 OTHER_FUNCS = [bfill, ffill]
 
@@ -111,8 +142,10 @@ __all__ = [
     "count",
     # "move_count",
     "move_exp_nancorr",
+    "move_exp_nancorrmatrix",
     "move_exp_nancount",
     "move_exp_nancov",
+    "move_exp_nancovmatrix",
     "move_exp_nanmean",
     "move_exp_nanstd",
     "move_exp_nansum",
@@ -123,9 +156,13 @@ __all__ = [
     "move_cov",
     "move_corr",
     "move_sum",
+    "move_corrmatrix",
+    "move_covmatrix",
     "nanargmax",
     "nanargmin",
+    "nancorrmatrix",
     "nancount",
+    "nancovmatrix",
     "nanmax",
     "group_nanall",
     "group_nanany",
