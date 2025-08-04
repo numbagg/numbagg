@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 import numpy as np
 from numba import bool_, float32, float64, int32, int64
+from numpy.typing import NDArray
 
 from numbagg.decorators import ndaggregate, ndfill, ndmatrix, ndquantile, ndreduce
+
+from .utils import FloatArray, NumericArray
+
+T = TypeVar("T", bound=NumericArray)
+F = TypeVar("F", bound=FloatArray)
 
 
 @ndaggregate.wrap(
@@ -14,7 +22,7 @@ from numbagg.decorators import ndaggregate, ndfill, ndmatrix, ndquantile, ndredu
         (float64[:], bool_[:]),
     ]
 )
-def allnan(a, out):
+def allnan(a: NumericArray, out: NumericArray) -> None:
     for ai in a:
         if not np.isnan(ai):
             out[0] = False
@@ -29,7 +37,7 @@ def allnan(a, out):
         (float64[:], bool_[:]),
     ]
 )
-def anynan(a, out):
+def anynan(a: NumericArray, out: NumericArray) -> None:
     for ai in a.flat:
         if np.isnan(ai):
             out[0] = True
@@ -44,7 +52,7 @@ def anynan(a, out):
         (float64[:], int64[:]),
     ]
 )
-def nancount(a, out):
+def nancount(a: T, out: T) -> None:
     non_missing = 0
     for ai in a.flat:
         if not np.isnan(ai):
@@ -94,11 +102,7 @@ def nanmean(a, out):
     ],
     supports_ddof=True,
 )
-def nanvar(
-    a,
-    ddof,
-    out,
-):
+def nanvar(a: F, ddof: int, out: F) -> None:
     # Running two loops might seem inefficient, but it's 3x faster than a Welford's
     # algorithm. And if we don't compute the mean first, we get numerical instability
     # (which our tests capture so is easy to observe).
@@ -129,7 +133,7 @@ def nanvar(
     ],
     supports_ddof=True,
 )
-def nanstd(a, ddof, out):
+def nanstd(a: F, ddof: int, out: F) -> None:
     asum = 0
     count = 0
     for ai in a:
@@ -232,7 +236,9 @@ def nanmin(a):
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
-def nanquantile(arr: np.ndarray, quantile, out):
+def nanquantile(
+    arr: NDArray[np.float64], quantile: NDArray[np.float64], out: NDArray[np.float64]
+) -> None:
     nans = np.isnan(arr)
     valid_obs = arr.size - np.sum(nans)
 
@@ -279,7 +285,7 @@ def nanquantile(arr: np.ndarray, quantile, out):
 
 
 @ndfill.wrap()
-def bfill(a, limit, out):
+def bfill(a: F, limit: int, out: F) -> None:
     lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
@@ -297,7 +303,7 @@ def bfill(a, limit, out):
 
 
 @ndfill.wrap()
-def ffill(a, limit, out):
+def ffill(a: F, limit: int, out: F) -> None:
     lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):
@@ -314,7 +320,7 @@ def ffill(a, limit, out):
 count = nancount
 
 
-def nanmedian(a: np.ndarray, **kwargs):
+def nanmedian(a: NDArray[np.float64], **kwargs) -> NDArray[np.float64]:
     return nanquantile(a, quantiles=0.5, **kwargs)
 
 
@@ -324,7 +330,7 @@ def nanmedian(a: np.ndarray, **kwargs):
         "(n,m)->(n,n)",
     )
 )
-def nancorrmatrix(a, out):
+def nancorrmatrix(a: F, out: F) -> None:
     """
     Compute correlation matrix treating NaN as missing values.
 
@@ -454,7 +460,7 @@ def nancorrmatrix(a, out):
         "(n,m)->(n,n)",
     )
 )
-def nancovmatrix(a, out):
+def nancovmatrix(a: F, out: F) -> None:
     """
     Compute covariance matrix treating NaN as missing values.
 
