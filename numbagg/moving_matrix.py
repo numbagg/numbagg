@@ -256,16 +256,14 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
         decay = 1.0 - alpha_t
 
         # Apply exponential decay to all pairwise statistics
-        for i in range(n_vars):
-            for j in range(n_vars):
-                sums_i[i, j] *= decay
-                sums_j[i, j] *= decay
-                sums_sq_i[i, j] *= decay
-                sums_sq_j[i, j] *= decay
-                prods[i, j] *= decay
-                pair_weights[i, j] *= decay
-                pair_sum_weights[i, j] *= decay
-                pair_sum_weights_sq[i, j] *= decay**2
+        sums_i *= decay
+        sums_j *= decay
+        sums_sq_i *= decay
+        sums_sq_j *= decay
+        prods *= decay
+        pair_weights *= decay
+        pair_sum_weights *= decay
+        pair_sum_weights_sq *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
@@ -376,14 +374,12 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
         decay = 1.0 - alpha_t
 
         # Apply exponential decay to all pairwise statistics
-        for i in range(n_vars):
-            for j in range(n_vars):
-                sums_i[i, j] *= decay
-                sums_j[i, j] *= decay
-                prods[i, j] *= decay
-                pair_weights[i, j] *= decay
-                pair_sum_weights[i, j] *= decay
-                pair_sum_weights_sq[i, j] *= decay**2
+        sums_i *= decay
+        sums_j *= decay
+        prods *= decay
+        pair_weights *= decay
+        pair_sum_weights *= decay
+        pair_sum_weights_sq *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
