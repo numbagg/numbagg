@@ -389,7 +389,7 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
             new_val_i = a[t, i]
             if np.isnan(new_val_i):
                 continue
-            
+
             for j in range(n_vars):
                 new_val_j = a[t, j]
                 if np.isnan(new_val_j):
