@@ -206,6 +206,11 @@ class ndaggregate(NumbaBaseSimple):
             axis = tuple(range(arrays[0].ndim))
         elif not isinstance(axis, Iterable):
             axis = (axis,)
+        
+        # sorting the axis ensures that the performance is consistent
+        # regardless of the input order. Assumes c-ordered arrays since
+        # that is all numba supports
+        axis = tuple(sorted(axis))
 
         if not all(isinstance(a, np.ndarray) for a in arrays):
             raise TypeError(
