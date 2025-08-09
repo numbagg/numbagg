@@ -256,34 +256,35 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
         decay = 1.0 - alpha_t
 
         # Apply exponential decay to all pairwise statistics
-        for i in range(n_vars):
-            for j in range(n_vars):
-                sums_i[i, j] *= decay
-                sums_j[i, j] *= decay
-                sums_sq_i[i, j] *= decay
-                sums_sq_j[i, j] *= decay
-                prods[i, j] *= decay
-                pair_weights[i, j] *= decay
-                pair_sum_weights[i, j] *= decay
-                pair_sum_weights_sq[i, j] *= decay**2
+        sums_i *= decay
+        sums_j *= decay
+        sums_sq_i *= decay
+        sums_sq_j *= decay
+        prods *= decay
+        pair_weights *= decay
+        pair_sum_weights *= decay
+        pair_sum_weights_sq *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            for j in range(n_vars):
-                new_val_i = a[t, i]
-                new_val_j = a[t, j]
+            new_val_i = a[t, i]
+            if np.isnan(new_val_i):
+                continue
 
-                # Only update if BOTH values are non-NaN (consistent with non-matrix functions)
-                if not (np.isnan(new_val_i) or np.isnan(new_val_j)):
-                    # Update pairwise statistics
-                    sums_i[i, j] += new_val_i
-                    sums_j[i, j] += new_val_j
-                    sums_sq_i[i, j] += new_val_i * new_val_i
-                    sums_sq_j[i, j] += new_val_j * new_val_j
-                    prods[i, j] += new_val_i * new_val_j
-                    pair_weights[i, j] += alpha_t
-                    pair_sum_weights[i, j] += 1.0
-                    pair_sum_weights_sq[i, j] += 1.0
+            for j in range(n_vars):
+                new_val_j = a[t, j]
+                if np.isnan(new_val_j):
+                    continue
+
+                # Only update pairwise statistics if BOTH values are non-NaN (consistent with non-matrix functions)
+                sums_i[i, j] += new_val_i
+                sums_j[i, j] += new_val_j
+                sums_sq_i[i, j] += new_val_i * new_val_i
+                sums_sq_j[i, j] += new_val_j * new_val_j
+                prods[i, j] += new_val_i * new_val_j
+                pair_weights[i, j] += alpha_t
+                pair_sum_weights[i, j] += 1.0
+                pair_sum_weights_sq[i, j] += 1.0
 
         # Compute correlation matrix for current time step
         for i in range(n_vars):
@@ -376,30 +377,31 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
         decay = 1.0 - alpha_t
 
         # Apply exponential decay to all pairwise statistics
-        for i in range(n_vars):
-            for j in range(n_vars):
-                sums_i[i, j] *= decay
-                sums_j[i, j] *= decay
-                prods[i, j] *= decay
-                pair_weights[i, j] *= decay
-                pair_sum_weights[i, j] *= decay
-                pair_sum_weights_sq[i, j] *= decay**2
+        sums_i *= decay
+        sums_j *= decay
+        prods *= decay
+        pair_weights *= decay
+        pair_sum_weights *= decay
+        pair_sum_weights_sq *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            for j in range(n_vars):
-                new_val_i = a[t, i]
-                new_val_j = a[t, j]
+            new_val_i = a[t, i]
+            if np.isnan(new_val_i):
+                continue
 
-                # Only update if BOTH values are non-NaN (consistent with non-matrix functions)
-                if not (np.isnan(new_val_i) or np.isnan(new_val_j)):
-                    # Update pairwise statistics
-                    sums_i[i, j] += new_val_i
-                    sums_j[i, j] += new_val_j
-                    prods[i, j] += new_val_i * new_val_j
-                    pair_weights[i, j] += alpha_t
-                    pair_sum_weights[i, j] += 1.0
-                    pair_sum_weights_sq[i, j] += 1.0
+            for j in range(n_vars):
+                new_val_j = a[t, j]
+                if np.isnan(new_val_j):
+                    continue
+
+                # Only update pairwise statistics if BOTH values are non-NaN (consistent with non-matrix functions)
+                sums_i[i, j] += new_val_i
+                sums_j[i, j] += new_val_j
+                prods[i, j] += new_val_i * new_val_j
+                pair_weights[i, j] += alpha_t
+                pair_sum_weights[i, j] += 1.0
+                pair_sum_weights_sq[i, j] += 1.0
 
         # Compute covariance matrix for current time step
         for i in range(n_vars):
