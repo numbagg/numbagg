@@ -196,6 +196,26 @@ class ndaggregate(NumbaBaseSimple):
         self.supports_ddof: bool = supports_ddof
         super().__init__(func, signature, supports_parallel)
 
+    def _optimize_axis_order(
+        self, arr: np.ndarray, axes: tuple[int, ...]
+    ) -> tuple[int, ...]:
+        """
+        Optimize the order of axes to reduce for better memory access patterns.
+
+        Uses stride-based ordering which works for all array layouts:
+        C-contiguous, F-contiguous, transposed, sliced, or any view.
+        """
+        if len(axes) <= 1:
+            return axes
+
+        # Get strides for the specified axes
+        axis_strides = [arr.strides[ax] for ax in axes]
+
+        # Sort axes by stride size (largest first)
+        # Larger strides = bigger jumps in memory = process first for better cache usage
+        sorted_indices = np.argsort(axis_strides)[::-1]
+        return tuple(axes[i] for i in sorted_indices)
+
     def __call__(
         self,
         *arrays: FloatArray,
@@ -207,10 +227,8 @@ class ndaggregate(NumbaBaseSimple):
         elif not isinstance(axis, Iterable):
             axis = (axis,)
 
-        # sorting the axis ensures that the performance is consistent
-        # regardless of the input order. Assumes c-ordered arrays since
-        # that is all numba supports
-        axis = tuple(sorted(axis))
+        # Optimize axis order based on memory layout for better performance
+        axis = self._optimize_axis_order(arrays[0], axis)
 
         if not all(isinstance(a, np.ndarray) for a in arrays):
             raise TypeError(
