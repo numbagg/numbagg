@@ -35,7 +35,9 @@ def arrays_2d():
     # Group 1: Same memory access pattern
     # C(1500,2500) has same pattern as F(2500,1500)
     c_1500x2500 = np.ascontiguousarray(data_1500x2500)  # C-ordered (1500, 2500)
-    f_2500x1500 = np.asfortranarray(data_1500x2500.T)  # F-ordered (2500, 1500) - transposed!
+    f_2500x1500 = np.asfortranarray(
+        data_1500x2500.T
+    )  # F-ordered (2500, 1500) - transposed!
 
     # Group 2: Same memory access pattern
     # C(2500,1500) has same pattern as F(1500,2500)
