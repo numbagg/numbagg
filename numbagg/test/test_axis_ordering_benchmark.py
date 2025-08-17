@@ -1,7 +1,15 @@
-"""Benchmarks for axis ordering performance with C and F contiguous arrays.
+"""Benchmark showing axis ordering optimization for same memory access patterns.
 
-Run this benchmark with:
+This benchmark demonstrates that arrays with the same fundamental memory access
+pattern have similar performance after optimization, regardless of:
+1. Whether they're C or F ordered
+2. How the axes are specified (0,1) vs (1,0)
 
+Key insight: C(300,500) and F(500,300) have the same memory access pattern!
+- C(300,500): 300 blocks of 500 contiguous elements
+- F(500,300): 500 blocks of 300 contiguous elements (same pattern!)
+
+Run this benchmark:
     uv run pytest numbagg/test/test_axis_ordering_benchmark.py -m slow --benchmark-enable --benchmark-only --benchmark-group-by=group --benchmark-columns=mean -q
 """
 
@@ -13,119 +21,104 @@ from .. import nansum
 pytestmark = pytest.mark.slow
 
 
+@pytest.fixture(scope="module")
+def arrays_2d():
+    """Create 2D arrays with equivalent memory access patterns."""
+    np.random.seed(42)
+
+    # Create base data
+    data_300x500 = np.random.rand(300, 500)
+    mask = np.random.rand(300, 500) > 0.9
+    data_300x500[mask] = np.nan
+
+    # Group 1: Same memory access pattern
+    # C(300,500) has same pattern as F(500,300)
+    c_300x500 = np.ascontiguousarray(data_300x500)  # C-ordered (300, 500)
+    f_500x300 = np.asfortranarray(data_300x500.T)  # F-ordered (500, 300) - transposed!
+
+    # Group 2: Same memory access pattern
+    # C(500,300) has same pattern as F(300,500)
+    c_500x300 = np.ascontiguousarray(data_300x500.T)  # C-ordered (500, 300)
+    f_300x500 = np.asfortranarray(data_300x500)  # F-ordered (300, 500)
+
+    return {
+        "C_300x500": c_300x500,
+        "F_500x300": f_500x300,
+        "C_500x300": c_500x300,
+        "F_300x500": f_300x500,
+    }
+
+
 @pytest.fixture(
     params=[
-        # All same size (200x200x200) - only varying C/F and axis ordering
-        # Single axis reductions
-        ((200, 200, 200), 0, "C"),
-        ((200, 200, 200), 0, "F"),
-        ((200, 200, 200), 1, "C"),
-        ((200, 200, 200), 1, "F"),
-        ((200, 200, 200), 2, "C"),
-        ((200, 200, 200), 2, "F"),
-        # Multi-axis reductions - sorted order
-        ((200, 200, 200), (0, 1), "C"),
-        ((200, 200, 200), (0, 1), "F"),
-        ((200, 200, 200), (0, 2), "C"),
-        ((200, 200, 200), (0, 2), "F"),
-        ((200, 200, 200), (1, 2), "C"),
-        ((200, 200, 200), (1, 2), "F"),
-        # Multi-axis reductions - unsorted order (to show effect of sorting)
-        ((200, 200, 200), (1, 0), "C"),
-        ((200, 200, 200), (1, 0), "F"),
-        ((200, 200, 200), (2, 0), "C"),
-        ((200, 200, 200), (2, 0), "F"),
-        ((200, 200, 200), (2, 1), "C"),
-        ((200, 200, 200), (2, 1), "F"),
+        # Group 1: C(300x500) and F(500x300) - same memory access pattern
+        ("C_300x500", (0, 1), "pattern1_C300x500_F500x300"),
+        ("C_300x500", (1, 0), "pattern1_C300x500_F500x300"),
+        ("F_500x300", (0, 1), "pattern1_C300x500_F500x300"),
+        ("F_500x300", (1, 0), "pattern1_C300x500_F500x300"),
+        # Group 2: C(500x300) and F(300x500) - same memory access pattern
+        ("C_500x300", (0, 1), "pattern2_C500x300_F300x500"),
+        ("C_500x300", (1, 0), "pattern2_C500x300_F300x500"),
+        ("F_300x500", (0, 1), "pattern2_C500x300_F300x500"),
+        ("F_300x500", (1, 0), "pattern2_C500x300_F300x500"),
     ]
 )
-def axis_config(request):
-    """Fixture providing (shape, axis, order) configurations."""
+def config_2d(request):
+    """Configuration: (array_key, axes, group_name)."""
     return request.param
-
-
-@pytest.fixture
-def axis_array(axis_config):
-    """Create array with specified shape and memory ordering."""
-    shape, axis, order = axis_config
-    np.random.seed(42)
-    arr = np.random.rand(*shape)
-    # Add some NaNs
-    mask = np.random.rand(*shape) > 0.9
-    arr[mask] = np.nan
-    # Ensure correct memory ordering
-    if order == "F":
-        arr = np.asfortranarray(arr)
-    else:
-        arr = np.ascontiguousarray(arr)
-    return arr, axis
 
 
 @pytest.mark.parametrize("func", [nansum])
 @pytest.mark.benchmark(warmup=True, warmup_iterations=1)
-def test_axis_ordering_performance(benchmark, func, axis_array):
-    """Benchmark aggregation functions with different axis orderings."""
-    arr, axis = axis_array
+def test_same_memory_pattern_performance(benchmark, func, arrays_2d, config_2d):
+    """Test that same memory access patterns have similar performance."""
+    array_key, axes, group = config_2d
+    arr = arrays_2d[array_key]
 
-    # Get memory ordering info for the benchmark group name
-    order = "F" if arr.flags["F_CONTIGUOUS"] else "C"
+    # Group by memory access pattern
+    benchmark.group = group
 
-    # Create groups based on the actual reduction being performed
-    # (what gets sorted internally will be the same)
-    axis_str = str(axis).replace(" ", "")  # Remove spaces for cleaner output
+    # Name shows specific configuration
+    benchmark.name = f"{array_key}_axes{axes}"
 
-    # Group by the number of axes being reduced (computational complexity)
-    if isinstance(axis, int):
-        benchmark.group = "reduce 1 axis (single)"
-        benchmark.name = f"{order}-order_axis{axis}"
-    else:
-        # Group by number of axes being reduced
-        num_axes = len(axis)
-        benchmark.group = f"reduce {num_axes} axes (multi)"
-        # Include the original axis order in the name
-        benchmark.name = f"{order}-order_axis{axis_str}"
+    # Run benchmark
+    result = benchmark(func, arr, axis=axes)
 
-    benchmark(func, arr, axis=axis)
+    # Verify all produce scalar (reducing all dimensions)
+    assert np.isscalar(result) or result.shape == ()
 
 
-@pytest.mark.skip(reason="Benchmark fixture can only be used once per test")
-@pytest.mark.parametrize(
-    "shape,axes_list",
-    [
-        # Test different orderings of the same axes
-        ((100, 100, 100), [(0, 1), (1, 0)]),
-        ((100, 100, 100), [(0, 2), (2, 0)]),
-        ((100, 100, 100), [(1, 2), (2, 1)]),
-        ((100, 100, 100), [(0, 1, 2), (2, 1, 0), (1, 0, 2)]),
-    ],
-)
-@pytest.mark.parametrize("order", ["C", "F"])
-@pytest.mark.benchmark(warmup=True, warmup_iterations=1)
-def test_axis_order_consistency(benchmark, shape, axes_list, order):
-    """Test that different orderings of the same axes have similar performance."""
+def test_verify_same_results():
+    """Verify that all configurations produce the same numerical result."""
     np.random.seed(42)
-    arr = np.random.rand(*shape)
 
-    # Add some NaNs
-    mask = np.random.rand(*shape) > 0.9
-    arr[mask] = np.nan
+    # Create test data
+    data = np.random.rand(30, 50)
+    data[np.random.rand(30, 50) > 0.9] = np.nan
 
-    # Ensure correct memory ordering
-    if order == "F":
-        arr = np.asfortranarray(arr)
-    else:
-        arr = np.ascontiguousarray(arr)
+    # Create arrays with different layouts
+    c_30x50 = np.ascontiguousarray(data)
+    f_50x30 = np.asfortranarray(data.T)
+    c_50x30 = np.ascontiguousarray(data.T)
+    f_30x50 = np.asfortranarray(data)
 
-    # Run benchmark for each axis ordering
-    results = []
-    for axes in axes_list:
-        result = benchmark.pedantic(
-            nansum,
-            args=(arr,),
-            kwargs={"axis": axes},
-            rounds=10,
-            iterations=1,
-        )
-        results.append(result)
+    # All should produce the same result
+    result1 = nansum(c_30x50, axis=(0, 1))
+    result2 = nansum(c_30x50, axis=(1, 0))
+    result3 = nansum(f_50x30, axis=(0, 1))
+    result4 = nansum(f_50x30, axis=(1, 0))
+    result5 = nansum(c_50x30, axis=(0, 1))
+    result6 = nansum(c_50x30, axis=(1, 0))
+    result7 = nansum(f_30x50, axis=(0, 1))
+    result8 = nansum(f_30x50, axis=(1, 0))
 
-    benchmark.group = f"nansum|{shape}|axes={axes_list}|{order}"
+    # Check all equal
+    np.testing.assert_allclose(result1, result2)
+    np.testing.assert_allclose(result1, result3)
+    np.testing.assert_allclose(result1, result4)
+    np.testing.assert_allclose(result1, result5)
+    np.testing.assert_allclose(result1, result6)
+    np.testing.assert_allclose(result1, result7)
+    np.testing.assert_allclose(result1, result8)
+
+    print(f"✓ All configurations produce same result: {result1:.6f}")
