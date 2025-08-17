@@ -5,9 +5,9 @@ pattern have similar performance after optimization, regardless of:
 1. Whether they're C or F ordered
 2. How the axes are specified (0,1) vs (1,0)
 
-Key insight: C(300,500) and F(500,300) have the same memory access pattern!
-- C(300,500): 300 blocks of 500 contiguous elements
-- F(500,300): 500 blocks of 300 contiguous elements (same pattern!)
+Key insight: C(1500,2500) and F(2500,1500) have the same memory access pattern!
+- C(1500,2500): 1500 blocks of 2500 contiguous elements
+- F(2500,1500): 2500 blocks of 1500 contiguous elements (same pattern!)
 
 Run this benchmark:
     uv run pytest numbagg/test/test_axis_ordering_benchmark.py -m slow --benchmark-enable --benchmark-only --benchmark-group-by=group --benchmark-columns=mean -q
@@ -26,41 +26,42 @@ def arrays_2d():
     """Create 2D arrays with equivalent memory access patterns."""
     np.random.seed(42)
 
-    # Create base data
-    data_300x500 = np.random.rand(300, 500)
-    mask = np.random.rand(300, 500) > 0.9
-    data_300x500[mask] = np.nan
+    # Create base data - use larger arrays to see memory pattern differences
+    # 1500x2500 = 3.75M elements, shows differences while still being fast
+    data_1500x2500 = np.random.rand(1500, 2500)
+    mask = np.random.rand(1500, 2500) > 0.9
+    data_1500x2500[mask] = np.nan
 
     # Group 1: Same memory access pattern
-    # C(300,500) has same pattern as F(500,300)
-    c_300x500 = np.ascontiguousarray(data_300x500)  # C-ordered (300, 500)
-    f_500x300 = np.asfortranarray(data_300x500.T)  # F-ordered (500, 300) - transposed!
+    # C(1500,2500) has same pattern as F(2500,1500)
+    c_1500x2500 = np.ascontiguousarray(data_1500x2500)  # C-ordered (1500, 2500)
+    f_2500x1500 = np.asfortranarray(data_1500x2500.T)  # F-ordered (2500, 1500) - transposed!
 
     # Group 2: Same memory access pattern
-    # C(500,300) has same pattern as F(300,500)
-    c_500x300 = np.ascontiguousarray(data_300x500.T)  # C-ordered (500, 300)
-    f_300x500 = np.asfortranarray(data_300x500)  # F-ordered (300, 500)
+    # C(2500,1500) has same pattern as F(1500,2500)
+    c_2500x1500 = np.ascontiguousarray(data_1500x2500.T)  # C-ordered (2500, 1500)
+    f_1500x2500 = np.asfortranarray(data_1500x2500)  # F-ordered (1500, 2500)
 
     return {
-        "C_300x500": c_300x500,
-        "F_500x300": f_500x300,
-        "C_500x300": c_500x300,
-        "F_300x500": f_300x500,
+        "C_1500x2500": c_1500x2500,
+        "F_2500x1500": f_2500x1500,
+        "C_2500x1500": c_2500x1500,
+        "F_1500x2500": f_1500x2500,
     }
 
 
 @pytest.fixture(
     params=[
-        # Group 1: C(300x500) and F(500x300) - same memory access pattern
-        ("C_300x500", (0, 1), "pattern1_C300x500_F500x300"),
-        ("C_300x500", (1, 0), "pattern1_C300x500_F500x300"),
-        ("F_500x300", (0, 1), "pattern1_C300x500_F500x300"),
-        ("F_500x300", (1, 0), "pattern1_C300x500_F500x300"),
-        # Group 2: C(500x300) and F(300x500) - same memory access pattern
-        ("C_500x300", (0, 1), "pattern2_C500x300_F300x500"),
-        ("C_500x300", (1, 0), "pattern2_C500x300_F300x500"),
-        ("F_300x500", (0, 1), "pattern2_C500x300_F300x500"),
-        ("F_300x500", (1, 0), "pattern2_C500x300_F300x500"),
+        # Group 1: C(1500x2500) and F(2500x1500) - same memory access pattern
+        ("C_1500x2500", (0, 1), "pattern1_C1500x2500_F2500x1500"),
+        ("C_1500x2500", (1, 0), "pattern1_C1500x2500_F2500x1500"),
+        ("F_2500x1500", (0, 1), "pattern1_C1500x2500_F2500x1500"),
+        ("F_2500x1500", (1, 0), "pattern1_C1500x2500_F2500x1500"),
+        # Group 2: C(2500x1500) and F(1500x2500) - same memory access pattern
+        ("C_2500x1500", (0, 1), "pattern2_C2500x1500_F1500x2500"),
+        ("C_2500x1500", (1, 0), "pattern2_C2500x1500_F1500x2500"),
+        ("F_1500x2500", (0, 1), "pattern2_C2500x1500_F1500x2500"),
+        ("F_1500x2500", (1, 0), "pattern2_C2500x1500_F1500x2500"),
     ]
 )
 def config_2d(request):
@@ -92,25 +93,25 @@ def test_verify_same_results():
     """Verify that all configurations produce the same numerical result."""
     np.random.seed(42)
 
-    # Create test data
-    data = np.random.rand(30, 50)
-    data[np.random.rand(30, 50) > 0.9] = np.nan
+    # Create test data (smaller for quick test)
+    data = np.random.rand(150, 250)
+    data[np.random.rand(150, 250) > 0.9] = np.nan
 
     # Create arrays with different layouts
-    c_30x50 = np.ascontiguousarray(data)
-    f_50x30 = np.asfortranarray(data.T)
-    c_50x30 = np.ascontiguousarray(data.T)
-    f_30x50 = np.asfortranarray(data)
+    c_150x250 = np.ascontiguousarray(data)
+    f_250x150 = np.asfortranarray(data.T)
+    c_250x150 = np.ascontiguousarray(data.T)
+    f_150x250 = np.asfortranarray(data)
 
     # All should produce the same result
-    result1 = nansum(c_30x50, axis=(0, 1))
-    result2 = nansum(c_30x50, axis=(1, 0))
-    result3 = nansum(f_50x30, axis=(0, 1))
-    result4 = nansum(f_50x30, axis=(1, 0))
-    result5 = nansum(c_50x30, axis=(0, 1))
-    result6 = nansum(c_50x30, axis=(1, 0))
-    result7 = nansum(f_30x50, axis=(0, 1))
-    result8 = nansum(f_30x50, axis=(1, 0))
+    result1 = nansum(c_150x250, axis=(0, 1))
+    result2 = nansum(c_150x250, axis=(1, 0))
+    result3 = nansum(f_250x150, axis=(0, 1))
+    result4 = nansum(f_250x150, axis=(1, 0))
+    result5 = nansum(c_250x150, axis=(0, 1))
+    result6 = nansum(c_250x150, axis=(1, 0))
+    result7 = nansum(f_150x250, axis=(0, 1))
+    result8 = nansum(f_150x250, axis=(1, 0))
 
     # Check all equal
     np.testing.assert_allclose(result1, result2)
