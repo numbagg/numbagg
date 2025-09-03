@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist
@@ -62,9 +62,15 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set up Python
+        run: uv python install 3.11
+
       - name: Test installation
         run: |
           sleep 5
+          # Create a virtual environment
+          uv venv
+
           # Install dependencies from trusted PyPI first
           uv pip install numpy numba
 
@@ -72,7 +78,7 @@ jobs:
           uv pip install --index-url https://test.pypi.org/simple --no-deps numbagg
 
           # Verify installation works
-          python -c "import numbagg; print(f'Successfully installed numbagg {numbagg.__version__} from TestPyPI')"
+          uv run python -c "import numbagg; print(f'Successfully installed numbagg {numbagg.__version__} from TestPyPI')"
 
   pypi:
     needs: test-pypi
