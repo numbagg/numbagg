@@ -114,7 +114,7 @@ class TestThreadingDetection:
 
     def test_is_in_unsafe_thread_pool_executor(self):
         """Test detection inside ThreadPoolExecutor."""
-        result = {"in_pool": None, "thread_name": None}
+        result: dict[str, bool | str | None] = {"in_pool": None, "thread_name": None}
 
         def check_in_pool():
             result["in_pool"] = _is_in_unsafe_thread_pool()
@@ -125,6 +125,7 @@ class TestThreadingDetection:
             future.result()
 
         # Thread name should indicate it's in a pool
+        assert isinstance(result["thread_name"], str)
         assert result["thread_name"].startswith("ThreadPoolExecutor")
 
         # Whether it's unsafe depends on the backend
