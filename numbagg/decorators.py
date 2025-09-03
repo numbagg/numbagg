@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import abc
 import functools
+import importlib
 import logging
 import os
+import sys
 import threading
 import warnings
 from collections.abc import Callable, Iterable
 from functools import cache, cached_property
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar, cast
 
 import numba
 import numpy as np
@@ -995,31 +997,78 @@ class ndmoveexpmatrix(NumbaBase):
         return vectorize(self.func)
 
 
+# Layer categories and which backends they allow
+_LAYER_CATEGORIES = {
+    "default": {"tbb", "omp", "workqueue"},
+    "safe": {"tbb"},
+    "threadsafe": {"tbb", "omp"},
+    # OpenMP is not fork-safe on Linux, but is on other platforms
+    "forksafe": {"tbb", "workqueue", "omp"}
+    if sys.platform != "linux"
+    else {"tbb", "workqueue"},
+}
+
+# Backends that are safe to use in multi-threaded contexts (e.g., ThreadPoolExecutor)
+_THREADSAFE_BACKENDS = {"tbb", "omp"}
+
+
 def _is_in_unsafe_thread_pool() -> bool:
+    """
+    Check if we're running in a ThreadPoolExecutor with a non-thread-safe
+    numba backend.
+
+    This is important because running parallel numba code with workqueue
+    backend inside a ThreadPoolExecutor can cause deadlocks or other issues.
+    """
     current_thread = threading.current_thread()
     # ThreadPoolExecutor threads typically have names like 'ThreadPoolExecutor-0_1'
-    return current_thread.name.startswith(
-        "ThreadPoolExecutor"
-    ) and _thread_backend() in {"workqueue", None}
+    in_thread_pool = current_thread.name.startswith("ThreadPoolExecutor")
+
+    if not in_thread_pool:
+        return False
+
+    # We're in a thread pool - check if the backend is safe for this
+    return not _is_threading_layer_threadsafe()
 
 
 @cache
-def _thread_backend() -> str | None:
-    # Note that `importlib.util.find_spec` doesn't work for these; it will falsely
-    # return True
+def _thread_backend() -> str:
+    """
+    Get the numba threading backend that will be used, properly respecting
+    user configuration in THREADING_LAYER and THREADING_LAYER_PRIORITY.
 
-    try:
-        from numba.np.ufunc import tbbpool  # noqa
+    Returns the backend name: "tbb", "omp", or "workqueue".
+    """
+    layer_choice = cast(str, numba.config.THREADING_LAYER)
 
-        return "tbb"
-    except ImportError:
-        pass
+    # Direct backend name (not a category)
+    if layer_choice not in _LAYER_CATEGORIES:
+        return layer_choice if _is_backend_available(layer_choice) else "workqueue"
 
-    try:
-        from numba.np.ufunc import omppool  # noqa
+    # Category like "default", "safe", "threadsafe", "forksafe"
+    allowed_backends = _LAYER_CATEGORIES[layer_choice]
 
-        return "omp"
-    except ImportError:
-        pass
+    for backend in cast(list[str], numba.config.THREADING_LAYER_PRIORITY):
+        if backend in allowed_backends and _is_backend_available(backend):
+            return backend
 
+    # Shouldn't happen as workqueue is usually in allowed backends
     return "workqueue"
+
+
+def _is_backend_available(backend: str) -> bool:
+    """Check if a threading backend is available."""
+    if backend == "workqueue":
+        return True  # Always available (built-in)
+
+    try:
+        importlib.import_module(f"numba.np.ufunc.{backend}pool")
+        return True
+    except ImportError:
+        return False
+
+
+def _is_threading_layer_threadsafe() -> bool:
+    """Check if the current numba threading layer is thread-safe."""
+    layer = _thread_backend()
+    return layer in _THREADSAFE_BACKENDS
