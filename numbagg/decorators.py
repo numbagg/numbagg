@@ -1008,9 +1008,6 @@ _LAYER_CATEGORIES = {
     else {"tbb", "workqueue"},
 }
 
-# Backends that are safe to use in multi-threaded contexts (e.g., ThreadPoolExecutor)
-_THREADSAFE_BACKENDS = {"tbb", "omp"}
-
 
 def _is_in_unsafe_thread_pool() -> bool:
     """
@@ -1071,4 +1068,4 @@ def _is_backend_available(backend: str) -> bool:
 def _is_threading_layer_threadsafe() -> bool:
     """Check if the current numba threading layer is thread-safe."""
     layer = _thread_backend()
-    return layer in _THREADSAFE_BACKENDS
+    return layer in _LAYER_CATEGORIES["threadsafe"]
