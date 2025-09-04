@@ -164,7 +164,7 @@ class TestThreadingDetection:
         from numbagg.decorators import _LAYER_CATEGORIES
 
         forksafe = _LAYER_CATEGORIES["forksafe"]
-        assert "omp" in forksafe or sys.platform == "linux"
+        assert "omp" in forksafe  # On non-Linux, omp should be in forksafe
 
     @pytest.mark.skipif(
         sys.platform != "linux", reason="Test is for Linux forksafe behavior"
