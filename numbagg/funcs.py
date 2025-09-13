@@ -292,10 +292,7 @@ def nanquantile(
 
 @ndfill.wrap()
 def bfill(a: T, limit: int, out: T) -> None:
-    """
-    Backward fill missing values.
-    For floats, fills NaN values. For integers, returns unchanged (no NaN possible).
-    """
+    """Backward fill missing values."""
     lives_remaining = limit
     current = np.nan
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
@@ -314,10 +311,7 @@ def bfill(a: T, limit: int, out: T) -> None:
 
 @ndfill.wrap()
 def ffill(a: T, limit: int, out: T) -> None:
-    """
-    Forward fill missing values.
-    For floats, fills NaN values. For integers, returns unchanged (no NaN possible).
-    """
+    """Forward fill missing values."""
     lives_remaining = limit
     current = np.nan
     for i, val in enumerate(a):
