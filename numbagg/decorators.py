@@ -399,17 +399,53 @@ class ndmoveexp(NumbaBaseSimple):
             return gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
 
 
-class ndfill(NumbaBaseSimple):
+class ndfill(NumbaBase):
+    """Dynamic compilation fill decorator - compiles on-demand based on input dtype."""
+
     def __init__(
         self,
         func: Callable[..., Any],
-        signature: list[NumbaTypes] = [
-            (numba.float32[:], numba.int32, numba.float32[:]),
-            (numba.float64[:], numba.int64, numba.float64[:]),
-        ],
         **kwargs,
     ) -> None:
-        super().__init__(func, signature, **kwargs)
+        super().__init__(func=func, **kwargs)
+
+    @cache
+    def gufunc(self, dtype: np.dtype, *, target: Targets) -> GUFunc:
+        """
+        Dynamically compile a gufunc for the given dtype.
+        This method is cached, so each dtype is only compiled once.
+        """
+        # Convert numpy dtype to numba type
+        numba_type = numba.from_dtype(dtype)
+
+        # For fill functions: (array, limit) -> out_array
+        # The limit parameter type depends on the array type
+        if np.issubdtype(dtype, np.integer):
+            # For integer arrays, use matching integer type for limit
+            if dtype == np.int32:
+                limit_type = numba.int32
+            else:
+                limit_type = numba.int64
+        else:
+            # For float arrays, use int64 for limit (more general)
+            limit_type = numba.int64
+
+        signature = [(numba_type[:], limit_type, numba_type[:])]
+
+        # Generate gufunc signature string: "(n),()->(n)"
+        gufunc_sig = "(n),()->(n)"
+
+        # Compile the function with numba.guvectorize
+        vectorize = numba.guvectorize(
+            signature,
+            gufunc_sig,
+            nopython=True,
+            target=target,
+            cache=self.cache,
+            fastmath=_FASTMATH,
+        )
+
+        return vectorize(self.func)
 
     def __call__(
         self,
@@ -419,11 +455,20 @@ class ndfill(NumbaBaseSimple):
         axis: int = -1,
         **kwargs,
     ) -> A:
+        """Call the dynamically compiled function."""
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:
             raise ValueError(f"`limit` must be positive: {limit}")
-        gufunc = self.gufunc(target=self.target)
+
+        # Check if dtype is supported (numeric types only)
+        if not np.issubdtype(arr.dtype, np.number):
+            raise TypeError(f"Unsupported dtype for fill operation: {arr.dtype}")
+
+        # Get or compile the gufunc for this dtype
+        gufunc = self.gufunc(arr.dtype, target=self.target)
+
+        # Call the compiled function
         return gufunc(arr, limit, axis=axis, **kwargs)
 
 
