@@ -34,7 +34,7 @@ jobs:
         run: uv sync --python ${{ matrix.python-version }}
 
       - name: Run tests
-        run: uv run pytest --durations=20 -W error
+        run: uv run --python ${{ matrix.python-version }} pytest --durations=20 -W error
 
   lint:
     runs-on: ubuntu-latest
@@ -53,10 +53,10 @@ jobs:
         run: uv sync --python 3.11
 
       - name: Run mypy
-        run: uv run mypy
+        run: uv run --python 3.11 mypy
 
       - name: Run pre-commit
-        run: uv run pre-commit run --all-files
+        run: uv run --python 3.11 pre-commit run --all-files
 
   benchmark:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         run: uv sync --python 3.13
 
       - name: Run benchmarks
-        run: uv run python numbagg/test/run_benchmarks.py
+        run: uv run --python 3.13 python numbagg/test/run_benchmarks.py
 
   nightly:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -98,4 +98,4 @@ jobs:
         run: uv sync --python 3.13
 
       - name: Run nightly benchmarks
-        run: uv run pytest --durations=20 -W error --run-nightly --benchmark-enable
+        run: uv run --python 3.13 pytest --durations=20 -W error --run-nightly --benchmark-enable
