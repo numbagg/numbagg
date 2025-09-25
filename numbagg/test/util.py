@@ -120,20 +120,20 @@ def array_generator(func_name, dtypes):
                 yield a[start::step]  # don't use astype here; copy created
     for dtype in dtypes:
         # 2d
-        a = np.arange(12).reshape(4, 3).astype(dtype)
-        yield a[::2]
-        yield a[:, ::2]
-        yield a[::2][:, ::2]
+        a2 = np.arange(12).reshape(4, 3).astype(dtype)
+        yield a2[::2]
+        yield a2[:, ::2]
+        yield a2[::2][:, ::2]
     for dtype in dtypes:
         # 3d
-        a = np.arange(24).reshape(2, 3, 4).astype(dtype)
+        a3 = np.arange(24).reshape(2, 3, 4).astype(dtype)
         for start in range(2):
             for step in range(1, 2):
-                yield a[start::step]
-                yield a[:, start::step]
-                yield a[:, :, start::step]
-                yield a[start::step][::2]
-                yield a[start::step][::2][:, ::2]
+                yield a3[start::step]
+                yield a3[:, start::step]
+                yield a3[:, :, start::step]
+                yield a3[start::step][::2]
+                yield a3[start::step][::2][:, ::2]
 
 
 def array_order(a):

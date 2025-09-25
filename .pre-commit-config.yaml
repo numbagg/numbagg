@@ -10,13 +10,9 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.1
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix"]
       - id: ruff-format
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.1
-    hooks:
-      - id: blackdoc
   - repo: https://github.com/Carreau/velin
     rev: 0.0.12
     hooks:
@@ -37,6 +33,7 @@ repos:
     rev: v1.7.7
     hooks:
       - id: actionlint
+        exclude: dependabot.yml
   - repo: local
     hooks:
       - id: no-print
