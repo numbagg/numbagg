@@ -1,5 +1,6 @@
 import ast
 import inspect
+import sys
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
@@ -67,15 +68,26 @@ class _NDReduceTransformer(ast.NodeTransformer):
             defaults=[],
             posonlyargs=[],
         )
-        function_def = ast.FunctionDef(
-            name=_TRANSFORMED_FUNC_NAME,
-            args=arguments,
-            body=node.body,
-            decorator_list=[],
-            returns=None,
-            type_comment=None,
-            type_params=[],
-        )
+        # Python 3.12+ requires type_params argument
+        if sys.version_info >= (3, 12):
+            function_def = ast.FunctionDef(
+                name=_TRANSFORMED_FUNC_NAME,
+                args=arguments,
+                body=node.body,
+                decorator_list=[],
+                returns=None,
+                type_comment=None,
+                type_params=[],
+            )
+        else:
+            function_def = ast.FunctionDef(
+                name=_TRANSFORMED_FUNC_NAME,
+                args=arguments,
+                body=node.body,
+                decorator_list=[],
+                returns=None,
+                type_comment=None,
+            )
         return self.generic_visit(function_def)
 
     def visit_Return(self, node):

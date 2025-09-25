@@ -3,8 +3,8 @@ from __future__ import annotations
 import functools
 import logging
 import warnings
+from collections.abc import Callable
 from functools import cache, partial
-from typing import Callable
 
 import bottleneck as bn
 import numpy as np
