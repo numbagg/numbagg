@@ -10,13 +10,15 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix"]
       - id: ruff-format
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.1
-    hooks:
-      - id: blackdoc
+  # Temporarily disabled due to incompatibility with Black 25.9.0
+  # See https://github.com/keewis/blackdoc/issues/248
+  # - repo: https://github.com/keewis/blackdoc
+  #   rev: v0.4.1
+  #   hooks:
+  #     - id: blackdoc
   - repo: https://github.com/Carreau/velin
     rev: 0.0.12
     hooks:
