@@ -267,33 +267,33 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     result = func(values, labels)
     assert_almost_equal(result, values)
 
-    values = np.arange(25.0).reshape(5, 5)
+    values2d = np.arange(25.0).reshape(5, 5)
     labels = np.arange(5)
 
     with pytest.raises(ValueError) as excinfo:
-        result = func(values, labels)
+        result = func(values2d, labels)
     assert "axis required" in str(excinfo.value)
 
-    result = func(values, labels, axis=1)
-    assert_almost_equal(result, values)
+    result = func(values2d, labels, axis=1)
+    assert_almost_equal(result, values2d)
 
-    result = func(values, labels, axis=(1,))
-    assert_almost_equal(result, values)
+    result = func(values2d, labels, axis=(1,))
+    assert_almost_equal(result, values2d)
 
-    result = func(values, labels, axis=0)
-    assert_almost_equal(result, values.T)
+    result = func(values2d, labels, axis=0)
+    assert_almost_equal(result, values2d.T)
 
     with pytest.raises(ValueError) as excinfo:
-        func(values, labels[:4], axis=0)
+        func(values2d, labels[:4], axis=0)
     assert "must have same shape" in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        func(values, labels[:4], axis=(0,))
+        func(values2d, labels[:4], axis=(0,))
     assert "must have same shape" in str(excinfo.value)
 
-    result = func(values, [0, 0, -1, 1, 1], axis=1)
+    result = func(values2d, [0, 0, -1, 1, 1], axis=1)
     expected = np.stack(
-        [npfunc(values[:, :2], axis=1), npfunc(values[:, 3:], axis=1)], axis=-1
+        [npfunc(values2d[:, :2], axis=1), npfunc(values2d[:, 3:], axis=1)], axis=-1
     )
     assert_almost_equal(result, expected)
 
@@ -305,9 +305,9 @@ def test_group_axis_2d_labels(func):
     result = func(values, labels)
     assert_almost_equal(result, values.ravel())
 
-    values = np.arange(125.0).reshape(5, 5, 5)
-    result = func(values, labels, axis=(1, 2))
-    assert_almost_equal(result, values.reshape(5, -1))
+    values3d = np.arange(125.0).reshape(5, 5, 5)
+    result = func(values3d, labels, axis=(1, 2))
+    assert_almost_equal(result, values3d.reshape(5, -1))
 
 
 def test_numeric_int_nancount():
@@ -401,17 +401,17 @@ def test_dimensionality():
     with pytest.raises(ValueError):
         func(values.reshape(1, 6), labels)
 
-    values = np.arange(24).reshape(6, 4)
-    labels = np.arange(4)
+    values2 = np.arange(24).reshape(6, 4)
+    labels2 = np.arange(4)
 
-    result = func(values, labels, axis=-1)
+    result = func(values2, labels2, axis=-1)
     assert result.shape == (6, 4)
 
-    result = func(values.reshape(1, 6, 4), labels, axis=-1)
+    result = func(values2.reshape(1, 6, 4), labels2, axis=-1)
     assert result.shape == (1, 6, 4)
 
-    result = func(values.reshape(1, 6, 2, 2), labels.reshape(2, 2), axis=(-1, -2))
+    result = func(values2.reshape(1, 6, 2, 2), labels2.reshape(2, 2), axis=(-1, -2))
     assert result.shape == (1, 6, 4)
 
     with pytest.raises(ValueError):
-        func(values, labels)
+        func(values2, labels)
