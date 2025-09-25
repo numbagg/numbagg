@@ -13,10 +13,6 @@ repos:
       - id: ruff
         args: ["--fix"]
       - id: ruff-format
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.4.1
-    hooks:
-      - id: blackdoc
   - repo: https://github.com/Carreau/velin
     rev: 0.0.12
     hooks:
