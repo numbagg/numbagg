@@ -27,6 +27,9 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
       - name: Install dependencies and project
         run: uv sync --python ${{ matrix.python-version }}
 
@@ -42,6 +45,9 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
 
       - name: Install dependencies and project
         run: uv sync --python 3.11
@@ -65,6 +71,9 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
       - name: Install dependencies and project
         run: uv sync --python 3.13
 
@@ -81,6 +90,9 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
 
       - name: Install dependencies and project
         run: uv sync --python 3.13
