@@ -8,7 +8,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.1
+    rev: v0.13.3
     hooks:
       - id: ruff-check
         args: ["--fix"]
@@ -26,7 +26,7 @@ repos:
   #      additional_dependencies:
   #        [types-setuptools, numpy, types-Pygments, types-colorama]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.36.2
+    rev: v1.37.2
     hooks:
       - id: typos
   - repo: https://github.com/rhysd/actionlint
