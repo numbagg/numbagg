@@ -44,7 +44,7 @@ def allnan(a: NumericArray, out: NumericArray) -> None:
     ]
 )
 def anynan(a: NumericArray, out: NumericArray) -> None:
-    for ai in a.flat:
+    for ai in a:
         if np.isnan(ai):
             out[0] = True
             return
@@ -60,7 +60,7 @@ def anynan(a: NumericArray, out: NumericArray) -> None:
 )
 def nancount(a: T, out: T) -> None:
     non_missing = 0
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             non_missing += 1
     out[0] = non_missing
@@ -76,7 +76,7 @@ def nancount(a: T, out: T) -> None:
 )
 def nansum(a, out):
     asum = a.dtype.type(0)
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
     out[0] = asum
@@ -91,7 +91,7 @@ def nansum(a, out):
 def nanmean(a, out):
     asum = 0.0
     count = 0
-    for ai in a.flat:
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
             count += 1
@@ -123,7 +123,7 @@ def nanvar(a: F, ddof: int, out: F) -> None:
     if count > ddof:
         amean = asum / count
         asum = 0
-        for ai in a.flat:
+        for ai in a:
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai
@@ -149,7 +149,7 @@ def nanstd(a: F, ddof: int, out: F) -> None:
     if count > ddof:
         amean = asum / count
         asum = 0
-        for ai in a.flat:
+        for ai in a:
             if not np.isnan(ai):
                 ai -= amean
                 asum += ai * ai

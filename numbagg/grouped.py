@@ -81,7 +81,7 @@ def group_nanargmax(values: GenericArray, labels: IntArray, out: GenericArray) -
 def group_nanargmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
-    for i in range(len(values.flat)):
+    for i in range(len(values)):
         value = values[i]
         label = labels[i]
         if label < 0:
