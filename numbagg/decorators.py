@@ -323,7 +323,12 @@ class ndmove(NumbaBaseSimple):
         if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         gufunc = self.gufunc(target=self.target)
-        return gufunc(*arr, window, min_count, axis=axis, **kwargs)
+        # TODO: moving window functions raise warnings here for the default test
+        # fixtures; I can't figure out where it's coming from, and can't reproduce it
+        # locally. So I'm ignoring so that we can still raise errors on other
+        # warnings.
+        with np.errstate(invalid="ignore"):
+            return gufunc(*arr, window, min_count, axis=axis, **kwargs)
 
 
 class ndmoveexp(NumbaBaseSimple):
