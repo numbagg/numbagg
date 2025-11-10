@@ -8,15 +8,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "attrs"
-version = "25.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5a/b0/1367933a8532ee6ff8d63537de4f1177af4bff9f3e829baf7331f595bb24/attrs-25.3.0.tar.gz", hash = "sha256:75d7cefc7fb576747b2c81b4442d4d4a1ce0900973527c011d1030fd3bf4af1b", size = 812032, upload-time = "2025-03-13T11:10:22.779Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/06/bb80f5f86020c4551da315d78b3ab75e8228f89f0162f2c3a819e407941a/attrs-25.3.0-py3-none-any.whl", hash = "sha256:427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3", size = 63815, upload-time = "2025-03-13T11:10:21.14Z" },
-]
-
-[[package]]
 name = "bottleneck"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -127,16 +118,15 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.144.0"
+version = "6.147.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/d5/622284cecf35fc1a702d415a0d6c988202a205a1ff2d9452855081d80411/hypothesis-6.144.0.tar.gz", hash = "sha256:38e81c34e5091ad6435efec85e82b956bb8c5bdfdaebd4930853dfc7a2783ae6", size = 466863, upload-time = "2025-11-02T22:10:16.318Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/53/e19fe74671fd60db86344a4623c818fac58b813cc3efbb7ea3b3074dcb71/hypothesis-6.147.0.tar.gz", hash = "sha256:72e6004ea3bd1460bdb4640b6389df23b87ba7a4851893fd84d1375635d3e507", size = 468587, upload-time = "2025-11-06T20:27:29.682Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/07/3fe99e5cd586dcb546f4eaac84a0a256c15a55cce392b42650c0261aa7e8/hypothesis-6.144.0-py3-none-any.whl", hash = "sha256:eea7ac8d8c906605781bd813715285088d5ab74eed1c4e7128b78043e6222213", size = 534244, upload-time = "2025-11-02T22:10:12.54Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/1b/932eddc3d55c4ed6c585006cffe6c6a133b5e1797d873de0bcf5208e4fed/hypothesis-6.147.0-py3-none-any.whl", hash = "sha256:de588807b6da33550d32f47bcd42b1a86d061df85673aa73e6443680249d185e", size = 535595, upload-time = "2025-11-06T20:27:23.536Z" },
 ]
 
 [[package]]
