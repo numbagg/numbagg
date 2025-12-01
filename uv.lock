@@ -119,36 +119,15 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.148.1"
+version = "6.148.4"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.10.2'",
-]
 dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version < '3.10.2'" },
-    { name = "sortedcontainers", marker = "python_full_version < '3.10.2'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/5f/b08ad8dc0a79c3828dd137b4f55243f5d0342b02e963f5298dcb3bec7021/hypothesis-6.148.1.tar.gz", hash = "sha256:98851429bd89b0c8835e8ebca6705c28dec56517576e5606fc3b841ddb0dc1c7", size = 468664, upload-time = "2025-11-16T07:58:37.959Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/a2/d894cf29ddfc96c434fd8fb5ee09370a1f389c8508718014e59681fac2fa/hypothesis-6.148.4.tar.gz", hash = "sha256:cbe0e2283f65c76fc96b4c6b60459a3881ceeb75a4c16bf94b475cec3bb7f065", size = 470313, upload-time = "2025-12-01T02:43:30.956Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a4/39/a4f6a711970e6c23be35b967907f766064e27945f5b44855a00fa14af3bb/hypothesis-6.148.1-py3-none-any.whl", hash = "sha256:2cca1a20e8fcd230da86bb6d9f3e940a052caef0d4327c12b5694d164ea0f89e", size = 535684, upload-time = "2025-11-16T07:58:36.175Z" },
-]
-
-[[package]]
-name = "hypothesis"
-version = "6.148.2"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12'",
-    "python_full_version == '3.11.*'",
-    "python_full_version >= '3.10.2' and python_full_version < '3.11'",
-]
-dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version >= '3.10.2' and python_full_version < '3.11'" },
-    { name = "sortedcontainers", marker = "python_full_version >= '3.10.2'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/99/a3c6eb3fdd6bfa01433d674b0f12cd9102aa99630689427422d920aea9c6/hypothesis-6.148.2.tar.gz", hash = "sha256:07e65d34d687ddff3e92a3ac6b43966c193356896813aec79f0a611c5018f4b1", size = 469984, upload-time = "2025-11-18T20:21:17.047Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/d2/c2673aca0127e204965e0e9b3b7a0e91e9b12993859ac8758abd22669b89/hypothesis-6.148.2-py3-none-any.whl", hash = "sha256:bf8ddc829009da73b321994b902b1964bcc3e5c3f0ed9a1c1e6a1631ab97c5fa", size = 536986, upload-time = "2025-11-18T20:21:15.212Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/05/643b677f776121bfc6d3e16e099ebb4f2a761bad7085f242dc4a694309f2/hypothesis-6.148.4-py3-none-any.whl", hash = "sha256:38f91afd7703457c30284be2bfd2087cee94b1e7b71636fded297d160e316402", size = 537223, upload-time = "2025-12-01T02:43:28.675Z" },
 ]
 
 [[package]]
@@ -355,8 +334,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "bottleneck" },
-    { name = "hypothesis", version = "6.148.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10.2'" },
-    { name = "hypothesis", version = "6.148.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10.2'" },
+    { name = "hypothesis" },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "mypy" },
     { name = "pandas" },
