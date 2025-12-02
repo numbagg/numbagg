@@ -36,7 +36,6 @@ dev = [
   "bottleneck",
   "hypothesis",
   "jq; platform_system!='Windows'", # jq doesn't easily install on Windows. Alternatively we could have a `benchmark` category
-  "mypy",
   "pandas",
   "pre-commit",
   "pytest-benchmark",
@@ -44,6 +43,7 @@ dev = [
   "ruff",
   "setuptools_scm",
   "tabulate",
+  "ty",
 ]
 
 [tool.setuptools_scm]
@@ -72,28 +72,6 @@ known-first-party = ["numbagg"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
-
-[tool.mypy]
-check_untyped_defs = true
-enable_error_code = "redundant-self"
-files = "numbagg"
-show_error_codes = true
-show_error_context = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-
-# Much of the numerical computing stack doesn't have type annotations yet.
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = [
-  "bottleneck.*",
-  "pandas.*",
-  "numba.*",
-  "pytest.*",
-  "setuptools",
-  "tabulate.*",
-  "jq.*",
-]
 
 [tool.pytest.ini_options]
 addopts = ["--benchmark-disable", "--benchmark-warmup=on", "--doctest-modules"]

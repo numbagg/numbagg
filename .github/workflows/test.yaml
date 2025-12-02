@@ -46,8 +46,8 @@ jobs:
       - name: Install dependencies and project
         run: uv sync --python 3.11
 
-      - name: Run mypy
-        run: uv run --python 3.11 mypy
+      - name: Run ty check
+        run: uv run --python 3.11 ty check
 
       - name: Run pre-commit
         run: uv run --python 3.11 pre-commit run --all-files

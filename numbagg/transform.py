@@ -1,8 +1,9 @@
 import ast
 import inspect
 import sys
+import types
 from collections.abc import Callable
-from typing import ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar, cast
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -49,7 +50,9 @@ def _apply_ast_rewrite(
     source = compile(tree, filename="<ast>", mode="exec")
 
     scope: dict[str, Callable[P, R]] = {}
-    exec(source, func.__globals__, scope)
+    # Cast to FunctionType to access __globals__ attribute
+    func_obj = cast(types.FunctionType, func)
+    exec(source, func_obj.__globals__, scope)
     try:
         return scope[_TRANSFORMED_FUNC_NAME]
     except KeyError:

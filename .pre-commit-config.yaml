@@ -18,13 +18,6 @@ repos:
     hooks:
       - id: velin
         args: ["--write", "--compact"]
-  # This is failing in pre-commit.ci, and I can't work out why. We have a separate CI job which runs the proper mypy, so using that.
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #  rev: v1.10.1
-  #  hooks:
-  #    - id: mypy
-  #      additional_dependencies:
-  #        [types-setuptools, numpy, types-Pygments, types-colorama]
   - repo: https://github.com/adhtruong/mirrors-typos
     rev: v1.40.0
     hooks:
