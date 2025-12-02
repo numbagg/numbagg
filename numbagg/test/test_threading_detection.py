@@ -19,9 +19,9 @@ from numbagg.decorators import (
 @pytest.fixture
 def reset_numba_config() -> Iterator[None]:
     """Fixture to save/restore numba configuration and clear cache."""
-    # Save original config
-    orig_layer = numba.config.THREADING_LAYER
-    orig_priority = list(numba.config.THREADING_LAYER_PRIORITY)
+    # Save original config (numba.config attributes are not in type stubs)
+    orig_layer = numba.config.THREADING_LAYER  # type: ignore[attr-defined]
+    orig_priority = list(numba.config.THREADING_LAYER_PRIORITY)  # type: ignore[attr-defined]
 
     # Clear cache before test
     _thread_backend.cache_clear()
@@ -29,8 +29,8 @@ def reset_numba_config() -> Iterator[None]:
     yield
 
     # Restore original config after test
-    numba.config.THREADING_LAYER = orig_layer
-    numba.config.THREADING_LAYER_PRIORITY = orig_priority
+    numba.config.THREADING_LAYER = orig_layer  # type: ignore[attr-defined]
+    numba.config.THREADING_LAYER_PRIORITY = orig_priority  # type: ignore[attr-defined]
     _thread_backend.cache_clear()
 
 
@@ -60,8 +60,8 @@ class TestThreadingDetection:
         self, reset_numba_config, priority, expected
     ):
         """Test that backend respects THREADING_LAYER_PRIORITY."""
-        numba.config.THREADING_LAYER = "default"
-        numba.config.THREADING_LAYER_PRIORITY = priority
+        numba.config.THREADING_LAYER = "default"  # type: ignore[attr-defined]
+        numba.config.THREADING_LAYER_PRIORITY = priority  # type: ignore[attr-defined]
 
         # workqueue is always available, so it should be selected when first
         backend = _thread_backend()
@@ -81,7 +81,7 @@ class TestThreadingDetection:
     )
     def test_thread_backend_explicit_layer(self, reset_numba_config, layer, expected):
         """Test that explicit layer selection works."""
-        numba.config.THREADING_LAYER = layer
+        numba.config.THREADING_LAYER = layer  # type: ignore[attr-defined]
         backend = _thread_backend()
         assert backend in expected
 
@@ -101,7 +101,7 @@ class TestThreadingDetection:
         self, reset_numba_config, category, allowed_backends
     ):
         """Test that layer categories work correctly."""
-        numba.config.THREADING_LAYER = category
+        numba.config.THREADING_LAYER = category  # type: ignore[attr-defined]
         backend = _thread_backend()
         assert backend in allowed_backends
 
@@ -186,8 +186,8 @@ class TestThreadingWithMocks:
             # Mock successful imports
             mock_import.return_value = True
 
-            numba.config.THREADING_LAYER = "default"
-            numba.config.THREADING_LAYER_PRIORITY = ["tbb", "omp", "workqueue"]
+            numba.config.THREADING_LAYER = "default"  # type: ignore[attr-defined]
+            numba.config.THREADING_LAYER_PRIORITY = ["tbb", "omp", "workqueue"]  # type: ignore[attr-defined]
 
             # Should return tbb since it's first and "available"
             assert _thread_backend() == "tbb"
@@ -203,7 +203,7 @@ class TestThreadingWithMocks:
         with patch("numbagg.decorators.importlib.import_module") as mock_import:
             mock_import.side_effect = mock_import_side_effect
 
-            numba.config.THREADING_LAYER = "default"
+            numba.config.THREADING_LAYER = "default"  # type: ignore[attr-defined]
 
             # Should return workqueue as fallback
             assert _thread_backend() == "workqueue"
