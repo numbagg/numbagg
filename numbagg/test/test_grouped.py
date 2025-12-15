@@ -539,3 +539,16 @@ def test_argmax_argmin_2d_axis_none():
         label_mask = flat_labels == label
         expected_min = flat_values[label_mask].min()
         assert values[coords] == expected_min
+
+
+@pytest.mark.parametrize(
+    "func",
+    [f for f in GROUPED_FUNCS if not f.supports_bool],
+)
+def test_bool_input_with_supports_bool_false(func):
+    """Test that bool input to functions with supports_bool=False raises TypeError."""
+    values = np.array([True, False, True, True, False], dtype=np.bool_)
+    labels = np.array([0, 0, 1, 1, 1], dtype=np.int64)
+
+    with pytest.raises(TypeError, match="does not support boolean input"):
+        func(values, labels, num_labels=2)

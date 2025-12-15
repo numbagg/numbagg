@@ -580,6 +580,11 @@ class groupndreduce(NumbaBase):
             labels = labels.astype(dtype)
 
         if values.dtype == np.bool_:
+            if not self.supports_bool:
+                raise TypeError(
+                    f"{self.func.__name__} does not support boolean input. "
+                    "Convert to a numeric type first."
+                )
             values = values.astype(np.int32)
 
         if num_labels is None:
@@ -587,14 +592,9 @@ class groupndreduce(NumbaBase):
 
         target = self.target
 
-        # Use a float type. But TODO: I'm not confident when exactly numba will coerce
-        # vs. raise an error. If this is important we should decide + add tests
-        # (currently tests skip these cases, and IIUC the behavior changed when we added
-        # our own pre-type caching).
-        if (not self.supports_ints and np.issubdtype(values.dtype, np.integer)) or (
-            not self.supports_bool and values.dtype == np.bool_
-        ):
-            values_dtype = values.dtype
+        # Use a float type when the function doesn't support the input type.
+        if not self.supports_ints and np.issubdtype(values.dtype, np.integer):
+            values_dtype = np.dtype(np.float64)
             result_dtype: np.dtype = np.dtype(np.float64)
         else:
             values_dtype = values.dtype
