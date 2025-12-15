@@ -29,6 +29,7 @@ F = TypeVar("F", bound=FloatArray)
     ]
 )
 def allnan(a: NumericArray, out: NumericArray) -> None:
+    out[0] = True
     for ai in a:
         if not np.isnan(ai):
             out[0] = False
@@ -44,6 +45,7 @@ def allnan(a: NumericArray, out: NumericArray) -> None:
     ]
 )
 def anynan(a: NumericArray, out: NumericArray) -> None:
+    out[0] = False
     for ai in a:
         if np.isnan(ai):
             out[0] = True
