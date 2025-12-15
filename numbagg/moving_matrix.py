@@ -43,12 +43,12 @@ def move_corrmatrix(a, window, min_count, out):
     n_vars = a.shape[1]
     min_count = max(min_count, 1)
 
-    # Initialize running statistics
-    sums = np.zeros(n_vars, dtype=a.dtype)
-    sums_sq = np.zeros(n_vars, dtype=a.dtype)
-    counts = np.zeros(n_vars, dtype=np.int64)
-
-    # Initialize pairwise statistics
+    # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
+    # to ensure all moments are computed over the same set of observations
+    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_sq_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_sq_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
     prods = np.zeros((n_vars, n_vars), dtype=a.dtype)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
 
@@ -56,52 +56,53 @@ def move_corrmatrix(a, window, min_count, out):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val = a[t - window, i]
-                if not np.isnan(old_val):
-                    sums[i] -= old_val
-                    sums_sq[i] -= old_val * old_val
-                    counts[i] -= 1
-
-                    # Update pairwise products
-                    for j in range(n_vars):
-                        old_val_j = a[t - window, j]
-                        if not np.isnan(old_val_j):
-                            prods[i, j] -= old_val * old_val_j
-                            pair_counts[i, j] -= 1
+                old_val_i = a[t - window, i]
+                if np.isnan(old_val_i):
+                    continue
+                for j in range(n_vars):
+                    old_val_j = a[t - window, j]
+                    if np.isnan(old_val_j):
+                        continue
+                    # Only update pairwise statistics for observations where BOTH are valid
+                    sums_i[i, j] -= old_val_i
+                    sums_j[i, j] -= old_val_j
+                    sums_sq_i[i, j] -= old_val_i * old_val_i
+                    sums_sq_j[i, j] -= old_val_j * old_val_j
+                    prods[i, j] -= old_val_i * old_val_j
+                    pair_counts[i, j] -= 1
 
         # Add new values
         for i in range(n_vars):
-            new_val = a[t, i]
-            if not np.isnan(new_val):
-                sums[i] += new_val
-                sums_sq[i] += new_val * new_val
-                counts[i] += 1
-
-                # Update pairwise products
-                for j in range(n_vars):
-                    new_val_j = a[t, j]
-                    if not np.isnan(new_val_j):
-                        prods[i, j] += new_val * new_val_j
-                        pair_counts[i, j] += 1
+            new_val_i = a[t, i]
+            if np.isnan(new_val_i):
+                continue
+            for j in range(n_vars):
+                new_val_j = a[t, j]
+                if np.isnan(new_val_j):
+                    continue
+                # Only update pairwise statistics for observations where BOTH are valid
+                sums_i[i, j] += new_val_i
+                sums_j[i, j] += new_val_j
+                sums_sq_i[i, j] += new_val_i * new_val_i
+                sums_sq_j[i, j] += new_val_j * new_val_j
+                prods[i, j] += new_val_i * new_val_j
+                pair_counts[i, j] += 1
 
         # Compute correlation matrix for current window
         for i in range(n_vars):
             for j in range(n_vars):
-                # Compute correlation
                 n = pair_counts[i, j]
                 # Need at least 2 observations for correlation (to compute variance)
-                if n >= max(min_count, 2) and counts[i] >= 2 and counts[j] >= 2:
-                    mean_i = sums[i] / counts[i]
-                    mean_j = sums[j] / counts[j]
+                if n >= max(min_count, 2):
+                    mean_i = sums_i[i, j] / n
+                    mean_j = sums_j[i, j] / n
 
-                    # Compute variances
-                    var_i = sums_sq[i] / counts[i] - mean_i * mean_i
-                    var_j = sums_sq[j] / counts[j] - mean_j * mean_j
+                    # Compute variances using pairwise statistics
+                    var_i = sums_sq_i[i, j] / n - mean_i * mean_i
+                    var_j = sums_sq_j[i, j] / n - mean_j * mean_j
 
-                    # Compute covariance
-                    cov = prods[i, j] / n - (sums[i] / counts[i]) * (
-                        sums[j] / counts[j]
-                    )
+                    # Compute covariance using pairwise statistics
+                    cov = prods[i, j] / n - mean_i * mean_j
 
                     # Compute correlation
                     if var_i > 0 and var_j > 0:
@@ -143,11 +144,10 @@ def move_covmatrix(a, window, min_count, out):
     n_vars = a.shape[1]
     min_count = max(min_count, 1)
 
-    # Initialize running statistics
-    sums = np.zeros(n_vars, dtype=a.dtype)
-    counts = np.zeros(n_vars, dtype=np.int64)
-
-    # Initialize pairwise statistics
+    # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
+    # to ensure all moments are computed over the same set of observations
+    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
     prods = np.zeros((n_vars, n_vars), dtype=a.dtype)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
 
@@ -155,31 +155,33 @@ def move_covmatrix(a, window, min_count, out):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val = a[t - window, i]
-                if not np.isnan(old_val):
-                    sums[i] -= old_val
-                    counts[i] -= 1
-
-                    # Update pairwise products
-                    for j in range(n_vars):
-                        old_val_j = a[t - window, j]
-                        if not np.isnan(old_val_j):
-                            prods[i, j] -= old_val * old_val_j
-                            pair_counts[i, j] -= 1
+                old_val_i = a[t - window, i]
+                if np.isnan(old_val_i):
+                    continue
+                for j in range(n_vars):
+                    old_val_j = a[t - window, j]
+                    if np.isnan(old_val_j):
+                        continue
+                    # Only update pairwise statistics for observations where BOTH are valid
+                    sums_i[i, j] -= old_val_i
+                    sums_j[i, j] -= old_val_j
+                    prods[i, j] -= old_val_i * old_val_j
+                    pair_counts[i, j] -= 1
 
         # Add new values
         for i in range(n_vars):
-            new_val = a[t, i]
-            if not np.isnan(new_val):
-                sums[i] += new_val
-                counts[i] += 1
-
-                # Update pairwise products
-                for j in range(n_vars):
-                    new_val_j = a[t, j]
-                    if not np.isnan(new_val_j):
-                        prods[i, j] += new_val * new_val_j
-                        pair_counts[i, j] += 1
+            new_val_i = a[t, i]
+            if np.isnan(new_val_i):
+                continue
+            for j in range(n_vars):
+                new_val_j = a[t, j]
+                if np.isnan(new_val_j):
+                    continue
+                # Only update pairwise statistics for observations where BOTH are valid
+                sums_i[i, j] += new_val_i
+                sums_j[i, j] += new_val_j
+                prods[i, j] += new_val_i * new_val_j
+                pair_counts[i, j] += 1
 
         # Compute covariance matrix for current window
         for i in range(n_vars):
@@ -187,8 +189,10 @@ def move_covmatrix(a, window, min_count, out):
                 n = pair_counts[i, j]
                 if n >= min_count:
                     if n > 1:
-                        # Unbiased covariance with ddof=1
-                        cov = (prods[i, j] - sums[i] * sums[j] / n) / (n - 1)
+                        # Unbiased covariance with ddof=1 using pairwise statistics
+                        mean_i = sums_i[i, j] / n
+                        mean_j = sums_j[i, j] / n
+                        cov = (prods[i, j] / n - mean_i * mean_j) * n / (n - 1)
                         out[t, i, j] = cov
                     else:
                         # n == 1, covariance is undefined (requires at least 2 points)
