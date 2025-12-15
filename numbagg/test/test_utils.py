@@ -1,6 +1,24 @@
 import numpy as np
+import pytest
 
 from numbagg.utils import move_axes
+
+
+def test_move_axes_rejects_out_of_bounds():
+    """move_axes should raise AxisError for out-of-bounds axis indices."""
+    arr = np.ones((3, 4, 5))
+
+    # Positive out-of-bounds
+    with pytest.raises(np.exceptions.AxisError):
+        move_axes(arr, (3,))
+    with pytest.raises(np.exceptions.AxisError):
+        move_axes(arr, (5,))
+
+    # Negative out-of-bounds
+    with pytest.raises(np.exceptions.AxisError):
+        move_axes(arr, (-4,))
+    with pytest.raises(np.exceptions.AxisError):
+        move_axes(arr, (-10,))
 
 
 def test_move_axes():
