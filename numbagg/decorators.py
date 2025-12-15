@@ -478,7 +478,33 @@ class ndfill(NumbaBase):
 
 
 class groupndreduce(NumbaBase):
-    """Create an N-dimensional grouped aggregation function."""
+    """Create an N-dimensional grouped aggregation function.
+
+    This decorator supports three axis modes that determine how labels are shaped
+    relative to values:
+
+    1. ``axis=int``: Labels are 1D with length ``values.shape[axis]``.
+       The specified axis is reduced, other dimensions are preserved.
+       This is the most common case, used by xarray/flox.
+
+    2. ``axis=tuple``: Labels have shape matching the specified axes.
+       E.g., ``axis=(1, 2)`` with values ``(time, lat, lon)`` requires
+       labels of shape ``(lat, lon)``. Multiple axes are reduced together.
+
+    3. ``axis=None``: Labels must have the same shape as values.
+       The entire array is treated as flat for grouping purposes.
+       Useful for scipy.ndimage-style labeled region operations.
+
+    Note: xarray/flox always uses ``axis=-1`` after flattening any multi-dimensional
+    groupby into a single dimension. The ``axis=tuple`` and ``axis=None`` modes
+    exist for direct numbagg users doing element-wise grouping (e.g., image
+    segmentation, spatial analysis with labeled regions).
+
+    Implementation requirement: The wrapped function receives values and labels
+    with ``core_ndim`` dimensions (1 for ``axis=int``, ``len(axis)`` for tuple,
+    ``values.ndim`` for None). Functions must iterate using ``np.ndindex(values.shape)``
+    to correctly handle all dimensionality modes.
+    """
 
     def __init__(
         self,
