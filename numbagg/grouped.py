@@ -54,17 +54,15 @@ def group_nancount(values: GenericArray, labels: IntArray, out: GenericArray) ->
 @groupndreduce.wrap()
 def group_nanargmax(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     max_values = np.full(out.shape, np.nan)
-    for i in range(len(values)):
-        value = values[i]
-        label = labels[i]
-        if label < 0:
-            continue
-        # Check for nan in the max_values to make sure we're updating it for the first time
-        if not np.isnan(value) and (
-            np.isnan(max_values[label]) or value > max_values[label]
-        ):
-            max_values[label] = value
-            out[label] = i
+    flat_idx = 0
+    for indices in np.ndindex(values.shape):
+        value = values[indices]
+        label = labels[indices]
+        if label >= 0 and not np.isnan(value):
+            if np.isnan(max_values[label]) or value > max_values[label]:
+                max_values[label] = value
+                out[label] = flat_idx
+        flat_idx += 1
     # If the max value for any label is still NaN (no valid data points), set it to NaN
     # We could instead set the array at the start to be `NaN` — would need to benchmark
     # which is faster.
@@ -72,25 +70,23 @@ def group_nanargmax(values: GenericArray, labels: IntArray, out: GenericArray) -
     # I'm quite confused why, but this raises a warning, so we do the full_loop instead.
     #
     #   out[np.isnan(max_values)] = np.nan
-    for i in range(len(out)):
-        if np.isnan(max_values[i]):
-            out[i] = np.nan
+    for idx in np.ndindex(out.shape):
+        if np.isnan(max_values[idx]):
+            out[idx] = np.nan
 
 
 @groupndreduce.wrap()
 def group_nanargmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
-    # Comments from `group_nanargmax` apply here too
     min_values = np.full(out.shape, np.nan)
-    for i in range(len(values)):
-        value = values[i]
-        label = labels[i]
-        if label < 0:
-            continue
-        if not np.isnan(value) and (
-            np.isnan(min_values[label]) or value < min_values[label]
-        ):
-            min_values[label] = value
-            out[label] = i
+    flat_idx = 0
+    for indices in np.ndindex(values.shape):
+        value = values[indices]
+        label = labels[indices]
+        if label >= 0 and not np.isnan(value):
+            if np.isnan(min_values[label]) or value < min_values[label]:
+                min_values[label] = value
+                out[label] = flat_idx
+        flat_idx += 1
     for idx in np.ndindex(out.shape):
         if np.isnan(min_values[idx]):
             out[idx] = np.nan
