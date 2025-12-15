@@ -340,6 +340,95 @@ class TestMovingMatrices:
 
         assert corr_moving_3d.shape == (2, 100, 3, 3)
 
+    @pytest.mark.parametrize("move_func", [move_corrmatrix, move_covmatrix])
+    def test_mismatched_nans_pairwise_statistics(self, move_func):
+        """Test correct handling when NaNs occur at different positions across variables.
+
+        This tests the pairwise-complete deletion behavior: statistics should be
+        computed using only observations where both variables are valid, not mixing
+        per-variable statistics (which would produce invalid results).
+        """
+        # Data where NaNs occur at different positions for each variable
+        # This ensures counts[i] != counts[j] != pair_counts[i,j]
+        data = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, np.nan],  # Variable 0 has value, variable 1 is NaN
+                [np.nan, 8.0],  # Variable 0 is NaN, variable 1 has value
+                [5.0, 10.0],
+                [6.0, 12.0],
+            ],
+            dtype=np.float64,
+        )
+
+        window = 6
+        result = move_func(data, window=window, min_count=2)
+
+        # Get the matrix at the last time point (full window)
+        matrix = result[5]
+
+        # Compare with pandas (which correctly uses pairwise-complete observations)
+        df = pd.DataFrame(data)
+        if move_func == move_corrmatrix:
+            pandas_result = df.rolling(window, min_periods=2).corr()
+        else:
+            pandas_result = df.rolling(window, min_periods=2).cov()
+        expected = pandas_result.loc[5].values
+
+        assert_allclose(matrix, expected, rtol=1e-10)
+
+    def test_corrmatrix_bounds_with_mismatched_nans(self):
+        """Test that correlation values stay in [-1, 1] even with mismatched NaNs."""
+        data = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, np.nan],
+                [np.nan, 8.0],
+                [5.0, 10.0],
+                [6.0, 12.0],
+            ],
+            dtype=np.float64,
+        )
+
+        result = move_corrmatrix(data, window=6, min_count=2)
+        corr_matrix = result[5]
+
+        # All finite correlations must be in [-1, 1]
+        finite_values = corr_matrix[np.isfinite(corr_matrix)]
+        assert np.all(finite_values >= -1.0), (
+            f"Found correlation < -1: {finite_values.min()}"
+        )
+        assert np.all(finite_values <= 1.0), (
+            f"Found correlation > 1: {finite_values.max()}"
+        )
+
+        # For this specific data (perfect linear y=2x), correlation should be 1.0
+        assert_allclose(corr_matrix[0, 1], 1.0, rtol=1e-10)
+
+    def test_covmatrix_sign_with_mismatched_nans(self):
+        """Test that covariance has correct sign with mismatched NaNs."""
+        data = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, np.nan],
+                [np.nan, 8.0],
+                [5.0, 10.0],
+                [6.0, 12.0],
+            ],
+            dtype=np.float64,
+        )
+
+        result = move_covmatrix(data, window=6, min_count=2)
+        cov_matrix = result[5]
+
+        # For data with perfect positive relationship y=2x, covariance must be positive
+        assert cov_matrix[0, 1] > 0, (
+            f"Covariance should be positive, got {cov_matrix[0, 1]}"
+        )
+
 
 class TestExponentialMatrices:
     """Test exponential moving matrix functions (move_exp_nancorrmatrix, move_exp_nancovmatrix)."""
