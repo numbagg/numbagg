@@ -19,7 +19,7 @@ def group_nanmean(values: GenericArray, labels: IntArray, out: GenericArray) -> 
             counts[label] += 1
             out[label] += value
 
-    for label in range(len(out)):  # type: ignore[assignment]
+    for label in range(len(out)):
         count = counts[label]
         if count == 0:
             out[label] = np.nan
@@ -167,7 +167,7 @@ def group_nanvar(
             sums_of_squares[label] += value**2
 
     # Calculate for each group
-    for label in range(len(out)):  # type: ignore[assignment]
+    for label in range(len(out)):
         count = counts[label]
         denom = count - ddof
         if denom <= 0:
@@ -197,7 +197,7 @@ def group_nanstd(
             sums[label] += value
             sums_of_squares[label] += value**2
 
-    for label in range(len(out)):  # type: ignore[assignment]
+    for label in range(len(out)):
         count = counts[label]
         denom = count - ddof
         if denom <= 0:

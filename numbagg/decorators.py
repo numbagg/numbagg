@@ -226,7 +226,7 @@ class ndaggregate(NumbaBaseSimple):
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
-        elif not isinstance(axis, Iterable):
+        elif not isinstance(axis, tuple):
             axis = (axis,)
 
         # Optimize axis order based on memory layout for better performance
@@ -370,7 +370,7 @@ class ndmoveexp(NumbaBaseSimple):
         **kwargs,
     ) -> FloatArray:
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])  # type: ignore[assignment,unused-ignore]
+            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
             alpha_axis = -1
         elif alpha.ndim == 1:
             alpha_axis = -1
@@ -581,8 +581,9 @@ class groupndreduce(NumbaBase):
 
         if values.dtype == np.bool_:
             if not self.supports_bool:
+                func_name = getattr(self.func, "__name__", "<unknown>")
                 raise TypeError(
-                    f"{self.func.__name__} does not support boolean input. "
+                    f"{func_name} does not support boolean input. "
                     "Convert to a numeric type first."
                 )
             values = values.astype(np.int32)
@@ -695,8 +696,9 @@ class ndmatrix(NumbaBase):
     ):
         # Require at least 2D input
         if a.ndim < 2:
+            func_name = getattr(self.func, "__name__", "<unknown>")
             raise ValueError(
-                f"{self.func.__name__} requires at least a 2D array with shape (..., vars, obs). "
+                f"{func_name} requires at least a 2D array with shape (..., vars, obs). "
                 "For 1D arrays, use nanvar for variance calculations."
             )
 
@@ -764,8 +766,9 @@ class ndmovematrix(NumbaBase):
         a = np.asarray(a)
 
         if a.ndim < 2:
+            func_name = getattr(self.func, "__name__", "<unknown>")
             raise ValueError(
-                f"{self.func.__name__} requires at least a 2D array with shape (..., obs, vars)."
+                f"{func_name} requires at least a 2D array with shape (..., obs, vars)."
             )
 
         if min_count is None:
@@ -829,7 +832,7 @@ class ndquantile(NumbaBase):
 
         if axis is None:
             axis = tuple(range(a.ndim))
-        elif not isinstance(axis, Iterable):
+        elif not isinstance(axis, tuple):
             axis = (axis,)
 
         a = move_axes(a, axis)
@@ -844,7 +847,8 @@ class ndquantile(NumbaBase):
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other
         # warnings.
-        if self.func.__name__ in ["nanquantile"]:
+        func_name = getattr(self.func, "__name__", "")
+        if func_name in ["nanquantile"]:
             warn: Literal["ignore", "warn"] = "ignore"
         else:
             warn = "warn"
@@ -983,7 +987,8 @@ class ndreduce(NumbaBase):
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other
         # warnings.
-        if self.func.__name__ in ["nanmin", "nanmax"]:
+        func_name = getattr(self.func, "__name__", "")
+        if func_name in ["nanmin", "nanmax"]:
             warn: Literal["ignore", "warn"] = "ignore"
         else:
             warn = "warn"
@@ -1045,8 +1050,9 @@ class ndmoveexpmatrix(NumbaBase):
         a = np.asarray(a)
 
         if a.ndim < 2:
+            func_name = getattr(self.func, "__name__", "<unknown>")
             raise ValueError(
-                f"{self.func.__name__} requires at least a 2D array with shape (..., obs, vars)."
+                f"{func_name} requires at least a 2D array with shape (..., obs, vars)."
             )
 
         # Exponential moving matrix functions use fixed convention: (..., obs, vars) -> (..., obs, vars, vars)
@@ -1055,7 +1061,7 @@ class ndmoveexpmatrix(NumbaBase):
 
         # Handle alpha parameter - broadcast to observations dimension (second-to-last)
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, a.shape[-2])  # type: ignore[assignment,unused-ignore]
+            alpha = np.broadcast_to(alpha, a.shape[-2])
 
         gufunc = self.gufunc(target=self.target)
         with np.errstate(invalid="ignore", divide="ignore"):
@@ -1112,7 +1118,8 @@ def _thread_backend() -> str:
 
     Returns the backend name: "tbb", "omp", or "workqueue".
     """
-    layer_choice = cast(str, numba.config.THREADING_LAYER)
+    # numba.config attributes are not in type stubs
+    layer_choice = cast(str, numba.config.THREADING_LAYER)  # type: ignore[attr-defined]
 
     # Direct backend name (not a category)
     if layer_choice not in _LAYER_CATEGORIES:
@@ -1121,7 +1128,8 @@ def _thread_backend() -> str:
     # Category like "default", "safe", "threadsafe", "forksafe"
     allowed_backends = _LAYER_CATEGORIES[layer_choice]
 
-    for backend in cast(list[str], numba.config.THREADING_LAYER_PRIORITY):
+    # numba.config attributes are not in type stubs
+    for backend in cast(list[str], numba.config.THREADING_LAYER_PRIORITY):  # type: ignore[attr-defined]
         if backend in allowed_backends and _is_backend_available(backend):
             return backend
 

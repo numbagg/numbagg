@@ -218,7 +218,7 @@ def test_groupby_mean_types(dtype):
     group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
     expected = pd.Series(values).groupby(group).mean()
     result = groupby_mean_pandas(values, group)
-    assert_almost_equal(result, expected.values)  # type: ignore[arg-type,unused-ignore]
+    assert_almost_equal(result, expected.values)
 
 
 @pytest.mark.parametrize(

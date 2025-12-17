@@ -185,7 +185,7 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                 else:
                     assert desired == actual
 
-            elif desiredraised and actual.size == 0:
+            elif desiredraised and hasattr(actual, "size") and actual.size == 0:
                 # there are no array values, so don't worry about not raising
                 pass
             else:
