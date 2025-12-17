@@ -13,6 +13,8 @@ from numpy.testing import (
 
 from numbagg import (
     AGGREGATION_FUNCS,
+    allnan,
+    anynan,
     bfill,
     ffill,
     nanargmax,
@@ -249,3 +251,75 @@ def test_wraps():
     assert move_exp_nanmean.__name__ == "move_exp_nanmean"
     assert move_exp_nanmean.__repr__() == "numbagg.move_exp_nanmean"
     assert "Exponentially" in move_exp_nanmean.__doc__  # type: ignore
+
+
+class TestAllnanAnynanEdgeCases:
+    """Tests for allnan/anynan edge cases that require output initialization."""
+
+    def test_allnan_all_nans(self):
+        """allnan returns True when all values are NaN."""
+        arr = np.array([np.nan, np.nan, np.nan])
+        assert allnan(arr)
+
+    def test_allnan_single_nan(self):
+        """allnan returns True for a single NaN value."""
+        arr = np.array([np.nan])
+        assert allnan(arr)
+
+    def test_allnan_no_nans(self):
+        """allnan returns False when no values are NaN."""
+        arr = np.array([1.0, 2.0, 3.0])
+        assert not allnan(arr)
+
+    def test_allnan_mixed(self):
+        """allnan returns False when some values are NaN."""
+        arr = np.array([np.nan, 1.0, np.nan])
+        assert not allnan(arr)
+
+    def test_anynan_no_nans(self):
+        """anynan returns False when no values are NaN."""
+        arr = np.array([1.0, 2.0, 3.0])
+        assert not anynan(arr)
+
+    def test_anynan_single_non_nan(self):
+        """anynan returns False for a single non-NaN value."""
+        arr = np.array([1.0])
+        assert not anynan(arr)
+
+    def test_anynan_all_nans(self):
+        """anynan returns True when all values are NaN."""
+        arr = np.array([np.nan, np.nan, np.nan])
+        assert anynan(arr)
+
+    def test_anynan_mixed(self):
+        """anynan returns True when some values are NaN."""
+        arr = np.array([1.0, np.nan, 3.0])
+        assert anynan(arr)
+
+    def test_allnan_2d_axis(self):
+        """allnan works correctly with axis parameter on 2D arrays."""
+        arr = np.array([[np.nan, np.nan], [1.0, np.nan], [np.nan, np.nan]])
+        result = allnan(arr, axis=1)
+        expected = np.array([True, False, True])
+        assert_array_equal(result, expected)
+
+    def test_anynan_2d_axis(self):
+        """anynan works correctly with axis parameter on 2D arrays."""
+        arr = np.array([[1.0, 2.0], [1.0, np.nan], [3.0, 4.0]])
+        result = anynan(arr, axis=1)
+        expected = np.array([False, True, False])
+        assert_array_equal(result, expected)
+
+    def test_allnan_empty_along_axis(self):
+        """allnan handles edge case with 2D where entire row is NaN."""
+        arr = np.array([[np.nan, np.nan, np.nan], [1.0, 2.0, 3.0]])
+        result = allnan(arr, axis=1)
+        expected = np.array([True, False])
+        assert_array_equal(result, expected)
+
+    def test_anynan_empty_along_axis(self):
+        """anynan handles edge case with 2D where entire row has no NaN."""
+        arr = np.array([[1.0, 2.0, 3.0], [np.nan, np.nan, np.nan]])
+        result = anynan(arr, axis=1)
+        expected = np.array([False, True])
+        assert_array_equal(result, expected)

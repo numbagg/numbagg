@@ -43,7 +43,7 @@ dev = [
   "ruff",
   "setuptools_scm",
   "tabulate",
-  "ty",
+  "ty>=0.0.2",
 ]
 
 [tool.setuptools_scm]

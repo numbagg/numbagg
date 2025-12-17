@@ -130,6 +130,33 @@ def test_move_exp_nancount_nansum(alpha):
     assert_allclose(result, expected)
 
 
+@pytest.mark.parametrize("alpha", [0.1, 0.5, 0.9])
+def test_move_exp_nancount_zero_before_observations(alpha):
+    # nancount returns 0.0 before any observations (with min_weight=0), not NaN.
+    # This differs from nansum which returns NaN. The semantic difference:
+    # - count of zero observations = 0 (a valid count)
+    # - sum of zero observations = undefined (NaN)
+    array = np.array([np.nan, np.nan, 1.0, np.nan, 1.0])
+
+    result = move_exp_nancount(array, alpha=alpha, min_weight=0.0)
+
+    # First two positions have zero observations, count is 0.0
+    assert result[0] == 0.0
+    assert result[1] == 0.0
+    # After first observation, count becomes positive
+    assert result[2] == 1.0
+
+    # All-NaN case: count is 0.0 throughout
+    array_all_nan = np.array([np.nan, np.nan, np.nan, np.nan])
+    result = move_exp_nancount(array_all_nan, alpha=alpha, min_weight=0.0)
+    expected = np.array([0.0, 0.0, 0.0, 0.0])
+    assert_array_equal(result, expected)
+
+    # Contrast with nansum which returns NaN for all-NaN input
+    sum_result = move_exp_nansum(array_all_nan, alpha=alpha, min_weight=0.0)
+    assert all(np.isnan(sum_result))
+
+
 @pytest.mark.parametrize(
     "func_n",
     [

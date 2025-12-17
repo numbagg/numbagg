@@ -10,6 +10,7 @@ def move_exp_nancount(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nanmean(
     arr: T,
@@ -17,6 +18,7 @@ def move_exp_nanmean(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nansum(
     arr: T,
@@ -24,6 +26,7 @@ def move_exp_nansum(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nanvar(
     arr: T,
@@ -31,6 +34,7 @@ def move_exp_nanvar(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nanstd(
     arr: T,
@@ -38,6 +42,7 @@ def move_exp_nanstd(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nancov(
     a1: T,
@@ -46,6 +51,7 @@ def move_exp_nancov(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...
 def move_exp_nancorr(
     a1: T,
@@ -54,4 +60,5 @@ def move_exp_nancorr(
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
+    axis: int = -1,
 ) -> T: ...

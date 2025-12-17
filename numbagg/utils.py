@@ -21,8 +21,7 @@ def move_axes(arr: NDArray[T], axes: tuple[int, ...]):
     """
     Move & reshape a tuple of axes to an array's final axis, handling zero-length axes.
     """
-    # Normalize axes values to positive
-    axes = tuple(a % arr.ndim for a in axes)
+    # np.moveaxis handles negative indices and raises AxisError for out-of-bounds
 
     # Move specified axes to the end
     moved_arr = np.moveaxis(arr, axes, range(arr.ndim - len(axes), arr.ndim))

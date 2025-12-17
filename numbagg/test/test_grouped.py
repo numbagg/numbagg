@@ -310,6 +310,47 @@ def test_group_axis_2d_labels(func):
     assert_almost_equal(result, values3d.reshape(5, -1))
 
 
+@pytest.mark.parametrize("func", [f[0] for f in FUNCTIONS])
+def test_group_nd_labels_all_functions(func):
+    """Test all grouped functions with N-dimensional labels.
+
+    This verifies that all functions correctly iterate using np.ndindex
+    rather than range(len(values)), which only works for 1D.
+
+    The test compares results from:
+    - 2D values/labels with axis=None
+    - Equivalent flattened 1D values/labels
+
+    These should produce identical results since axis=None treats the
+    array as flat anyway.
+    """
+    # 2D case: axis=None with matching shapes
+    values_2d = np.array([[1.0, 5.0, 3.0], [2.0, 4.0, 6.0]])
+    labels_2d = np.array([[0, 0, 1], [1, 2, 2]])
+
+    # Equivalent 1D case
+    values_1d = values_2d.ravel()
+    labels_1d = labels_2d.ravel()
+
+    # Both should give the same result
+    result_2d = func(values_2d, labels_2d)
+    result_1d = func(values_1d, labels_1d)
+
+    assert_allclose(result_2d, result_1d)
+
+    # Also test axis=tuple case: (batch, spatial_dim1, spatial_dim2)
+    values_3d = np.arange(24.0).reshape(2, 3, 4)
+    labels_spatial = np.arange(12).reshape(3, 4)  # Each element is its own group
+
+    result_tuple = func(values_3d, labels_spatial, axis=(1, 2))
+    assert result_tuple.shape == (2, 12)
+
+    # Compare with flattened: should match applying func to each batch separately
+    for batch in range(2):
+        result_1d_batch = func(values_3d[batch].ravel(), labels_spatial.ravel())
+        assert_allclose(result_tuple[batch], result_1d_batch)
+
+
 def test_numeric_int_nancount():
     values = np.array([1, 2, 3, 4, 5], dtype=np.int32)
     labels = np.array([0, 0, 0, 1, 1], dtype=np.int32)
@@ -415,3 +456,99 @@ def test_dimensionality():
 
     with pytest.raises(ValueError):
         func(values2, labels)
+
+
+def test_argmax_argmin_axis_tuple():
+    """Test group_nanargmax/argmin with axis=tuple (multi-dimensional groupby).
+
+    This is the xarray use case: groupby multiple dimensions simultaneously.
+    E.g., (time, lat, lon) grouped by 2D (lat, lon) region labels.
+    """
+    # Shape: (2, 3, 4) - like (time, lat, lon)
+    values = np.arange(24.0).reshape(2, 3, 4)
+    # 2D labels for (lat, lon) - each spatial point belongs to a group
+    labels = np.array([[0, 0, 1, 1], [0, 1, 1, 2], [2, 2, 2, 2]])
+
+    # Group by last two dimensions
+    result = group_nanargmax(values, labels, axis=(1, 2))
+
+    # For each time slice, find argmax within each label group
+    # Result shape: (2, 3) - (time, num_groups)
+    assert result.shape == (2, 3)
+
+    # Verify: for time=0, the values are 0-11 reshaped to (3,4)
+    # Label 0: positions (0,0), (0,1), (1,0) -> values 0, 1, 4 -> max at flat index 4
+    # Label 1: positions (0,2), (0,3), (1,1), (1,2) -> values 2, 3, 5, 6 -> max at flat index 6
+    # Label 2: positions (1,3), (2,0), (2,1), (2,2), (2,3) -> values 7, 8, 9, 10, 11 -> max at flat index 11
+    expected_t0 = np.array([4.0, 6.0, 11.0])
+    assert_allclose(result[0], expected_t0)
+
+    # Test argmin too
+    result_min = group_nanargmin(values, labels, axis=(1, 2))
+    assert result_min.shape == (2, 3)
+    # Label 0: min at flat index 0, Label 1: min at flat index 2, Label 2: min at flat index 7
+    expected_min_t0 = np.array([0.0, 2.0, 7.0])
+    assert_allclose(result_min[0], expected_min_t0)
+
+
+def test_argmax_argmin_2d_axis_none():
+    """Test group_nanargmax/argmin with 2D arrays and axis=None.
+
+    When axis=None and both values and labels have the same N-dimensional shape,
+    the function should return flattened indices (matching numpy's argmax behavior).
+    """
+    values = np.array([[1.0, 5.0, 3.0], [2.0, 4.0, 6.0]])
+    labels = np.array([[0, 0, 1], [1, 2, 2]])
+
+    # Test group_nanargmax
+    result = group_nanargmax(values, labels)
+
+    # Flattened values: [1.0, 5.0, 3.0, 2.0, 4.0, 6.0]
+    # Flattened labels: [0, 0, 1, 1, 2, 2]
+    # Label 0: flat indices 0,1 -> values 1.0, 5.0 -> max at flat index 1
+    # Label 1: flat indices 2,3 -> values 3.0, 2.0 -> max at flat index 2
+    # Label 2: flat indices 4,5 -> values 4.0, 6.0 -> max at flat index 5
+    expected_argmax = np.array([1.0, 2.0, 5.0])
+    assert_allclose(result, expected_argmax)
+
+    # Verify with np.unravel_index
+    for label in range(3):
+        flat_idx = int(result[label])
+        coords = np.unravel_index(flat_idx, values.shape)
+        flat_labels = labels.ravel()
+        flat_values = values.ravel()
+        label_mask = flat_labels == label
+        expected_max = flat_values[label_mask].max()
+        assert values[coords] == expected_max
+
+    # Test group_nanargmin
+    result = group_nanargmin(values, labels)
+
+    # Label 0: flat indices 0,1 -> values 1.0, 5.0 -> min at flat index 0
+    # Label 1: flat indices 2,3 -> values 3.0, 2.0 -> min at flat index 3
+    # Label 2: flat indices 4,5 -> values 4.0, 6.0 -> min at flat index 4
+    expected_argmin = np.array([0.0, 3.0, 4.0])
+    assert_allclose(result, expected_argmin)
+
+    # Verify with np.unravel_index
+    for label in range(3):
+        flat_idx = int(result[label])
+        coords = np.unravel_index(flat_idx, values.shape)
+        flat_labels = labels.ravel()
+        flat_values = values.ravel()
+        label_mask = flat_labels == label
+        expected_min = flat_values[label_mask].min()
+        assert values[coords] == expected_min
+
+
+@pytest.mark.parametrize(
+    "func",
+    [f for f in GROUPED_FUNCS if not f.supports_bool],
+)
+def test_bool_input_with_supports_bool_false(func):
+    """Test that bool input to functions with supports_bool=False raises TypeError."""
+    values = np.array([True, False, True, True, False], dtype=np.bool_)
+    labels = np.array([0, 0, 1, 1, 1], dtype=np.int64)
+
+    with pytest.raises(TypeError, match="does not support boolean input"):
+        func(values, labels, num_labels=2)
