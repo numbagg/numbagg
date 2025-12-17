@@ -259,7 +259,7 @@ def run(k_filter, run_tests, extra_args):
 
     if not summary.empty:
         summary = summary.reset_index()
-        values = summary.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
+        values = summary.to_dict(index=False, orient="split")["data"]
 
         # Generate headers from the new column structure (1D_pandas, 2D_pandas, etc.)
         headers = ["func"]
@@ -281,7 +281,7 @@ def run(k_filter, run_tests, extra_args):
     full = df.assign(
         func=lambda x: x.reset_index()["func"].where(lambda x: ~x.duplicated(), "")
     )
-    values = full.to_dict(index=False, orient="split")["data"]  # type: ignore[unused-ignore,call-overload]
+    values = full.to_dict(index=False, orient="split")["data"]
     full_markdown = tabulate(
         values,
         headers=full.columns,

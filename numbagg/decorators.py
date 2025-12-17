@@ -370,7 +370,7 @@ class ndmoveexp(NumbaBaseSimple):
         **kwargs,
     ) -> FloatArray:
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])  # type: ignore[assignment,unused-ignore]
+            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
             alpha_axis = -1
         elif alpha.ndim == 1:
             alpha_axis = -1
@@ -1061,7 +1061,7 @@ class ndmoveexpmatrix(NumbaBase):
 
         # Handle alpha parameter - broadcast to observations dimension (second-to-last)
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, a.shape[-2])  # type: ignore[assignment,unused-ignore]
+            alpha = np.broadcast_to(alpha, a.shape[-2])
 
         gufunc = self.gufunc(target=self.target)
         with np.errstate(invalid="ignore", divide="ignore"):

@@ -107,7 +107,7 @@ def array_generator(func_name, dtypes):
                     idx = rs.rand(*a.shape) < 0.2
                     a[idx] *= -1
                 rs.shuffle(a)
-                for shape in shapes:  # type: ignore
+                for shape in shapes:
                     yield a.reshape(shape)
 
     # non-contiguous arrays

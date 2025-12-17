@@ -46,6 +46,10 @@ dev = [
   "ty>=0.0.2",
 ]
 
+[tool.ty.rules]
+# Warn when type: ignore comments become unnecessary (e.g., if upstream adds stubs)
+unused-ignore-comment = "warn"
+
 [tool.setuptools_scm]
 fallback_version = "999"
 
