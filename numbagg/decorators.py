@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import functools
 import importlib
+import inspect
 import logging
 import os
 import sys
@@ -111,6 +112,8 @@ class NumbaBase:
         self.supports_parallel: bool = supports_parallel
         self._target_cpu: bool = not supports_parallel
         functools.wraps(func)(self)
+        # Override the signature from functools.wraps with the actual public API
+        self.__signature__ = inspect.signature(self.__call__)
 
     def __repr__(self) -> str:
         return f"numbagg.{self.__name__}"  # type: ignore[attr-defined]
@@ -197,6 +200,12 @@ class ndaggregate(NumbaBaseSimple):
     ) -> None:
         self.supports_ddof: bool = supports_ddof
         super().__init__(func, signature, supports_parallel)
+        # Remove ddof from signature for functions that don't support it
+        if not supports_ddof:
+            params = [
+                p for p in self.__signature__.parameters.values() if p.name != "ddof"
+            ]
+            self.__signature__ = self.__signature__.replace(parameters=params)
 
     def _optimize_axis_order(
         self, arr: np.ndarray, axes: tuple[int, ...]

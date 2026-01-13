@@ -36,6 +36,7 @@ dev = [
   "bottleneck",
   "hypothesis",
   "jq; platform_system!='Windows'", # jq doesn't easily install on Windows. Alternatively we could have a `benchmark` category
+  "mypy",
   "pandas",
   "pre-commit",
   "pytest-benchmark",
@@ -83,3 +84,8 @@ markers = [
   "nightly: Tests not to be run on each commit", #
   "slow: Tests not to be run on each loop",
 ]
+
+[tool.mypy]
+# Config for stubtest (mypy itself is not used for type checking)
+ignore_missing_imports = true
+ignore_errors = true

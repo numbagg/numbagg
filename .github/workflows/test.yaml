@@ -52,6 +52,15 @@ jobs:
       - name: Run pre-commit
         run: uv run --python 3.11 pre-commit run --all-files
 
+      - name: Run stubtest
+        # TODO: replace CLI options with pyproject.toml config when stubtest supports it
+        run: |
+          uv run --python 3.11 python -m mypy.stubtest \
+            numbagg.funcs numbagg.moving numbagg.moving_exp \
+            --allowlist stubtest_allowlist.txt \
+            --ignore-unused-allowlist \
+            --mypy-config-file pyproject.toml
+
   benchmark:
     runs-on: ubuntu-latest
     steps:
