@@ -1,0 +1,35 @@
+# Stubtest allowlist for "is not a function" errors
+# These are callable class instances, not functions, which is expected.
+# Allowlist generated with: python -m mypy.stubtest numbagg.funcs numbagg.moving numbagg.moving_exp --generate-allowlist
+
+numbagg.funcs.allnan
+numbagg.funcs.anynan
+numbagg.funcs.bfill
+numbagg.funcs.ffill
+numbagg.funcs.nanargmax
+numbagg.funcs.nanargmin
+numbagg.funcs.nancorrmatrix
+numbagg.funcs.nancount
+numbagg.funcs.nancovmatrix
+numbagg.funcs.nanmax
+numbagg.funcs.nanmean
+numbagg.funcs.nanmin
+numbagg.funcs.nanquantile
+numbagg.funcs.nanstd
+numbagg.funcs.nansum
+numbagg.funcs.nanvar
+numbagg.moving.move_corr
+numbagg.moving.move_corrmatrix
+numbagg.moving.move_cov
+numbagg.moving.move_covmatrix
+numbagg.moving.move_mean
+numbagg.moving.move_std
+numbagg.moving.move_sum
+numbagg.moving.move_var
+numbagg.moving_exp.move_exp_nancorr
+numbagg.moving_exp.move_exp_nancount
+numbagg.moving_exp.move_exp_nancov
+numbagg.moving_exp.move_exp_nanmean
+numbagg.moving_exp.move_exp_nanstd
+numbagg.moving_exp.move_exp_nansum
+numbagg.moving_exp.move_exp_nanvar

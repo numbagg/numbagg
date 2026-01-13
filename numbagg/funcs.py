@@ -330,8 +330,10 @@ def ffill(a: T, limit: int, out: T) -> None:
 count = nancount
 
 
-def nanmedian(a: NDArray[np.float64], **kwargs) -> NDArray[np.float64]:
-    return nanquantile(a, quantiles=0.5, **kwargs)
+def nanmedian(
+    a: NDArray[np.float64], *, axis: int | tuple[int, ...] | None = None, **kwargs
+) -> NDArray[np.float64]:
+    return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 
 
 @ndmatrix.wrap(
