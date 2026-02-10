@@ -79,7 +79,9 @@ def run(k_filter, run_tests, extra_args):
         .reset_index()
         .assign(
             func=lambda x: x["func"].map(
-                lambda func_name: f"`{func_name}`{'[^6]' if 'matrix' in func_name else '[^5]' if not getattr(numbagg, func_name).supports_parallel else ''}"
+                lambda func_name: (
+                    f"`{func_name}`{'[^6]' if 'matrix' in func_name else '[^5]' if not getattr(numbagg, func_name).supports_parallel else ''}"
+                )
             )
         )
     )
