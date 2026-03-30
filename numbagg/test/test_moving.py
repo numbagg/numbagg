@@ -368,7 +368,7 @@ def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
     else:
         y = np.empty(a.shape)
     idx1 = [slice(None)] * a.ndim
-    idx2: Any = list(idx1)
+    idx2: list[Any] = list(idx1)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for i in range(a.shape[axis]):
@@ -438,7 +438,7 @@ def lastrank(a, axis=-1):
     indlast_ = [slice(None)] * ndim
     indlast_[axis] = slice(-1, None)
     indlast = tuple(indlast_)
-    indlast2_: Any = [slice(None)] * ndim
+    indlast2_: list[Any] = list(indlast_)
     indlast2_[axis] = -1
     indlast2 = tuple(indlast2_)
     n = (~np.isnan(a)).sum(axis)
