@@ -1,0 +1,9 @@
+bot_name = "numbagg-bot"
+
+setup = [
+  { uses = "astral-sh/setup-uv@v7" },
+  { run = "uv sync" },
+]
+
+[workflows.ci-fix]
+watched_workflows = ["Test"]
