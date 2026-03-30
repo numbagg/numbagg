@@ -9,5 +9,5 @@ Tend-specific CI guidance. Project conventions are in CLAUDE.md.
 
 ## Dependency management
 
-Renovate is enabled via tend-renovate. Dependencies are managed in
-`pyproject.toml` with `uv`.
+Dependencies are managed in `pyproject.toml` with `uv`. The tend-weekly
+workflow handles dependency updates.
