@@ -35,7 +35,7 @@ uv run pytest
 uv run pytest --skip-slow
 
 # Run benchmarks (disabled by default)
-uv run pytest --benchmark-enable test/test_benchmark.py
+uv run pytest --benchmark-enable numbagg/test/test_benchmark.py
 
 # Run specific test file
 uv run pytest numbagg/test/test_funcs.py
