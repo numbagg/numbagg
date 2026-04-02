@@ -992,7 +992,7 @@ class ndreduce(NumbaBase):
     def __call__(
         self, arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None
     ):
-        # TODO: `nanmin` & `nanmix` raises a warning here for the default test
+        # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other
         # warnings.
