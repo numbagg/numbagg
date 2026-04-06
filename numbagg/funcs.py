@@ -117,7 +117,6 @@ def nanvar(a: F, ddof: int, out: F) -> None:
 
     asum = 0
     count = 0
-    # ddof = 1
     for ai in a:
         if not np.isnan(ai):
             asum += ai
