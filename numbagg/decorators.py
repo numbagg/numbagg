@@ -116,7 +116,7 @@ class NumbaBase:
         self.__signature__ = inspect.signature(self.__call__)
 
     def __repr__(self) -> str:
-        return f"numbagg.{self.__name__}"  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
+        return f"numbagg.{self.__name__}"  # ty:ignore[unresolved-attribute]
 
     @classmethod
     def wrap(cls: type[T], *args, **kwargs) -> Callable[..., T]:
@@ -1128,7 +1128,7 @@ def _thread_backend() -> str:
     Returns the backend name: "tbb", "omp", or "workqueue".
     """
     # numba.config attributes are not in type stubs
-    layer_choice = cast(str, numba.config.THREADING_LAYER)  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
+    layer_choice = cast(str, numba.config.THREADING_LAYER)  # ty:ignore[unresolved-attribute]
 
     # Direct backend name (not a category)
     if layer_choice not in _LAYER_CATEGORIES:
@@ -1138,7 +1138,7 @@ def _thread_backend() -> str:
     allowed_backends = _LAYER_CATEGORIES[layer_choice]
 
     # numba.config attributes are not in type stubs
-    for backend in cast(list[str], numba.config.THREADING_LAYER_PRIORITY):  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
+    for backend in cast(list[str], numba.config.THREADING_LAYER_PRIORITY):  # ty:ignore[unresolved-attribute]
         if backend in allowed_backends and _is_backend_available(backend):
             return backend
 

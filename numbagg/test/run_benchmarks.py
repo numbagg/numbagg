@@ -24,7 +24,7 @@ def _sort_key(x):
 
 
 def run(k_filter, run_tests, extra_args):
-    import jq  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+    import jq  # ty:ignore[unresolved-import]
 
     json_path = Path(".benchmarks/benchmark.json")
     json_path.parent.mkdir(exist_ok=True, parents=True)
