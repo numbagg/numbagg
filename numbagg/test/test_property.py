@@ -11,10 +11,12 @@ from numbagg import move_exp_nanmean
 
 from .conftest import COMPARISONS
 
-pytestmark = pytest.mark.nightly
-pytestmark = pytest.mark.skip(
-    reason="These need more work; in particular they overflow with very large values, but arguably in an acceptable way"
-)
+pytestmark = [
+    pytest.mark.nightly,
+    pytest.mark.skip(
+        reason="These need more work; in particular they overflow with very large values, but arguably in an acceptable way"
+    ),
+]
 
 
 @given(
@@ -38,7 +40,7 @@ def test_move_exp_pandas_comparison(
     if np.sum(np.isfinite(array) > 0) and np.nanmax(array) > 1e300:
         # We don't always handle overflows well
         return
-    if alpha == 1 & ~np.isnan(array) > 0:
+    if (alpha == 1) & (~np.isnan(array) > 0).any():
         # Pandas doesn't agree with us on arrays such as `[0, np.nan]`, see unit tests
         # for more details.
         return
