@@ -127,7 +127,7 @@ def functions():
     yield nanargmax, np.nanargmax, np.inf
     yield nanmin, np.nanmin, np.inf
     yield nanmean, np.nanmean, 5
-    yield nanmean, np.nanmean, True
+    yield nanmean, np.nanmean, 1
     yield nanstd, partial(np.nanstd, ddof=1), 5
     yield nanvar, partial(np.nanvar, ddof=1), 5
     # yield anynan, bn.anynan, np.inf
@@ -224,8 +224,7 @@ def slow_count(x, axis=None):
 
 @pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
 @pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
-def test_nanquantile(axis, quantiles, rs):
-    arr = rs.rand(2000).reshape(10, 10, -1)
+def test_nanquantile(axis, quantiles):
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
     result = nanquantile(arr, quantiles, axis=axis)
