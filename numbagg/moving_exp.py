@@ -113,9 +113,9 @@ def move_exp_nanvar(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
     N: int = len(a)
 
     # sum_x: decayed sum of the sequence values.
-    # sum_x2: decayed sum of the squared sequence values.
-    # n: decayed count of non-missing values observed so far in the sequence.
-    # n2: decayed sum of the (already-decayed) weights of non-missing values.
+    # sum_x_2: decayed sum of the squared sequence values.
+    # sum_weight: decayed count of non-missing values observed so far in the sequence.
+    # sum_weight_2: decayed sum of the (already-decayed) weights of non-missing values.
     sum_x_2 = sum_x = sum_weight = sum_weight_2 = weight = 0.0
 
     for i in range(N):
@@ -181,9 +181,9 @@ def move_exp_nanstd(a: T, alpha: FloatArray, min_weight: float, out: T) -> None:
     N: int = len(a)
 
     # sum_x: decayed sum of the sequence values.
-    # sum_x2: decayed sum of the squared sequence values.
-    # n: decayed count of non-missing values observed so far in the sequence.
-    # n2: decayed sum of the (already-decayed) weights of non-missing values.
+    # sum_x_2: decayed sum of the squared sequence values.
+    # sum_weight: decayed count of non-missing values observed so far in the sequence.
+    # sum_weight_2: decayed sum of the (already-decayed) weights of non-missing values.
     sum_x_2 = sum_x = sum_weight = sum_weight_2 = weight = 0.0
 
     for i in range(N):
