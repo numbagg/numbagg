@@ -364,3 +364,26 @@ def test_move_exp_alphas(array, alpha: float, func):
 
     result = c["numbagg"](array.T, alpha=alpha)(axis=0).T
     assert_allclose(result, expected)
+
+
+def test_move_exp_axis_tuple():
+    # Tuple axis should be unpacked to a single int and produce the same
+    # result as the equivalent integer axis.
+    array = np.array([1.0, 2.0, 3.0, 4.0])
+    expected = move_exp_nansum(array, alpha=0.5, axis=0)
+
+    result = move_exp_nansum(array, alpha=0.5, axis=(0,))
+    assert_allclose(result, expected)
+
+    # Same with an array alpha — the alpha-broadcasting branch must run after
+    # the axis tuple is unpacked.
+    alphas = np.full(array.shape[-1], 0.5)
+    result = move_exp_nansum(array, alpha=alphas, axis=(0,))
+    assert_allclose(result, expected)
+
+
+def test_move_exp_axis_empty_tuple():
+    # An empty tuple means no reduction — return the input unchanged.
+    array = np.array([1.0, 2.0, 3.0, 4.0])
+    result = move_exp_nansum(array, alpha=0.5, axis=())
+    assert_array_equal(result, array)
