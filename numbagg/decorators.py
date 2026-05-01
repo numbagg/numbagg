@@ -375,7 +375,7 @@ class ndmoveexp(NumbaBaseSimple):
         *arr: FloatArray,
         alpha: float | FloatArray,
         min_weight: float = 0,
-        axis: int = -1,
+        axis: int | tuple[int, ...] = -1,
         **kwargs,
     ) -> FloatArray:
         # If an empty tuple is passed, there's no reduction to do, so we return the
