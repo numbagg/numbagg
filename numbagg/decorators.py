@@ -375,17 +375,9 @@ class ndmoveexp(NumbaBaseSimple):
         *arr: FloatArray,
         alpha: float | FloatArray,
         min_weight: float = 0,
-        axis: int = -1,
+        axis: int | tuple[int, ...] = -1,
         **kwargs,
     ) -> FloatArray:
-        if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
-            alpha_axis = -1
-        elif alpha.ndim == 1:
-            alpha_axis = -1
-        else:
-            alpha_axis = axis
-
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
@@ -401,6 +393,14 @@ class ndmoveexp(NumbaBaseSimple):
                     f"Only one axis can be passed to {self.func}; got {axis}"
                 )
             (axis,) = axis
+
+        if not isinstance(alpha, np.ndarray):
+            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
+            alpha_axis = -1
+        elif alpha.ndim == 1:
+            alpha_axis = -1
+        else:
+            alpha_axis = axis
 
         # Axes is `axis` for each array (most often just one array), and then either
         # `-1` or `axis` for alphas, depending on whether a full array was passed or not.
