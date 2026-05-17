@@ -14,6 +14,12 @@ permission first) still applies when the target shows no agent signals.
 - **Test** — the main CI workflow (`test.yaml`). Runs tests, linting,
   benchmarks. tend-ci-fix watches this workflow.
 
+## CI polling cap
+
+Benchmark runs ~17 min, exceeding the bundled `running-in-ci` 15-iter cap.
+Use `while :; do …; done` instead of `for i in $(seq 1 15)` — poll until
+checks complete. See [#599](https://github.com/numbagg/numbagg/issues/599).
+
 ## Nightly rolling survey
 
 `nightly-survey-files.sh` outputs empty on roughly 5 of 28 days — this
