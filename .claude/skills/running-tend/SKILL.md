@@ -16,18 +16,9 @@ permission first) still applies when the target shows no agent signals.
 
 ## CI polling cap
 
-The `Test` workflow's `benchmark` job consistently runs 16–17 min wall, and
-the full required-check set on bot-opened PRs that trigger the matrix
-(workflow-regen, dependency bumps) finishes in 17–20 min. The bundled
-`running-in-ci` polling recipe's default `for i in $(seq 1 15)` (15-min cap)
-reliably fires one tick short of completion. **Use `seq 1 22` instead** when
-polling such PRs.
-
-The bot's fallback path (single-shot `gh pr checks` after cap fires) is
-correct — but it has historically carried bugs in hand-rolled continuation
-loops, so avoiding the fallback is preferred. See tracking issue
-[#599](https://github.com/numbagg/numbagg/issues/599) for the cumulative
-evidence.
+Benchmark runs ~17 min, exceeding the bundled `running-in-ci` 15-iter cap.
+Use `while :; do …; done` instead of `for i in $(seq 1 15)` — poll until
+checks complete. See [#599](https://github.com/numbagg/numbagg/issues/599).
 
 ## Nightly rolling survey
 
