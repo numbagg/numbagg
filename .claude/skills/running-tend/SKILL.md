@@ -14,6 +14,21 @@ permission first) still applies when the target shows no agent signals.
 - **Test** — the main CI workflow (`test.yaml`). Runs tests, linting,
   benchmarks. tend-ci-fix watches this workflow.
 
+## CI polling cap
+
+The `Test` workflow's `benchmark` job consistently runs 16–17 min wall, and
+the full required-check set on bot-opened PRs that trigger the matrix
+(workflow-regen, dependency bumps) finishes in 17–20 min. The bundled
+`running-in-ci` polling recipe's default `for i in $(seq 1 15)` (15-min cap)
+reliably fires one tick short of completion. **Use `seq 1 22` instead** when
+polling such PRs.
+
+The bot's fallback path (single-shot `gh pr checks` after cap fires) is
+correct — but it has historically carried bugs in hand-rolled continuation
+loops, so avoiding the fallback is preferred. See tracking issue
+[#599](https://github.com/numbagg/numbagg/issues/599) for the cumulative
+evidence.
+
 ## Nightly rolling survey
 
 `nightly-survey-files.sh` outputs empty on roughly 5 of 28 days — this
