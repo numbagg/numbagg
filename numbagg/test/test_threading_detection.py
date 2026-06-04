@@ -43,22 +43,14 @@ class TestThreadingDetection:
         assert backend in {"tbb", "omp", "workqueue"}
 
     @pytest.mark.parametrize(
-        "priority,expected",
+        "priority",
         [
-            (["workqueue", "omp", "tbb"], "workqueue"),
-            (
-                ["tbb", "workqueue", "omp"],
-                "workqueue",
-            ),  # tbb likely unavailable, falls back
-            (
-                ["omp", "tbb", "workqueue"],
-                "workqueue",
-            ),  # omp likely unavailable, falls back
+            ["workqueue", "omp", "tbb"],
+            ["tbb", "workqueue", "omp"],  # tbb likely unavailable, falls back
+            ["omp", "tbb", "workqueue"],  # omp likely unavailable, falls back
         ],
     )
-    def test_thread_backend_respects_priority(
-        self, reset_numba_config, priority, expected
-    ):
+    def test_thread_backend_respects_priority(self, reset_numba_config, priority):
         """Test that backend respects THREADING_LAYER_PRIORITY."""
         numba.config.THREADING_LAYER = "default"  # ty:ignore[unresolved-attribute]
         numba.config.THREADING_LAYER_PRIORITY = priority  # ty:ignore[unresolved-attribute]
