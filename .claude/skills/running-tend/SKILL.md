@@ -16,14 +16,18 @@ permission first) still applies when the target shows no agent signals.
 
 ## CI polling cap
 
-Benchmark runs ~17 min, exceeding the bundled `running-in-ci` 15-iter cap.
-Use `while :; do …; done` instead of `for i in $(seq 1 15)` — poll until
-checks complete. See [#599](https://github.com/numbagg/numbagg/issues/599).
+Benchmark runs ~17 min, exceeding the bundled `running-in-ci` 15-iter
+cap. Use an unbounded loop instead — e.g. `until [ "$(pending)" -eq 0 ];
+do sleep 60; done` (after defining `pending()` per the bundled recipe) —
+so the poll completes rather than aborting at 15 minutes.
 
-Run this loop in the **foreground**, not `run_in_background: true` (the
-bundled `running-in-ci` default): a backgrounded poll is killed when the
-run's turn ends (~1–2 min), long before the benchmark finishes, so the
-dismiss-on-CI-failure follow-up never runs.
+The claude-interactive harness blocks long leading `sleep` and
+auto-backgrounds the loop, then delivers a single notification when it
+exits. That is fine — the dismiss-on-CI-failure follow-up runs in
+response to that notification. Earlier guidance to "poll in the
+foreground, not `run_in_background: true`" applied to the prior
+`claude-code-action` harness and no longer holds; don't fight the
+auto-background.
 
 ## Nightly rolling survey
 
