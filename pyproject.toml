@@ -40,7 +40,8 @@ dev = [
   "pandas",
   "pre-commit",
   "pytest-benchmark",
-  "pytest",
+  # 9.1.0 regressed indirect fixture override (pytest-dev/pytest#14591); unpin when fixed upstream
+  "pytest!=9.1.0",
   "ruff",
   "setuptools_scm",
   "tabulate",
