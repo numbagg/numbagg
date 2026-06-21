@@ -21,9 +21,9 @@ def rewrite_ndreduce(func: Callable[P, R]) -> Callable[P, R]:
 
     into
 
-        def __sub__gufunc(x, __out):
+        def __numbagg_transformed_func(x, __numbagg_out):
             ...
-            __out[0] = foo
+            __numbagg_out[0] = foo
 
     which is the form numba needs for writing a gufunc that returns a scalar
     value.
