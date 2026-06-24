@@ -15,7 +15,7 @@ The library provides aggregation functions (like `nansum`, `nanmean`), moving wi
 
 Prefix commands with `uv run` to ensure that the correct virtual environment is used. For example:
 - `uv run pytest` instead of `python -m pytest`
-- `uv run mypy` instead of `mypy`
+- `uv run ty check` instead of `ty check`
 - `uv run pre-commit run --all-files` instead of `pre-commit run --all-files`
 
 ## Testing
