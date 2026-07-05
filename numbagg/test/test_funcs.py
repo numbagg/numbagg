@@ -106,6 +106,9 @@ def test_quantile_comparison(array, quantiles):
     kwargs = dict(quantiles=quantiles)
 
     result = c["numbagg"](array, **kwargs)()
+    # Both wrappers close over the same `array`, so a second identical call
+    # must produce the same result — a regression guard against nanquantile
+    # mutating its input (#251).
     assert_allclose(result, c["numbagg"](array, **kwargs)())
     expected = c["pandas"](array, **kwargs)().values
     assert_allclose(result, expected)
