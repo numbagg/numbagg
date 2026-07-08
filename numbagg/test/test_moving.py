@@ -201,17 +201,14 @@ def functions():
 
 @pytest.mark.parametrize("func,func0", functions())
 def test_numerical_results_identical(func, func0):
-    "Test that bn.xxx gives the same output as a reference function."
+    "Test that the numbagg function matches a slow reference implementation."
     fmt = (
         "\nfunc %s | window %d | min_count %s | input %s (%s) | shape %s | "
         "axis %s | order %s\n"
     )
     fmt += "\nInput array:\n%s\n"
     func_name = func.__name__
-    if func_name == "move_var":
-        decimal = 3
-    else:
-        decimal = 5
+    decimal = 5
     for i, a in enumerate(arrays(func_name)):
         if a.size >= 1_000:
             continue
