@@ -122,6 +122,10 @@ def test_quantile_comparison(array, quantiles):
         assert_allclose(result, expected)
 
 
+def slow_count(x, axis=None):
+    return np.sum(~np.isnan(x), axis=axis)
+
+
 def functions():
     # TODO: test tuple axes
     yield nansum, np.nansum, np.inf
@@ -152,7 +156,7 @@ def functions():
 @pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
 @pytest.mark.filterwarnings("ignore:invalid value encountered")
-@pytest.mark.parametrize("numbagg_func,comp_func,decimal", functions())
+@pytest.mark.parametrize("numbagg_func,comp_func,decimal", list(functions()))
 def test_numerical_results_identical(numbagg_func, comp_func, decimal):
     msg = "\nfunc %s | input %s (%s) | shape %s | axis %s\n"
     msg += "\nInput array:\n%s\n"
@@ -219,10 +223,6 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                 da = actual.dtype
                 dd = desired.dtype
                 assert_equal(da, dd, err_msg % (da, dd))
-
-
-def slow_count(x, axis=None):
-    return np.sum(~np.isnan(x), axis=axis)
 
 
 @pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])

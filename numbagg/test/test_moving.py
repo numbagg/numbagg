@@ -195,11 +195,16 @@ def test_numerical_issues_float32_move_sum_100(rs):
     assert result[-1] == expected, result[-1] - expected
 
 
+def slow_move_mean(a, window, min_count=None, axis=-1):
+    "Slow move_mean for unaccelerated dtype"
+    return move_func(np.nanmean, a, window, min_count, axis=axis)
+
+
 def functions():
     yield move_mean, slow_move_mean
 
 
-@pytest.mark.parametrize("func,func0", functions())
+@pytest.mark.parametrize("func,func0", list(functions()))
 def test_numerical_results_identical(func, func0):
     "Test that the numbagg function matches a slow reference implementation."
     fmt = (
@@ -243,11 +248,6 @@ def test_numerical_results_identical(func, func0):
                     # about endianness of the result
                     assert da.kind == dd.kind, err_msg % (da, dd)
                     assert da.itemsize == dd.itemsize, err_msg % (da, dd)
-
-
-def slow_move_mean(a, window, min_count=None, axis=-1):
-    "Slow move_mean for unaccelerated dtype"
-    return move_func(np.nanmean, a, window, min_count, axis=axis)
 
 
 # magic utility functions ---------------------------------------------------
