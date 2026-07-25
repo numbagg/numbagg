@@ -33,8 +33,9 @@ logger = logging.getLogger(__name__)
 
 def _set_fast_math() -> set[str] | bool:
     """
-    If "NUMBAGG_FASTMATH" is set to True, enable fastmath optimizations.\n
-    We exclude the "no nans" and "no infs" flags.\n
+    If "NUMBAGG_FASTMATH" is set to True, enable fastmath optimizations.
+
+    We exclude the "no nans" and "no infs" flags.
     see https://llvm.org/docs/LangRef.html#fast-math-flags
     """
     if os.getenv("NUMBAGG_FASTMATH", "False").lower() in ("true", "1", "t"):
