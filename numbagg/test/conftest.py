@@ -221,7 +221,7 @@ def _df_of_array(a):
 #
 # - Each function has a dict, which contains a mapping of library:lambda, for each
 #   library we want to test.
-# - The lambda takes an takes an input array and returns a callable than can be called
+# - The lambda takes an input array and returns a callable that can be called
 #   with `func()`. It should do all "setup" beforehand, so when we benchmark the
 #   functions, we're not benchmarking allocating dataframes etc.
 # - The lambda can also can have optional kwargs if we want to be able to test other
