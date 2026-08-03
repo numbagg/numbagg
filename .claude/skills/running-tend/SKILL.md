@@ -14,16 +14,24 @@ permission first) still applies when the target shows no agent signals.
 - **Test** — the main CI workflow (`test.yaml`). Runs tests, linting,
   benchmarks. tend-ci-fix watches this workflow.
 
-## CI polling cap
+## CI polling takes two passes
 
-Benchmark runs ~17 min, exceeding the bundled `running-in-ci` 15-iter cap.
-Use `while :; do …; done` instead of `for i in $(seq 1 15)` — poll until
-checks complete. See [#599](https://github.com/numbagg/numbagg/issues/599).
+The `benchmark` job runs ~17 min, longer than one pass of the bundled
+`running-in-ci` CI Monitoring loop (`for i in $(seq 1 9)`, sized to fit
+the harness's 10-min Bash maximum). That is expected here: run the
+bundled loop as written, and when the first pass reports checks still
+running, simply invoke it again. Two passes normally cover the benchmark.
 
-Run this loop in the **foreground**, not `run_in_background: true` (the
-bundled `running-in-ci` default): a backgrounded poll is killed when the
-run's turn ends (~1–2 min), long before the benchmark finishes, so the
-dismiss-on-CI-failure follow-up never runs.
+Do **not** substitute an unbounded `while :; do …; done` — it cannot
+finish inside the 10-min Bash cap, so the harness kills it mid-poll with
+exit 143 and the poll has to be restarted anyway
+([30789131037](https://github.com/numbagg/numbagg/actions/runs/30789131037)).
+See [#599](https://github.com/numbagg/numbagg/issues/599).
+
+Keep the loop in the **foreground** (no `run_in_background: true`): a
+backgrounded poll is killed when the run's turn ends (~1–2 min), long
+before the benchmark finishes, so the dismiss-on-CI-failure follow-up
+never runs.
 
 ## Nightly rolling survey
 
