@@ -1,4 +1,7 @@
 bot_name: numbagg-bot
+# The agent runs everything through `uv run` (CLAUDE.md); setup-uv is where it
+# gets uv. `uv sync` warms `.venv`, which the sandbox inherits along with the
+# workspace, so `uv run` only syncs what the PR changed.
 setup:
 - uses: astral-sh/setup-uv@v7
 - run: uv sync
