@@ -26,7 +26,8 @@ def _sort_key(x):
 # pytest-benchmark can't serialize the function objects it's parametrized over, so it
 # records them as `UNSERIALIZABLE[<repr>]`. Decorated functions have a `__repr__` of
 # `numbagg.<name>`; plain wrappers like `nanmedian` fall back to the default
-# `<function nanmedian at 0x...>`. Match both, or their rows are silently dropped.
+# `<function nanmedian at 0x...>`. Match both, or their rows are silently dropped; any
+# other repr form raises rather than vanishing the same way.
 _JQ_PROGRAM = r"""
 .benchmarks[]
 | select(.name | test("test_benchmark_(main|matrix)\\["))
@@ -35,7 +36,11 @@ _JQ_PROGRAM = r"""
     library: .params.library,
     func: (
       .params.func
-      | (match("\\[numbagg\\.(.*?)\\]") // match("<function (.*?) at "))
+      | (
+          match("\\[numbagg\\.(.*?)\\]")
+          // match("<function (.*?) at ")
+          // error("benchmark row has an unrecognized func repr: \(.)")
+        )
       | .captures[0].string
     ),
     time: .stats.median,
