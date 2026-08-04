@@ -323,7 +323,7 @@ The `axis` parameter in numbagg has three different behaviors depending on the f
 
 ### Aggregation functions
 
-Includes: `nanmean`, `nansum`, `nanstd`, `nanvar`, `nanmin`, `nanmax`, `nancount`, `nanargmin`, `nanargmax`, `nanquantile`, `allnan`, `anynan`
+Includes: `nanmean`, `nansum`, `nanstd`, `nanvar`, `nanmin`, `nanmax`, `nancount`, `nanargmin`, `nanargmax`, `nanquantile`, `nanmedian`, `allnan`, `anynan`
 
 - Specify dimensions to reduce/aggregate over
 - Support multiple axes, e.g. `axis=(0, 1)`
