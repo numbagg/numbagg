@@ -16,6 +16,10 @@ from numbagg import (
 from .conftest import COMPARISONS
 from .util import array_order, arrays
 
+# Matrix functions return `(..., obs, vars, vars)` rather than the input shape, so
+# they're compared against pandas in `test_move_matrix_pandas_comp` instead.
+MOVE_MATRIX_FUNCS = [move_corrmatrix, move_covmatrix]
+
 
 @pytest.fixture(scope="function")
 def rs():
@@ -24,16 +28,12 @@ def rs():
 
 @pytest.mark.parametrize(
     "func",
-    MOVE_FUNCS,
+    [f for f in MOVE_FUNCS if f not in MOVE_MATRIX_FUNCS],
 )
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
 @pytest.mark.parametrize("window", [10, 50])
 @pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
 def test_move_pandas_comp(array, func, window, min_count):
-    if func.__name__ in ["move_corrmatrix", "move_covmatrix"]:
-        pytest.skip(
-            "Matrix functions tested separately in test_move_matrix_pandas_comp"
-        )
     c = COMPARISONS[func]
 
     if min_count == "window":
@@ -53,7 +53,7 @@ def test_move_pandas_comp(array, func, window, min_count):
         assert_allclose(result, expected_bottleneck)
 
 
-@pytest.mark.parametrize("func", [move_corrmatrix, move_covmatrix], indirect=True)
+@pytest.mark.parametrize("func", MOVE_MATRIX_FUNCS, indirect=True)
 @pytest.mark.parametrize(
     "shape", [(5, 100)], indirect=True
 )  # (vars, obs) benchmark convention
@@ -61,9 +61,6 @@ def test_move_pandas_comp(array, func, window, min_count):
 @pytest.mark.parametrize("min_count", [None, "window"])
 def test_move_matrix_pandas_comp(array, func, window, min_count):
     """Test matrix functions against pandas with various parameters."""
-    if array.ndim < 2:
-        pytest.skip("Matrix functions require at least 2D input")
-
     c = COMPARISONS[func]
 
     if min_count == "window":
@@ -255,7 +252,7 @@ def test_numerical_results_identical(func, func0):
 
 def move_func(func, a, window, min_count=None, axis=-1, **kwargs):
     "Generic moving window function implemented with a python loop."
-    a = np.array(a, copy=False)
+    a = np.asarray(a)
     if min_count is None:
         mc = window
     else:
