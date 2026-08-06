@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -25,11 +23,28 @@ from numbagg.grouped import (
 )
 from numbagg.test.conftest import COMPARISONS
 
+
+def pandas_idxmax(grouped):
+    """
+    `SeriesGroupBy.idxmax` equivalent which returns `NaN` for all-NA groups.
+
+    numbagg's `group_nanargmax` returns `NaN` for a group with no valid values.
+    pandas deprecated that behavior in 2.1 and, as of 3.0, raises `ValueError`
+    instead, so we only call `idxmax` on groups which have a valid value.
+    """
+    return grouped.agg(lambda x: x.idxmax() if x.notna().any() else np.nan)
+
+
+def pandas_idxmin(grouped):
+    """As `pandas_idxmax`, for `group_nanargmin`."""
+    return grouped.agg(lambda x: x.idxmin() if x.notna().any() else np.nan)
+
+
 FUNCTIONS = [
     (group_nanall, lambda x: x.all(), None),
     (group_nanany, lambda x: x.any(), None),
-    (group_nanargmax, lambda x: x.idxmax(), np.nanargmax),
-    (group_nanargmin, lambda x: x.idxmin(), np.nanargmin),
+    (group_nanargmax, pandas_idxmax, np.nanargmax),
+    (group_nanargmin, pandas_idxmin, np.nanargmin),
     (group_nancount, lambda x: x.count(), None),
     (group_nanfirst, lambda x: x.first(), None),
     (group_nanlast, lambda x: x.last(), None),
@@ -62,18 +77,6 @@ FUNCTIONS_CONSTANT = [
         group_nanmax,
     }
 ]
-
-
-@pytest.fixture(autouse=True)
-def silence_pandas_idx_warnings():
-    # Not sure whether we adopt this behavior, but no need to litter with
-    # warnings in the meantime...
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The behavior of Series.* with all-NA values, or any-NA and skipna=False, is deprecated. In a future version this will raise ValueError",
-        )
-        yield
 
 
 @pytest.fixture(params=[np.float64, np.int32, np.bool_], scope="module")
@@ -226,7 +229,7 @@ def test_groupby_mean_types(dtype):
     [
         (group_nansum, lambda x: x.sum(), 0),
         (group_nanprod, lambda x: x.prod(), 1),
-        (group_nanargmin, lambda x: x.idxmin(), np.nan),
+        (group_nanargmin, pandas_idxmin, np.nan),
     ],
 )
 def test_groupby_empty_numeric_operations(numbagg_func, pandas_func, exp):
