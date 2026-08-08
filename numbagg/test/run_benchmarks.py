@@ -23,6 +23,44 @@ def _sort_key(x):
     )
 
 
+# pytest-benchmark can't serialize the function objects it's parametrized over, so it
+# records them as `UNSERIALIZABLE[<repr>]`. Decorated functions have a `__repr__` of
+# `numbagg.<name>`; plain wrappers like `nanmedian` fall back to the default
+# `<function nanmedian at 0x...>`. Match both, or their rows are silently dropped; any
+# other repr form raises rather than vanishing the same way.
+_JQ_PROGRAM = r"""
+.benchmarks[]
+| select(.name | test("test_benchmark_(main|matrix)\\["))
+| .params + {
+    group,
+    library: .params.library,
+    func: (
+      .params.func
+      | (
+          match("\\[numbagg\\.(.*?)\\]")
+          // match("<function (.*?) at ")
+          // error("benchmark row has an unrecognized func repr: \(.)")
+        )
+      | .captures[0].string
+    ),
+    time: .stats.median,
+  }
+"""
+
+
+def _func_label(func_name: str) -> str:
+    """Markdown label for a function, with the footnote marker its type calls for."""
+    if "matrix" in func_name:
+        return f"`{func_name}`[^6]"
+    func = getattr(numbagg, func_name)
+    # `nanmedian` is a plain wrapper around `nanquantile` rather than a decorated
+    # gufunc, so it has no `supports_parallel` attribute. It inherits the
+    # parallelism of the function it delegates to, so default to parallel.
+    if getattr(func, "supports_parallel", True):
+        return f"`{func_name}`"
+    return f"`{func_name}`[^5]"
+
+
 def run(k_filter, run_tests, extra_args):
     import jq  # ty:ignore[unresolved-import]
 
@@ -44,9 +82,7 @@ def run(k_filter, run_tests, extra_args):
             check=True,
         )
 
-    json = jq.compile(
-        r'.benchmarks[] | select(.name | test("test_benchmark_(main|matrix)\\[")) | .params + {group, library: .params.library, func: .params.func | match("\\[numbagg.(.*?)\\]").captures[0].string, time: .stats.median, }'
-    ).input(text=json_path.read_text())
+    json = jq.compile(_JQ_PROGRAM).input(text=json_path.read_text())
 
     df = pd.DataFrame.from_dict(json.all())
 
@@ -77,13 +113,7 @@ def run(k_filter, run_tests, extra_args):
     df = (
         df.reindex(pd.MultiIndex.from_tuples(sorted_index, names=df.index.names))
         .reset_index()
-        .assign(
-            func=lambda x: x["func"].map(
-                lambda func_name: (
-                    f"`{func_name}`{'[^6]' if 'matrix' in func_name else '[^5]' if not getattr(numbagg, func_name).supports_parallel else ''}"
-                )
-            )
-        )
+        .assign(func=lambda x: x["func"].map(_func_label))
     )
 
     # Do numbagg last, so the division works below
