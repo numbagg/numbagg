@@ -744,15 +744,17 @@ class ndmovematrix(NumbaBase):
     for each window position (e.g., moving correlation/covariance matrices).
 
     Broadcasting and Dimension Conventions:
-    - Core dimensions: `(n, m), (), () -> (m, n, n)` where n=variables, m=observations
+    - Core dimensions: `(m, n), (), () -> (m, n, n)` where m=observations, n=variables.
+      Note this is observations-first, the opposite of the variables-first order that
+      the static `ndmatrix` functions take.
     - Conceptual: The observations dimension is preserved and becomes the time axis,
       with n×n variable matrices added at the end for each time point
     - Broadcasting: Works with arbitrary leading dimensions
 
     Examples:
-    - 2D input `(3, 100)` -> output `(100, 3, 3)` - matrix at each time
-    - 3D input `(batch=2, vars=3, obs=100)` -> output `(2, 100, 3, 3)`
-    - 4D input `(2, 5, 3, 100)` -> output `(2, 5, 100, 3, 3)`
+    - 2D input `(100, 3)` -> output `(100, 3, 3)` - matrix at each time
+    - 3D input `(batch=2, obs=100, vars=3)` -> output `(2, 100, 3, 3)`
+    - 4D input `(2, 5, 100, 3)` -> output `(2, 5, 100, 3, 3)`
 
     Each time step contains a matrix computed from the rolling window ending at that time.
     """
@@ -1026,16 +1028,18 @@ class ndmoveexpmatrix(NumbaBase):
     for each time position using exponential decay (e.g., moving correlation/covariance matrices).
 
     Broadcasting and Dimension Conventions:
-    - Core dimensions: `(n, m), (m), () -> (m, n, n)` where n=variables, m=observations
+    - Core dimensions: `(m, n), (m), () -> (m, n, n)` where m=observations, n=variables.
+      Note this is observations-first, the opposite of the variables-first order that
+      the static `ndmatrix` functions take.
     - Conceptual: The observations dimension is preserved and becomes the time axis,
       with n×n variable matrices added at the end for each time point
     - Broadcasting: Works with arbitrary leading dimensions
     - Alpha parameter: Supports scalar or array broadcasting
 
     Examples:
-    - 2D input `(3, 100)` -> output `(100, 3, 3)` - matrix at each time
-    - 3D input `(batch=2, vars=3, obs=100)` -> output `(2, 100, 3, 3)`
-    - 4D input `(2, 5, 3, 100)` -> output `(2, 5, 100, 3, 3)`
+    - 2D input `(100, 3)` -> output `(100, 3, 3)` - matrix at each time
+    - 3D input `(batch=2, obs=100, vars=3)` -> output `(2, 100, 3, 3)`
+    - 4D input `(2, 5, 100, 3)` -> output `(2, 5, 100, 3, 3)`
 
     Each time step contains a matrix computed using exponentially weighted observations
     up to that time, with more recent observations having higher weight.
