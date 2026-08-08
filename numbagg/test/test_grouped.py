@@ -124,6 +124,8 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
     elif dtype == np.bool_:
         if not numbagg_func.supports_bool:
             pytest.skip(f"{numbagg_func} doesn't support bools")
+        result = numbagg_func(values, labels)
+        assert_almost_equal(result, expected.values)
     else:
         result = numbagg_func(values, labels)
         assert_almost_equal(result, expected.values)
@@ -364,7 +366,7 @@ def test_numeric_int_nanmean():
     labels = np.array([0, 0, 0, 1, 1, 2], dtype=np.int32)
 
     result = group_nanmean(values, labels)
-    assert_almost_equal(result, np.array([2, 4, 6]))
+    assert_almost_equal(result, np.array([2.0, 4.5, 6.0]))
 
 
 def test_numeric_int_nanmin():
@@ -416,7 +418,9 @@ def test_int8_again(dtype, func):
 
     expected = getattr(
         pd.DataFrame(array.T).groupby(by), func.__name__.removeprefix("group_nan")
-    )().T.astype(dtype)
+    )().T
+    if func.supports_ints:
+        expected = expected.astype(dtype)
 
     # https://github.com/numbagg/numbagg/issues/213
     assert_almost_equal(func(array, by, axis=-1), expected)
@@ -552,3 +556,12 @@ def test_bool_input_with_supports_bool_false(func):
 
     with pytest.raises(TypeError, match="does not support boolean input"):
         func(values, labels, num_labels=2)
+
+
+def test_group_nanmean_bool():
+    """Regression test for #131: group_nanmean with bool input."""
+    values = np.array([True, True, False])
+    labels = np.array([0, 0, 0])
+    result = group_nanmean(values, labels)
+    expected = np.array([2 / 3])
+    assert_almost_equal(result, expected)

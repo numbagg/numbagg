@@ -4,7 +4,7 @@ from .decorators import groupndreduce
 from .utils import FloatArray, GenericArray, IntArray
 
 
-@groupndreduce.wrap()
+@groupndreduce.wrap(supports_ints=False)
 def group_nanmean(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
     counts = np.zeros(out.shape, dtype=labels.dtype)
     out[:] = 0.0
