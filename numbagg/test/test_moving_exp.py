@@ -254,13 +254,15 @@ def test_move_exp_inf():
     expected = np.array([np.inf])
     assert_allclose(result, expected)
 
+    # `float16` isn't in `FloatArray`; numpy upcasts it to a supported gufunc loop at
+    # runtime, so the calls below are fine but don't type-check.
     array = np.array([0, 0, np.inf], dtype=np.float16)
-    result = move_exp_nanmean(array, alpha=1.0)
+    result = move_exp_nanmean(array, alpha=1.0)  # type: ignore
     expected = np.array([0, 0, np.inf])
     assert_array_equal(result, expected)
 
     array = np.array([0, np.inf, np.inf], dtype=np.float16)
-    result = move_exp_nanmean(array, alpha=1.0)
+    result = move_exp_nanmean(array, alpha=1.0)  # type: ignore
     # Unclear if the final value should remain `inf` or become `nan` — it's changing to
     # `nan` because `alpha=1`, and so we get `inf * 0`...
     expected = np.array([0, np.inf, np.nan])
