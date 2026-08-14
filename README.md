@@ -312,10 +312,10 @@ numbagg/test/run_benchmarks.py -- --benchmark-max-time=10`. They run in CI,
     on parallelizable arrays.
 
 [^6]:
-    Matrix functions (correlation/covariance matrices) use different array shapes
-    in the summary benchmark: their **largest 2D shape** appears in the 1D column
-    and their **largest 3D shape** appears in the 2D column to demonstrate
-    parallelization across multiple independent matrices.
+    Matrix functions (correlation/covariance matrices) have no 1D benchmark — the
+    smallest input they accept is 2D — so their **largest 2D shape** appears in the
+    1D column. The 2D column has no entry for them, because no comparison library
+    accepts more than two dimensions.
 
 ## Axis parameter behavior
 
