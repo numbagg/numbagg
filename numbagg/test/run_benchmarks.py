@@ -61,30 +61,10 @@ def _func_label(func_name: str) -> str:
     return f"`{func_name}`[^5]"
 
 
-def run(k_filter, run_tests, extra_args):
-    import jq  # ty:ignore[unresolved-import]
+def markdown_tables(records: list[dict]) -> tuple[str, str]:
+    """The summary and full benchmark tables as markdown, from `_JQ_PROGRAM`'s output."""
 
-    json_path = Path(".benchmarks/benchmark.json")
-    json_path.parent.mkdir(exist_ok=True, parents=True)
-    if run_tests:
-        subprocess.run(
-            [
-                "pytest",
-                "-vv",
-                "numbagg/test/test_benchmark.py",
-                f"-k={k_filter}",
-                "--benchmark-enable",
-                "--benchmark-only",
-                "--run-nightly",
-                f"--benchmark-json={json_path}",
-            ]
-            + extra_args,
-            check=True,
-        )
-
-    json = jq.compile(_JQ_PROGRAM).input(text=json_path.read_text())
-
-    df = pd.DataFrame.from_dict(json.all())
+    df = pd.DataFrame(records)
 
     df = (
         df.assign(size=lambda x: x["shape"].map(lambda x: np.prod(x)))
@@ -142,29 +122,23 @@ def run(k_filter, run_tests, extra_args):
     ].rename_axis(columns=None)
 
     def make_summary_df(df, nd: int):
-        """Create summary DataFrame for benchmark results.
+        """Ratios at one dimensionality, indexed by func with a column per shape.
 
-        Matrix functions require special handling to appear in main summary columns:
-        - nd=1 (1D column): Use their LARGEST 2D matrix shape
-        - nd=2 (2D column): Use their LARGEST 3D matrix shape (demonstrates parallelization)
-
-        This allows matrix functions to demonstrate parallelization without separate columns.
+        Matrix functions have no 1D benchmark — the smallest input they accept is 2D —
+        so the 1D column falls back to their largest 2D shape. They're absent from the
+        2D column, because no comparison library accepts more than two dimensions and
+        so there's nothing to compare a parallelized matrix run against.
         """
 
-        def process_functions(func_df, target_ndim, source_df=None):
-            """Process a subset of functions with target dimensionality."""
-            if source_df is None:
-                source_df = func_df
-
-            filtered = func_df[lambda x: x["ndim"] == target_ndim]
+        def ratios_at_largest_shape(func_df, ndim):
+            filtered = func_df[lambda x: x["ndim"] == ndim]
             if filtered.empty:
                 return None
 
             # Use largest array shape for performance comparison
             shape = filtered.sort_values(by="size")["shape"].iloc[-1]
             return (
-                source_df.query(f"shape == '{shape}'")
-                .reset_index()
+                func_df.query(f"shape == '{shape}'")
                 .set_index(["func", "shape"])
                 .unstack("shape")  # Pivot: functions as rows, shapes as columns
                 .pipe(
@@ -172,139 +146,65 @@ def run(k_filter, run_tests, extra_args):
                         [
                             c
                             for c in x.columns
-                            if c[0].endswith("ratio") and c[0] not in ["numbagg_ratio"]
+                            if c[0].endswith("ratio") and c[0] != "numbagg_ratio"
                         ]
                     ]
                 )
             )
 
-        # Split data by matrix vs non-matrix functions
-        matrix_df = df[df["func"].str.contains("matrix", na=False)]
-        non_matrix_df = df[~df["func"].str.contains("matrix", na=False)]
-
-        results = []
-
-        # Process non-matrix functions: use regular dimensionality (1D→1D, 2D→2D)
-        if not non_matrix_df.empty:
-            regular_result = process_functions(non_matrix_df, nd)
-            if regular_result is not None:
-                results.append(regular_result)
-
-        # Process matrix functions: use special dimensionality mapping
-        if not matrix_df.empty:
-            matrix_target_ndim = {1: 2, 2: 3}.get(nd)  # 1D→2D, 2D→3D
-            if matrix_target_ndim:
-                matrix_result = process_functions(
-                    matrix_df, matrix_target_ndim, matrix_df
-                )
-                if matrix_result is not None:
-                    results.append(matrix_result)
-
-        # Combine all results into single DataFrame
+        is_matrix = df["func"].str.contains("matrix", na=False)
+        results = [ratios_at_largest_shape(df[~is_matrix], nd)]
+        if nd == 1:
+            results.append(ratios_at_largest_shape(df[is_matrix], 2))
+        results = [r for r in results if r is not None]
         return pd.concat(results, axis=0) if results else pd.DataFrame()
 
-    def get_column_value(summary_df, func, lib, dimension, matrix_shape_exclusions):
-        """Extract column value for a function/library pair with matrix function handling."""
-        matching_cols = [
-            col for col in summary_df.columns if col[0].removesuffix("_ratio") == lib
-        ]
+    def summary_value(summary_df, func, lib):
+        """The ratio for a function/library pair, from whichever shape column holds it.
 
-        if not matching_cols or func not in summary_df.index:
+        Concatenating the matrix and non-matrix frames leaves one column per shape, and
+        each function has a value in exactly one of them.
+        """
+        if func not in summary_df.index:
             return "n/a"
+        values = summary_df.loc[
+            func, [c for c in summary_df.columns if c[0].removesuffix("_ratio") == lib]
+        ].dropna()
+        return values.iloc[0] if len(values) else "n/a"
 
-        # For matrix functions, try to find matrix-specific column first
-        value = None
-        if "matrix" in func:
-            matrix_cols = [
-                col
-                for col in matching_cols
-                if not any(exclusion in col[1] for exclusion in matrix_shape_exclusions)
-            ]
-            if matrix_cols:
-                value = summary_df.loc[func, matrix_cols[0]]
+    summaries = [(nd, make_summary_df(df, nd)) for nd in (1, 2)]
 
-        # Fallback to first column if no matrix-specific column found
-        if value is None:
-            value = summary_df.loc[func, matching_cols[0]]
+    summary_funcs = set().union(*(summary_df.index for _, summary_df in summaries))
+    # Rows follow the order `_sort_key` established above
+    funcs = [func for func in df["func"].drop_duplicates() if func in summary_funcs]
+    # Columns follow the library order of the full benchmark table below
 
-        return value if not pd.isna(value) else "n/a"
-
-    def process_dimension_data(
-        summary_df, func, dimension, all_libs, matrix_shape_exclusions
-    ):
-        """Process data for a single dimension (1D or 2D) for a specific function."""
-        if summary_df.empty:
-            return {f"{dimension}_{lib}": "n/a" for lib in all_libs}
-
-        return {
-            f"{dimension}_{lib}": get_column_value(
-                summary_df, func, lib, dimension, matrix_shape_exclusions
-            )
-            for lib in all_libs
-        }
-
-    # Create summaries including matrix functions in main 1D/2D columns
-    summary_1d = make_summary_df(df, 1)
-    summary_2d = make_summary_df(df, 2)
-
-    # Matrix function shape exclusion patterns
-    matrix_exclusions = {"1D": ["(10000000,)"], "2D": ["(100, 100000)"]}
-
-    # Combine summaries properly - reorganize to have 1D/2D structure
-    if summary_1d.empty and summary_2d.empty:
-        summary = pd.DataFrame()
-    else:
-        # Extract unique libraries and functions
-        libs_1d = (
-            set(col[0].removesuffix("_ratio") for col in summary_1d.columns)
-            if not summary_1d.empty
-            else set()
+    summary_libs = [
+        lib
+        for lib in libraries
+        if lib != "numbagg"
+        and any(
+            c[0].removesuffix("_ratio") == lib
+            for _, summary_df in summaries
+            for c in summary_df.columns
         )
-        libs_2d = (
-            set(col[0].removesuffix("_ratio") for col in summary_2d.columns)
-            if not summary_2d.empty
-            else set()
-        )
-        all_libs = sorted(libs_1d | libs_2d)
-        all_functions = set(summary_1d.index if not summary_1d.empty else []) | set(
-            summary_2d.index if not summary_2d.empty else []
-        )
+    ]
 
-        # Create properly structured summary
-        summary_data = []
-        for func in all_functions:
-            row = {"func": func}
-
-            # Process 1D and 2D dimensions
-            for dim, summary_df, exclusions in [
-                ("1D", summary_1d, matrix_exclusions["1D"]),
-                ("2D", summary_2d, matrix_exclusions["2D"]),
-            ]:
-                dim_data = process_dimension_data(
-                    summary_df, func, dim, all_libs, exclusions
-                )
-                row.update(dim_data)
-
-            summary_data.append(row)
-
-        summary = pd.DataFrame(summary_data).set_index("func")
-
-    if not summary.empty:
-        summary = summary.reset_index()
-        values = summary.to_dict(index=False, orient="split")["data"]
-
-        # Generate headers from the new column structure (1D_pandas, 2D_pandas, etc.)
-        headers = ["func"]
-        for col in summary.columns[1:]:
-            # Column names are like "1D_pandas", "2D_numpy"
-            dimension, library = col.split("_", 1)
-            headers.append(f"{dimension}<br>{library}")
-
+    if funcs and summary_libs:
         summary_markdown = tabulate(
-            values,
-            headers=headers,
+            [
+                [func]
+                + [
+                    summary_value(summary_df, func, lib)
+                    for _, summary_df in summaries
+                    for lib in summary_libs
+                ]
+                for func in funcs
+            ],
+            headers=["func"]
+            + [f"{nd}D<br>{lib}" for nd, _ in summaries for lib in summary_libs],
             disable_numparse=True,
-            colalign=["left"] + ["right"] * (len(summary.columns) - 1),
+            colalign=["left"] + ["right"] * (len(summaries) * len(summary_libs)),
             tablefmt="pipe",
         )
     else:
@@ -321,6 +221,33 @@ def run(k_filter, run_tests, extra_args):
         colalign=["left"] + ["right"] * (len(full.columns) - 1),
         tablefmt="pipe",
     )
+
+    return summary_markdown, full_markdown
+
+
+def run(k_filter, run_tests, extra_args):
+    import jq  # ty:ignore[unresolved-import]
+
+    json_path = Path(".benchmarks/benchmark.json")
+    json_path.parent.mkdir(exist_ok=True, parents=True)
+    if run_tests:
+        subprocess.run(
+            [
+                "pytest",
+                "-vv",
+                "numbagg/test/test_benchmark.py",
+                f"-k={k_filter}",
+                "--benchmark-enable",
+                "--benchmark-only",
+                "--run-nightly",
+                f"--benchmark-json={json_path}",
+            ]
+            + extra_args,
+            check=True,
+        )
+
+    records = jq.compile(_JQ_PROGRAM).input(text=json_path.read_text()).all()
+    summary_markdown, full_markdown = markdown_tables(records)
 
     text = f"""
 ### Summary benchmark
