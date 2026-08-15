@@ -571,7 +571,7 @@ dev = [
     { name = "mypy" },
     { name = "pandas" },
     { name = "pre-commit" },
-    { name = "pytest", specifier = "!=9.1.0" },
+    { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "ruff" },
     { name = "setuptools-scm" },

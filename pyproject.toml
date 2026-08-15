@@ -40,8 +40,7 @@ dev = [
   "pandas",
   "pre-commit",
   "pytest-benchmark",
-  # 9.1.0 regressed indirect fixture override (pytest-dev/pytest#14591); unpin when fixed upstream
-  "pytest!=9.1.0",
+  "pytest",
   "ruff",
   "setuptools_scm",
   "tabulate",
@@ -75,9 +74,6 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["numbagg"]
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 addopts = ["--benchmark-disable", "--benchmark-warmup=on", "--doctest-modules"]
