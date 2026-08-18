@@ -128,7 +128,7 @@ def array_generator(func_name, dtypes):
         # 3d
         a3 = np.arange(24).reshape(2, 3, 4).astype(dtype)
         for start in range(2):
-            for step in range(1, 2):
+            for step in range(1, 3):
                 yield a3[start::step]
                 yield a3[:, start::step]
                 yield a3[:, :, start::step]
