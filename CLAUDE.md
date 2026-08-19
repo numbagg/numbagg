@@ -11,7 +11,7 @@ Numbagg provides fast N-dimensional aggregation functions using Numba and NumPy'
 ### Core Functions
 The library provides aggregation functions (like `nansum`, `nanmean`), moving window functions (like `move_mean`, `move_std`), exponential moving functions, and grouping operations. All functions work on N-dimensional arrays with arbitrary axes.
 
-The public functions in `numbagg/funcs.py`, `numbagg/moving.py`, and `numbagg/moving_exp.py` are mirrored in `.pyi` stubs beside them, which CI verifies with stubtest. Adding, renaming, or re-signaturing a function in those three modules means updating its stub too — and, if it's a decorated gufunc rather than a plain function, adding it to `stubtest_allowlist.txt` (decorated functions are callable class instances, which stubtest reports as "is not a function"). `numbagg/grouped.py` has no stub and isn't covered.
+The public functions in `numbagg/funcs.py`, `numbagg/moving.py`, and `numbagg/moving_exp.py` are mirrored in `.pyi` stubs beside them, which CI verifies with stubtest. Adding, renaming, or re-signaturing a function in those three modules means updating its stub too — and, if it's a decorated gufunc rather than a plain function, adding it to `stubtest_allowlist.txt` (decorated functions are callable class instances, which stubtest reports as "is not a function"). `numbagg/grouped.py` has no stub and isn't covered. `numbagg/moving_matrix.py` has no stub of its own either, but `move_corrmatrix` and `move_covmatrix` are re-exported by `moving.py` and declared in `moving.pyi`, so a new matrix function re-exported that way needs the same stub and allowlist entries; `move_exp_nancorrmatrix` and `move_exp_nancovmatrix`, which aren't re-exported, are unchecked.
 
 ## Running Commands
 
