@@ -11,7 +11,7 @@ Numbagg provides fast N-dimensional aggregation functions using Numba and NumPy'
 ### Core Functions
 The library provides aggregation functions (like `nansum`, `nanmean`), moving window functions (like `move_mean`, `move_std`), exponential moving functions, and grouping operations. All functions work on N-dimensional arrays with arbitrary axes.
 
-The public functions in `numbagg/funcs.py`, `numbagg/moving.py`, and `numbagg/moving_exp.py` are mirrored in `.pyi` stubs beside them, which CI verifies with stubtest. Adding, renaming, or re-signaturing a function in those three modules means updating its stub too — and, if it's a decorated gufunc rather than a plain function, adding it to `stubtest_allowlist.txt` (decorated functions are callable class instances, which stubtest reports as "is not a function"). `numbagg/grouped.py` has no stub and isn't covered. `numbagg/moving_matrix.py` has no stub of its own either, but `move_corrmatrix` and `move_covmatrix` are re-exported by `moving.py` and declared in `moving.pyi`, so a new matrix function re-exported that way needs the same stub and allowlist entries; `move_exp_nancorrmatrix` and `move_exp_nancovmatrix`, which aren't re-exported, are unchecked.
+Public functions in `funcs.py`, `moving.py`, and `moving_exp.py` — including the matrix functions `moving.py` re-exports — are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub.
 
 ## Running Commands
 
@@ -53,17 +53,10 @@ uv run python numbagg/test/run_benchmarks.py
 - Tests are configured in `conftest.py` files (root and test directory)
 - Custom markers: `slow` (skipped by `--skip-slow`), `nightly` (skipped unless `--run-nightly` is passed)
 - The test suite uses fixtures extensively for parameterized testing across different array shapes and configurations
-- CI runs `pytest -W error`, so a new warning fails there while passing a plain local `uv run pytest`. Reach for `-W error` when a change might emit one. The usual source is a numpy `RuntimeWarning` from a degenerate reduction (`All-NaN slice encountered`, `Mean of empty slice`, `invalid value encountered`); the established fix is a narrow `@pytest.mark.filterwarnings("ignore:...")` on the affected test, as in `test_funcs.py`
+- CI runs `pytest -W error`, so a warning that passes locally fails there. It's usually a numpy `RuntimeWarning` from a degenerate reduction (`All-NaN slice encountered`, `Mean of empty slice`); the fix is a narrow `@pytest.mark.filterwarnings("ignore:...")` on the test, as in `test_funcs.py`
 
 ## Before Returning
 
-Always run lints and tests before returning to the user. `ty check` and stubtest are *not* part of pre-commit — CI runs them as separate steps of the `lint` job, so pre-commit passing locally doesn't mean the job is green:
-
-```bash
-uv run pre-commit run --all-files
-uv run ty check
-uv run python -m mypy.stubtest numbagg.funcs numbagg.moving numbagg.moving_exp \
-  --allowlist stubtest_allowlist.txt --ignore-unused-allowlist \
-  --mypy-config-file pyproject.toml
-uv run pytest
-```
+Always run lints and tests before returning to the user:
+- `uv run pre-commit run --all-files` — includes the `ty` and `stubtest` hooks
+- `uv run pytest`

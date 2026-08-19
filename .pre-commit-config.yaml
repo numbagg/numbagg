@@ -1,5 +1,9 @@
 # https://pre-commit.com/
 # Copied from xarray
+ci:
+  # These run `uv`, which pre-commit.ci's environment doesn't have; the `lint`
+  # job in test.yaml runs them instead.
+  skip: [ty, stubtest]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -36,3 +40,21 @@ repos:
         types: ["python"]
         entry: 'print\('
         exclude: ".*/test/.*"
+      - id: ty
+        name: ty
+        description: Type-check with ty
+        language: system
+        entry: uv run ty check
+        types: ["python"]
+        pass_filenames: false
+      - id: stubtest
+        name: stubtest
+        description: Check the `.pyi` stubs match the runtime modules
+        language: system
+        # TODO: replace CLI options with pyproject.toml config when stubtest supports it
+        entry:
+          uv run python -m mypy.stubtest numbagg.funcs numbagg.moving
+          numbagg.moving_exp --allowlist stubtest_allowlist.txt
+          --ignore-unused-allowlist --mypy-config-file pyproject.toml
+        files: '^(numbagg/|stubtest_allowlist\.txt$|pyproject\.toml$)'
+        pass_filenames: false
