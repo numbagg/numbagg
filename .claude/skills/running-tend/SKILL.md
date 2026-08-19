@@ -1,6 +1,6 @@
 ---
 name: running-tend
-description: numbagg-specific guidance for tend CI workflows. Adds the CI workflow map, two-pass polling for the long benchmark job, nightly-survey expectations, and dependency management on top of the generic tend-* skills. Use when operating in CI.
+description: numbagg-specific guidance for tend CI workflows. Adds which CI workflow to watch, two-pass polling for the long benchmark job, nightly-survey expectations, and dependency management on top of the generic tend-* skills. Use when operating in CI.
 ---
 
 # Running Tend — numbagg
