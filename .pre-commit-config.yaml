@@ -45,7 +45,7 @@ repos:
         description: Type-check with ty
         language: system
         entry: uv run ty check
-        types: ["python"]
+        types_or: ["python", "pyi"]
         pass_filenames: false
       - id: stubtest
         name: stubtest
