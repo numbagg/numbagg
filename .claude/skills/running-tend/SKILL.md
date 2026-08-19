@@ -1,3 +1,8 @@
+---
+name: running-tend
+description: numbagg-specific guidance for tend CI workflows. Adds a standing exception for filing issues in other repos, which CI workflow to watch, two-pass polling for the long benchmark job, nightly-survey expectations, and dependency management on top of the generic tend-* skills. Use when operating in CI.
+---
+
 # Running Tend — numbagg
 
 Tend-specific CI guidance. Project conventions are in CLAUDE.md.
