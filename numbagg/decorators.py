@@ -579,7 +579,13 @@ class groupndreduce(NumbaBase):
         # multiple dimensions, we could refine it down; would need to consider for
         # axis being None or a tuple, though.)
         if np.iinfo(labels.dtype).max < values.size:
-            dtype = np.min_scalar_type(values.size)
+            # The dtype has to stay signed: negative labels mean "not in any group", so
+            # widening into an unsigned dtype would turn them into huge positive labels.
+            dtype = next(
+                np.dtype(candidate)
+                for candidate in (np.int16, np.int32, np.int64)
+                if np.iinfo(candidate).max >= values.size
+            )
             logger.debug(
                 f"values' size {values.size} is greater than the max of {labels.dtype}. "
                 f"We're casting the labels array to a larger dtype {dtype} to avoid the risk of overflow. "
@@ -599,7 +605,8 @@ class groupndreduce(NumbaBase):
             values = values.astype(np.int32)
 
         if num_labels is None:
-            num_labels = np.max(labels) + 1
+            # `int` so that a label at the dtype's maximum doesn't overflow the add.
+            num_labels = int(np.max(labels)) + 1
 
         target = self.target
 
