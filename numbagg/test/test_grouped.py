@@ -453,6 +453,26 @@ def test_negative_labels_with_narrow_label_dtype(dtype, func):
     assert_almost_equal(result, func(values, labels.astype(np.int64)))
 
 
+@pytest.mark.parametrize("dtype", [np.int8, np.int16])
+@pytest.mark.parametrize("func", [group_nansum, group_nanmean])
+def test_max_label_with_narrow_label_dtype(dtype, func):
+    """
+    A label at the labels dtype's maximum doesn't overflow the `num_labels` add. No
+    upcast happens here — `values.size` is well under the dtype's max — so this covers
+    a different path from `test_negative_labels_with_narrow_label_dtype`.
+    """
+    max_label = int(np.iinfo(dtype).max)
+    values = np.ones(10)
+    labels = np.full(10, max_label, dtype=dtype)
+
+    result = func(values, labels)
+
+    assert result.shape == (max_label + 1,)
+    assert_almost_equal(result[-1], 10.0 if func is group_nansum else 1.0)
+    # The label dtype shouldn't change the answer.
+    assert_almost_equal(result, func(values, labels.astype(np.int64)))
+
+
 def test_dimensionality():
     func = group_nansum
 
