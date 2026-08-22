@@ -21,3 +21,6 @@ __pycache__
 
 .hypothesis
 .aider*
+
+# Local Claude Code harness settings; the shared `.claude/skills` stay tracked
+.claude/settings.local.json
