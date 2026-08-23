@@ -86,9 +86,14 @@ jobs:
           # hasn't yet listed the upload resolves to the *previous* release, and the
           # gate goes green without the artifact we're about to publish ever being
           # installed. Pinned, a lagging index fails the install, so retry instead.
+          #
+          # `--refresh-package` is what makes the retry meaningful: TestPyPI serves
+          # its simple index with `Cache-Control: max-age=600`, and `uv` honours it,
+          # so without the flag every attempt re-reads the same cached page — the one
+          # fetched before the upload landed — and the loop can never succeed.
           installed=""
           for attempt in $(seq 1 10); do
-            if uv pip install --index-url https://test.pypi.org/simple --no-deps "numbagg==${version}"; then
+            if uv pip install --index-url https://test.pypi.org/simple --refresh-package numbagg --no-deps "numbagg==${version}"; then
               installed=$(uv run python -c "import numbagg; print(numbagg.__version__)")
               break
             fi
