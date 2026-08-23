@@ -66,17 +66,23 @@ def test_numba_cache_segfault():
                     ).lstrip()
                 )
 
-        # Add package dir to Python path so we can import our generated modules
+        # Add package dir to Python path so we can import our generated modules.
+        # Remove it again on the way out — `tmpdir` is deleted when this block ends,
+        # so leaving the entry behind would point the rest of the session's imports
+        # at a directory that no longer exists.
         sys.path.insert(0, str(tmpdir))
-        with ProcessPoolExecutor(jobs) as pool:
-            futures = []
-            for i in range(1600):
-                futures.extend([pool.submit(f_numba, i, x) for x in range(jobs)])
+        try:
+            with ProcessPoolExecutor(jobs) as pool:
+                futures = []
+                for i in range(1600):
+                    futures.extend([pool.submit(f_numba, i, x) for x in range(jobs)])
 
-            for i, future in enumerate(futures):
-                future.result()
-                if i % 100 == 0:
-                    print(f"Completed {i} numba tasks")
+                for i, future in enumerate(futures):
+                    future.result()
+                    if i % 100 == 0:
+                        print(f"Completed {i} numba tasks")
+        finally:
+            sys.path.remove(str(tmpdir))
 
 
 def numbagg_worker(i, x):
@@ -94,7 +100,7 @@ def numbagg_worker(i, x):
 )
 def test_numbagg_cache_segfault(func, clear_numba_cache, clean_pycache):
     """Test that reproduces numba cache segfault with numbagg's group_nanmean — doesn't
-    seem to currently fail though, even when `_NUMBAGG_CACHE` is set to `True`"""
+    seem to currently fail though, even when `NUMBAGG_CACHE` is set to `True`"""
     jobs = 32
 
     with ProcessPoolExecutor(jobs) as pool:
@@ -114,9 +120,11 @@ def test_numbagg_module_cache_segfault(clean_pycache):
     segfault repro with numbagg functions in separate modules, since I was having issues
     reproducing the segfault with the simpler `test_numbagg_cache_segfault` test"""
 
-    # Create a temporary script that runs our test
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(
+    # Create a temporary script that runs our test. A `TemporaryDirectory` rather than
+    # a `delete=False` `NamedTemporaryFile`, so the script doesn't outlive the test.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        script = Path(tmpdir) / "cache_segfault_repro.py"
+        script.write_text(
             dedent(
                 """
             import numpy as np
@@ -143,7 +151,6 @@ def test_numbagg_module_cache_segfault(clean_pycache):
         """
             )
         )
-        f.flush()
 
         env = os.environ.copy()
         env["NUMBAGG_CACHE"] = "True"
@@ -151,7 +158,7 @@ def test_numbagg_module_cache_segfault(clean_pycache):
 
         # Run the script and expect it to fail
         process = subprocess.run(
-            [sys.executable, f.name], env=env, capture_output=True, text=True
+            [sys.executable, str(script)], env=env, capture_output=True, text=True
         )
 
         # Process should have failed with a segfault and show warning about caching
