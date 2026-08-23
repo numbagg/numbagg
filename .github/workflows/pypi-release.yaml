@@ -30,8 +30,14 @@ jobs:
       - name: Check artifacts
         run: |
           uv tool run --from twine twine check dist/*
-          if [ -f dist/numbagg-0.0.0.tar.gz ]; then
-            echo "❌ Invalid version number"
+          # The tag is the source of truth: `setuptools_scm` derives the version from
+          # it, and falls back to `fallback_version` (see `pyproject.toml`) when the
+          # tag isn't visible — e.g. a shallow fetch. Check for the tag's own sdist
+          # rather than a sentinel filename, which the fallback never produces.
+          expected="${GITHUB_REF_NAME#v}"
+          if [ ! -f "dist/numbagg-${expected}.tar.gz" ]; then
+            echo "❌ No dist/numbagg-${expected}.tar.gz built for tag '$GITHUB_REF_NAME'; got:"
+            printf '  %s\n' dist/*
             exit 1
           fi
 
@@ -67,18 +73,35 @@ jobs:
 
       - name: Test installation
         run: |
-          sleep 5
+          version="${GITHUB_REF_NAME#v}"
+
           # Create a virtual environment
           uv venv
 
           # Install dependencies from trusted PyPI first
           uv pip install numpy numba
 
-          # Install numbagg from TestPyPI without dependencies to ensure we get the test package
-          uv pip install --index-url https://test.pypi.org/simple --no-deps numbagg
+          # Install numbagg from TestPyPI without dependencies to ensure we get the
+          # test package. Pin the exact version: unpinned, a TestPyPI index that
+          # hasn't yet listed the upload resolves to the *previous* release, and the
+          # gate goes green without the artifact we're about to publish ever being
+          # installed. Pinned, a lagging index fails the install, so retry instead.
+          installed=""
+          for attempt in $(seq 1 10); do
+            if uv pip install --index-url https://test.pypi.org/simple --no-deps "numbagg==${version}"; then
+              installed=$(uv run python -c "import numbagg; print(numbagg.__version__)")
+              break
+            fi
+            echo "numbagg==${version} not on TestPyPI yet (attempt ${attempt}/10); retrying in 15s"
+            sleep 15
+          done
 
           # Verify installation works
-          uv run python -c "import numbagg; print(f'Successfully installed numbagg {numbagg.__version__} from TestPyPI')"
+          if [ "$installed" != "$version" ]; then
+            echo "❌ Expected numbagg ${version} from TestPyPI, got '${installed:-nothing}'"
+            exit 1
+          fi
+          echo "Successfully installed numbagg ${installed} from TestPyPI"
 
   pypi:
     needs: test-pypi
