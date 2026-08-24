@@ -1,12 +1,45 @@
 from typing import TypeVar
 
 import numpy as np
-from numba import float32, float64, int64
+from numba import float32, float64, int64, njit
 
-from .decorators import ndmove
+from .decorators import _ENABLE_CACHE, ndmove
 from .utils import FloatArray
 
 T = TypeVar("T", bound=FloatArray)
+
+# Why `move_var`, `move_std`, `move_cov` & `move_corr` offset their inputs and
+# accumulate in float64:
+#
+# They all accumulate a sum of squares (or of products) and then subtract the
+# square of the sum. Both terms scale with the square of the values themselves, so
+# when the values are large relative to their spread the difference is almost
+# entirely cancellation and the result keeps hardly any significant digits. Two
+# separate losses were showing up:
+#
+# - The products were computed in the input's dtype, so a float32 series held only
+#   ~7 digits of `ai * ai`. `move_var` on a constant float32 series at 1e8 returned
+#   3.4e8 rather than 0, and `move_corr` on float32 values around 1e6 returned
+#   correlations more than 30 outside [-1, 1].
+# - Even in float64 the offset dominates: `move_cov` on values around 1e8 was off
+#   by ~10 in absolute terms.
+#
+# Subtracting a fixed value from each series fixes the second — variance,
+# covariance and correlation are all invariant to it, so it changes nothing in
+# exact arithmetic — and computing in float64 fixes the first. Any constant near
+# the data works; we use the first non-NaN observation because it's cheap to find
+# and is by construction on the same scale.
+
+
+# Cached alongside the gufuncs that call it: numba can't cache a compiled function
+# whose callees aren't cacheable themselves.
+@njit(cache=_ENABLE_CACHE)
+def _first_valid(a) -> float:
+    """The first non-NaN value of `a` as a float64, or 0.0 if there is none."""
+    for i in range(len(a)):
+        if not np.isnan(a[i]):
+            return np.float64(a[i])
+    return 0.0
 
 
 @ndmove.wrap(
@@ -129,11 +162,14 @@ def move_std(a: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
+    # See the note above `_first_valid` for why we offset and use float64 here.
+    offset = _first_valid(a)
+
     for i in range(len(a)):
-        ai = a[i]
+        ai = np.float64(a[i]) - offset
 
         if i >= window:
-            aold = a[i - window]
+            aold = np.float64(a[i - window]) - offset
             if not np.isnan(aold):
                 asum -= aold
                 asum_sq -= aold * aold
@@ -145,7 +181,10 @@ def move_std(a: T, window: int, min_count: int, out: T) -> None:
             count += 1
 
         if count >= min_count:
-            variance = (asum_sq - asum**2 / count) / (count - 1)
+            # Clamp at zero: `asum**2 / count` can still exceed `asum_sq` by a
+            # rounding error, and the negative variance that produces would come
+            # back out of `sqrt` as NaN.
+            variance = max((asum_sq - asum**2 / count) / (count - 1), 0.0)
             out[i] = np.sqrt(variance)
         else:
             out[i] = np.nan
@@ -160,11 +199,13 @@ def move_var(a: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
+    offset = _first_valid(a)
+
     for i in range(len(a)):
-        ai = a[i]
+        ai = np.float64(a[i]) - offset
 
         if i >= window:
-            aold = a[i - window]
+            aold = np.float64(a[i - window]) - offset
             if not np.isnan(aold):
                 asum -= aold
                 asum_sq -= aold * aold
@@ -176,7 +217,8 @@ def move_var(a: T, window: int, min_count: int, out: T) -> None:
             count += 1
 
         if count >= min_count:
-            out[i] = (asum_sq - asum**2 / count) / (count - 1)
+            # Clamp at zero, as in `move_std` — a variance is never negative.
+            out[i] = max((asum_sq - asum**2 / count) / (count - 1), 0.0)
         else:
             out[i] = np.nan
 
@@ -196,13 +238,16 @@ def move_cov(a: T, b: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
+    a_offset = _first_valid(a)
+    b_offset = _first_valid(b)
+
     for i in range(len(a)):
-        ai = a[i]
-        bi = b[i]
+        ai = np.float64(a[i]) - a_offset
+        bi = np.float64(b[i]) - b_offset
 
         if i >= window:
-            aold = a[i - window]
-            bold = b[i - window]
+            aold = np.float64(a[i - window]) - a_offset
+            bold = np.float64(b[i - window]) - b_offset
             if not (np.isnan(aold) or np.isnan(bold)):
                 asum -= aold
                 bsum -= bold
@@ -236,13 +281,16 @@ def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
 
     min_count = max(min_count, 1)
 
+    a_offset = _first_valid(a)
+    b_offset = _first_valid(b)
+
     for i in range(len(a)):
-        ai = a[i]
-        bi = b[i]
+        ai = np.float64(a[i]) - a_offset
+        bi = np.float64(b[i]) - b_offset
 
         if i >= window:
-            aold = a[i - window]
-            bold = b[i - window]
+            aold = np.float64(a[i - window]) - a_offset
+            bold = np.float64(b[i - window]) - b_offset
             if not (np.isnan(aold) or np.isnan(bold)):
                 asum -= aold
                 bsum -= bold

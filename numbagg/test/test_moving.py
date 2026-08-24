@@ -7,10 +7,14 @@ from numpy.testing import assert_allclose
 
 from numbagg import (
     MOVE_FUNCS,
+    move_corr,
     move_corrmatrix,
+    move_cov,
     move_covmatrix,
     move_mean,
+    move_std,
     move_sum,
+    move_var,
 )
 
 from .conftest import COMPARISONS
@@ -190,6 +194,60 @@ def test_numerical_issues_float32_move_sum_100(rs):
     result = move_sum(arr, window=10)
     expected = np.sum(arr[:10])
     assert result[-1] == expected, result[-1] - expected
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_numerical_issues_constant_series(dtype):
+    # A constant series has zero variance and zero covariance. The sums of squares
+    # lose all their significant digits at this magnitude, which used to surface as
+    # `move_var` returning 3.4e8 (float32) or a negative variance (float64), and
+    # `move_std` returning NaN out of `sqrt`.
+    arr = np.full(20, 1e8, dtype=dtype)
+
+    var = move_var(arr, window=5)
+    std = move_std(arr, window=5)
+    cov = move_cov(arr, arr, window=5)
+
+    assert not np.any(var < 0), var
+    assert not np.any(np.isnan(std[4:])), std
+    assert_allclose(var[4:], 0.0, atol=1e-6)
+    assert_allclose(std[4:], 0.0, atol=1e-3)
+    assert_allclose(cov[4:], 0.0, atol=1e-6)
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_numerical_issues_large_offset(rs, dtype):
+    # Variance, covariance and correlation are all invariant to a constant offset,
+    # so adding one shouldn't change the answer. Before the inputs were offset
+    # internally, a 1e6 offset was enough to push `move_corr` on float32 more than
+    # 30 outside [-1, 1].
+    a = rs.standard_normal(300).astype(dtype)
+    b = rs.standard_normal(300).astype(dtype)
+    # The offset has to stay small enough that it doesn't quantize the values away
+    # in the input dtype itself — that's a loss no implementation can undo.
+    offset, rtol = (dtype(1e3), 1e-2) if dtype == np.float32 else (dtype(1e8), 1e-6)
+
+    ao, bo = a + offset, b + offset
+
+    for func in (move_var, move_std):
+        assert_allclose(
+            func(ao, window=20)[19:],
+            func(a, window=20)[19:],
+            rtol=rtol,
+            err_msg=func.__name__,
+        )
+
+    for func in (move_cov, move_corr):
+        assert_allclose(
+            func(ao, bo, window=20)[19:],
+            func(a, b, window=20)[19:],
+            rtol=rtol,
+            err_msg=func.__name__,
+        )
+
+    corr = move_corr(ao, bo, window=20)
+    finite = corr[~np.isnan(corr)]
+    assert np.all(np.abs(finite) <= 1 + 1e-6), np.abs(finite).max()
 
 
 def slow_move_mean(a, window, min_count=None, axis=-1):
