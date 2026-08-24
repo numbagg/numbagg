@@ -1,4 +1,5 @@
 import warnings
+from fractions import Fraction
 from typing import Any
 
 import numpy as np
@@ -248,6 +249,96 @@ def test_numerical_issues_large_offset(rs, dtype):
     corr = move_corr(ao, bo, window=20)
     finite = corr[~np.isnan(corr)]
     assert np.all(np.abs(finite) <= 1 + 1e-6), np.abs(finite).max()
+
+
+def _exact_move_var(a, window):
+    """`move_var` in exact rational arithmetic, as a reference to measure against.
+
+    Rationals rather than `np.longdouble`, which is just float64 on Windows and so
+    would make the comparison vacuous there.
+    """
+    out = np.full(len(a), np.nan)
+    for i in range(window - 1, len(a)):
+        w = [Fraction(float(x)) for x in a[i - window + 1 : i + 1] if not np.isnan(x)]
+        if len(w) < 2:
+            continue
+        mean = sum(w) / len(w)
+        out[i] = float(sum((x - mean) ** 2 for x in w) / (len(w) - 1))
+    return out
+
+
+def _exact_move_cov(a, b, window):
+    """`move_cov` in exact rational arithmetic. See `_exact_move_var`."""
+    out = np.full(len(a), np.nan)
+    for i in range(window - 1, len(a)):
+        pairs = [
+            (Fraction(float(x)), Fraction(float(y)))
+            for x, y in zip(a[i - window + 1 : i + 1], b[i - window + 1 : i + 1])
+            if not (np.isnan(x) or np.isnan(y))
+        ]
+        if len(pairs) < 2:
+            continue
+        mean_a = sum(x for x, _ in pairs) / len(pairs)
+        mean_b = sum(y for _, y in pairs) / len(pairs)
+        out[i] = float(
+            sum((x - mean_a) * (y - mean_b) for x, y in pairs) / (len(pairs) - 1)
+        )
+    return out
+
+
+def _error_vs_exact(actual, exact, skip):
+    # Scaled by the median of the reference rather than pointwise: a window whose
+    # true covariance happens to be ~0 would make a relative error explode however
+    # accurate the answer is.
+    actual, exact = actual[skip:], exact[skip:]
+    valid = ~np.isnan(exact)
+    return np.max(np.abs(actual[valid] - exact[valid])) / np.median(
+        np.abs(exact[valid])
+    )
+
+
+@pytest.mark.parametrize(
+    # Tolerances sit roughly an order of magnitude above what's measured today
+    # (6e-16 / 2e-15 and 2e-5 / 5e-5), and below what the alternatives reach:
+    # no offset gives ~7 on the first case, offsetting by `a[0]` gives 1.5e-3 on
+    # the second.
+    ("case", "tol"),
+    [("large-offset", 1e-12), ("unrepresentative-first-value", 3e-4)],
+)
+def test_numerical_issues_vs_exact_reference(case, tol):
+    # The other tests here compare a function against itself on shifted input, which
+    # can't distinguish "accurate" from "consistently wrong" — and can't see the cost
+    # of the internal offset at all, since both sides pay it. So measure against an
+    # exact reference, on both the input the offset is meant to help and the input it
+    # is most exposed to.
+    rs = np.random.default_rng(0)
+    a = rs.standard_normal(60)
+    b = rs.standard_normal(60)
+    window = 10
+
+    if case == "large-offset":
+        # Uniformly far from zero: this is what the offsetting exists for. Without it
+        # the error here is ~7 for `move_var` and ~40 for `move_cov`, i.e. larger than
+        # the answer.
+        a, b = a + 1e8, b + 1e8
+        skip = window - 1
+    else:
+        # A single unrepresentative value at the head. Offsetting by `a[0]` would put
+        # `a[0]**2` into every accumulated term and so raise the error floor for the
+        # whole series — including, as measured here, the windows the outlier has
+        # already left.
+        a[0] = b[0] = 1e6
+        skip = window
+
+    var_err = _error_vs_exact(
+        move_var(a, window=window), _exact_move_var(a, window), skip
+    )
+    cov_err = _error_vs_exact(
+        move_cov(a, b, window=window), _exact_move_cov(a, b, window), skip
+    )
+
+    assert var_err < tol, f"move_var: {var_err:.2e}"
+    assert cov_err < tol, f"move_cov: {cov_err:.2e}"
 
 
 def slow_move_mean(a, window, min_count=None, axis=-1):

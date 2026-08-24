@@ -26,19 +26,45 @@ T = TypeVar("T", bound=FloatArray)
 #
 # Subtracting a fixed value from each series fixes the second — variance,
 # covariance and correlation are all invariant to it, so it changes nothing in
-# exact arithmetic — and computing in float64 fixes the first. Any constant near
-# the data works; we use the first non-NaN observation because it's cheap to find
-# and is by construction on the same scale.
+# exact arithmetic — and computing in float64 fixes the first.
+#
+# Which constant to subtract is a real choice, because the accumulators run for the
+# whole series: every term carries `(value - offset)**2`, so the offset sets the
+# rounding floor everywhere, not just where it's a good fit. The mean of the whole
+# series is the most accurate choice on most inputs, but it's ruled out here — it
+# depends on values that haven't been seen yet, which would break the guarantee
+# `test_moving_bigger_arrays_have_same_beginning` pins, that appending to a series
+# doesn't change results that were already emitted. The first observation keeps
+# that guarantee but rests on `a[0]` being representative; when it isn't, the whole
+# series pays for it. So we average the first `window` observations: still a
+# function of data that any window-`window` result already depends on, but a single
+# outlier is diluted by the window rather than setting the floor on its own.
 
 
 # Cached alongside the gufuncs that call it: numba can't cache a compiled function
 # whose callees aren't cacheable themselves.
 @njit(cache=_ENABLE_CACHE)
-def _first_valid(a) -> float:
-    """The first non-NaN value of `a` as a float64, or 0.0 if there is none."""
+def _offset(a, window) -> float:
+    """The mean of the non-NaN values among the first `window` values of `a`."""
+    total = 0.0
+    count = 0
+    for i in range(min(window, len(a))):
+        ai = np.float64(a[i])
+        if not np.isnan(ai):
+            total += ai
+            count += 1
+    if count > 0:
+        return total / count
+
+    # The first window is entirely NaN, so fall back to the first non-NaN value
+    # anywhere — better than 0.0 for a series that starts with a gap. Still safe
+    # for the appending guarantee: if this scan finds different values for `a` and
+    # a prefix of `a`, the prefix has no non-NaN values at all and every result it
+    # can emit is NaN either way.
     for i in range(len(a)):
-        if not np.isnan(a[i]):
-            return np.float64(a[i])
+        ai = np.float64(a[i])
+        if not np.isnan(ai):
+            return ai
     return 0.0
 
 
@@ -162,8 +188,8 @@ def move_std(a: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
-    # See the note above `_first_valid` for why we offset and use float64 here.
-    offset = _first_valid(a)
+    # See the note above `_offset` for why we offset and use float64 here.
+    offset = _offset(a, window)
 
     for i in range(len(a)):
         ai = np.float64(a[i]) - offset
@@ -199,7 +225,7 @@ def move_var(a: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
-    offset = _first_valid(a)
+    offset = _offset(a, window)
 
     for i in range(len(a)):
         ai = np.float64(a[i]) - offset
@@ -238,8 +264,8 @@ def move_cov(a: T, b: T, window: int, min_count: int, out: T) -> None:
     count = 0
     min_count = max(min_count, 2)
 
-    a_offset = _first_valid(a)
-    b_offset = _first_valid(b)
+    a_offset = _offset(a, window)
+    b_offset = _offset(b, window)
 
     for i in range(len(a)):
         ai = np.float64(a[i]) - a_offset
@@ -281,8 +307,8 @@ def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
 
     min_count = max(min_count, 1)
 
-    a_offset = _first_valid(a)
-    b_offset = _first_valid(b)
+    a_offset = _offset(a, window)
+    b_offset = _offset(b, window)
 
     for i in range(len(a)):
         ai = np.float64(a[i]) - a_offset
