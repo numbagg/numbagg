@@ -188,6 +188,46 @@ class TestCorrelationCovarianceMatrices:
         assert corr_3d.shape == (2, 3, 3)
         assert cov_3d.shape == (2, 3, 3)
 
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    def test_numerical_issues_large_offset(self, dtype):
+        """Covariance and correlation are invariant to a per-variable offset.
+
+        Before the accumulators were offset internally, standard-normal data plus
+        1e8 gave a `nancovmatrix` off-diagonal of -8.04 where the answer is -0.064,
+        and `nancorrmatrix` returned NaN throughout.
+        """
+        rng = np.random.default_rng(0)
+        data = rng.standard_normal((4, 300)).astype(dtype)
+        # The offset has to stay small enough that it doesn't quantize the values
+        # away in the input dtype itself, and the tolerance has to leave room for
+        # what quantization remains — neither is a loss any implementation can
+        # undo. At 1e8 float64 resolves unit-scale values to ~1.5e-8 relative;
+        # pre-fix the error here was ~1e-3 relative (covariance) or NaN
+        # (correlation), so the gap is still several orders of magnitude.
+        offset = dtype(1e3) if dtype == np.float32 else dtype(1e8)
+        rtol = 1e-3 if dtype == np.float32 else 1e-6
+
+        assert_allclose(nancovmatrix(data + offset), nancovmatrix(data), rtol=rtol)
+        assert_allclose(nancorrmatrix(data + offset), nancorrmatrix(data), rtol=rtol)
+
+        corr = nancorrmatrix(data + offset)
+        assert not np.any(np.isnan(corr)), corr
+        assert np.all(np.abs(corr) <= 1 + 1e-6), np.abs(corr).max()
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    def test_numerical_issues_constant_variable(self, dtype):
+        """A constant variable has zero variance, so its covariance is zero."""
+        rng = np.random.default_rng(0)
+        data = rng.standard_normal((3, 100)).astype(dtype)
+        data[1] = dtype(1e8)
+
+        cov = nancovmatrix(data)
+
+        assert_allclose(cov[1], 0.0, atol=1e-6)
+        # Zero variance means the correlation is undefined, not a huge number.
+        corr = nancorrmatrix(data)
+        assert np.all(np.isnan(corr[1])), corr[1]
+
 
 class TestMovingMatrices:
     """Test moving window matrix functions (move_corrmatrix, move_covmatrix)."""
