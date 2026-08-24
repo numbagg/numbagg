@@ -374,6 +374,32 @@ def test_appending_doesnt_change_earlier_results(rs, window, offset):
             )
 
 
+def test_numerical_issues_degenerate_window_clamps():
+    # A small head followed by a large near-constant tail: `_offset` averages the
+    # head, so it doesn't fit the tail and the sums of squares still cancel to a
+    # slightly negative number. Unclamped, that surfaces as a negative variance
+    # from `move_var`, a NaN out of `sqrt` in `move_std`, and a series
+    # anticorrelated with itself from `move_corr`. Nothing else in the suite
+    # fails if any of those clamps is reverted, so pin them here.
+    #
+    # `1e8 + 1` rather than a round `1e8` because a round one leaves the offset
+    # values exactly `0.0`, and the accumulators never go negative at all.
+    a = np.concatenate([np.zeros(5), np.full(25, 1e8 + 1)])
+
+    np.testing.assert_array_equal(move_var(a, window=5)[9:], 0.0)
+    np.testing.assert_array_equal(move_std(a, window=5)[9:], 0.0)
+
+    # `move_corr` needs its own series: on the one above its `var_a` and `var_b`
+    # come out as exactly 0.0, so the pre-existing `var_a_var_b > 0` guard already
+    # emits NaN and the clamp is inert. Here they round to -4.0 instead, their
+    # product is +16.0, the guard passes, and the unclamped result is -1.0 — a
+    # series anticorrelated with itself, on windows where `move_var` says 0.0.
+    c = np.concatenate([np.zeros(5), np.full(25, 123456789.123)])
+
+    np.testing.assert_array_equal(move_var(c, window=5)[9:], 0.0)
+    assert np.all(np.isnan(move_corr(c, c, window=5)[9:]))
+
+
 def slow_move_mean(a, window, min_count=None, axis=-1):
     "Slow move_mean for unaccelerated dtype"
     return move_func(np.nanmean, a, window, min_count, axis=axis)
