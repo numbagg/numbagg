@@ -33,7 +33,7 @@ T = TypeVar("T", bound=FloatArray)
 # rounding floor everywhere, not just where it's a good fit. The mean of the whole
 # series is the most accurate choice on most inputs, but it's ruled out here — it
 # depends on values that haven't been seen yet, which would break the guarantee
-# `test_moving_bigger_arrays_have_same_beginning` pins, that appending to a series
+# `test_appending_doesnt_change_earlier_results` pins, that appending to a series
 # doesn't change results that were already emitted. The first observation keeps
 # that guarantee but rests on `a[0]` being representative; when it isn't, the whole
 # series pays for it. So we average the first `window` observations: still a
@@ -336,8 +336,13 @@ def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
             count_reciprocal = 1.0 / count
             avg_a = asum * count_reciprocal
             avg_b = bsum * count_reciprocal
-            var_a = asum_sq * count_reciprocal - avg_a**2
-            var_b = bsum_sq * count_reciprocal - avg_b**2
+            # Clamp each variance at zero, as `move_var` does — otherwise two
+            # variances that round slightly negative multiply to a positive
+            # product, pass the guard below, and give a meaningless denominator.
+            # A degenerate window then reaches the `else` branch and emits NaN,
+            # which is the right answer for a correlation with a constant series.
+            var_a = max(asum_sq * count_reciprocal - avg_a**2, 0.0)
+            var_b = max(bsum_sq * count_reciprocal - avg_b**2, 0.0)
             cov_ab = prodsum * count_reciprocal - avg_a * avg_b
             var_a_var_b = var_a * var_b
             if var_a_var_b > 0:

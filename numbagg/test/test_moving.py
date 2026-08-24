@@ -341,6 +341,39 @@ def test_numerical_issues_vs_exact_reference(case, tol):
     assert cov_err < tol, f"move_cov: {cov_err:.2e}"
 
 
+@pytest.mark.parametrize("window", [5, 20])
+@pytest.mark.parametrize("offset", [0.0, 1e8])
+def test_appending_doesnt_change_earlier_results(rs, window, offset):
+    # The offset each of these functions subtracts is a function of the whole
+    # series, so it has to depend only on values that any result already depends
+    # on — otherwise appending to a series would change results that were already
+    # emitted. `_offset` averages the first `window` values for exactly this
+    # reason, and the choice cost real accuracy relative to a full-series mean, so
+    # pin the property it bought. `test_moving_bigger_arrays_have_same_beginning`
+    # in `test_property.py` covers the same ground but is skipped at module level.
+    #
+    # Bit-exact, not approximate: a tolerance here would let a future offset that
+    # peeks ahead through, which is the whole thing being ruled out.
+    a = rs.standard_normal(40) + offset
+    b = rs.standard_normal(40) + offset
+
+    for func in (move_var, move_std):
+        for n in (window, window + 1, len(a) - 1):
+            np.testing.assert_array_equal(
+                func(a[:n], window=window),
+                func(a, window=window)[:n],
+                err_msg=f"{func.__name__}, n={n}",
+            )
+
+    for func in (move_cov, move_corr):
+        for n in (window, window + 1, len(a) - 1):
+            np.testing.assert_array_equal(
+                func(a[:n], b[:n], window=window),
+                func(a, b, window=window)[:n],
+                err_msg=f"{func.__name__}, n={n}",
+            )
+
+
 def slow_move_mean(a, window, min_count=None, axis=-1):
     "Slow move_mean for unaccelerated dtype"
     return move_func(np.nanmean, a, window, min_count, axis=axis)
