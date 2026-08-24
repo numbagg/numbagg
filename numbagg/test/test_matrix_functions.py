@@ -198,6 +198,11 @@ class TestCorrelationCovarianceMatrices:
         """
         rng = np.random.default_rng(0)
         data = rng.standard_normal((4, 300)).astype(dtype)
+        # Ragged NaN holes: the shift is each variable's first *non-NaN* value, so
+        # pairwise-complete counting has to survive it.
+        data[0, :50] = np.nan
+        data[1, 100:160] = np.nan
+        data[2, ::7] = np.nan
         # The offset has to stay small enough that it doesn't quantize the values
         # away in the input dtype itself, and the tolerance has to leave room for
         # what quantization remains — neither is a loss any implementation can
@@ -213,6 +218,21 @@ class TestCorrelationCovarianceMatrices:
         corr = nancorrmatrix(data + offset)
         assert not np.any(np.isnan(corr)), corr
         assert np.all(np.abs(corr) <= 1 + 1e-6), np.abs(corr).max()
+
+    def test_pairwise_complete_matches_pandas(self):
+        """Ragged NaN holes: each pair is counted over its own overlap."""
+        rng = np.random.default_rng(0)
+        data = rng.standard_normal((4, 300))
+        data[0, :50] = np.nan
+        data[1, 100:160] = np.nan
+        data[2, ::7] = np.nan
+
+        # Unoffset, so that pandas is a usable reference: at 1e8 its own
+        # cancellation error is ~1e-7 relative, larger than anything this would
+        # be testing. The offset case is covered by the invariance test above.
+        df = pd.DataFrame(data.T)
+        assert_allclose(nancovmatrix(data), df.cov().to_numpy(), rtol=1e-8)
+        assert_allclose(nancorrmatrix(data), df.corr().to_numpy(), rtol=1e-8)
 
     @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     def test_numerical_issues_constant_variable(self, dtype):
