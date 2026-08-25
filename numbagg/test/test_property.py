@@ -11,14 +11,29 @@ from numbagg import move_exp_nanmean
 
 from .conftest import COMPARISONS
 
-pytestmark = [
-    pytest.mark.nightly,
-    pytest.mark.skip(
-        reason="These need more work; in particular they overflow with very large values, but arguably in an acceptable way"
-    ),
+pytestmark = pytest.mark.nightly
+
+# Numba compiles each gufunc on its first call, and numbagg leaves numba's on-disk
+# cache off by default (`NUMBAGG_CACHE`), so every process pays that cost afresh.
+# No fixed per-example deadline survives it on a cold runner.
+no_deadline = settings(deadline=None)
+
+# The moving matrix functions take `(..., obs, vars)` input and return an extra
+# `vars × vars` dimension, so neither the 1-d arrays generated below nor the
+# "a prefix of the input gives a prefix of the output" property applies to them
+# as written.
+MOVE_FUNCS_NON_MATRIX = [
+    func
+    for func in numbagg.MOVE_FUNCS
+    if func not in (numbagg.move_corrmatrix, numbagg.move_covmatrix)
 ]
 
 
+@pytest.mark.skip(
+    reason="numbagg and pandas disagree by more than the tolerance under catastrophic "
+    "cancellation — move_exp_nanmean([[9.00738e10, 0.0]], alpha=1-eps) on float32 gives "
+    "1.00002e-05 against pandas' 2.00004e-05"
+)
 @given(
     numbagg_func=st.sampled_from([move_exp_nanmean]),
     array=hnp.arrays(
@@ -29,7 +44,7 @@ pytestmark = [
     ),
     alpha=st.floats(min_value=0.0, max_value=1.0, exclude_min=True),
 )
-@settings(deadline=500)
+@no_deadline
 def test_move_exp_pandas_comparison(
     numbagg_func,
     array,
@@ -37,10 +52,13 @@ def test_move_exp_pandas_comparison(
 ):
     kwargs = dict(alpha=alpha)
 
-    if np.sum(np.isfinite(array) > 0) and np.nanmax(array) > 1e300:
+    # Compare as a Python float: `array.max() > 1e300` would cast 1e300 down to
+    # the array's dtype, which itself overflows for e.g. float16.
+    finite = array[np.isfinite(array)]
+    if finite.size and float(np.abs(finite).max()) > 1e300:
         # We don't always handle overflows well
         return
-    if (alpha == 1) & (~np.isnan(array) > 0).any():
+    if alpha == 1 and (~np.isnan(array)).any():
         # Pandas doesn't agree with us on arrays such as `[0, np.nan]`, see unit tests
         # for more details.
         return
@@ -64,16 +82,14 @@ def test_move_exp_pandas_comparison(
         else:
             result_exception = None
 
-        # Check if both functions raised exceptions
         if expected_exception:
             if "Big-endian buffer not supported on little-endian compiler" in str(
                 expected_exception
             ):
                 # pandas doesn't support this but it's OK that we do
                 return
-            assert type(result_exception) is type(expected_exception)
-
             # If only one function raised an exception, the test should fail
+            assert type(result_exception) is type(expected_exception)
             return  # Both raised exceptions, test passes
         else:
             assert result_exception is None
@@ -88,10 +104,10 @@ def test_move_exp_pandas_comparison(
     array=hnp.arrays(
         dtype=hnp.floating_dtypes(), shape=hnp.array_shapes(min_dims=1, max_dims=6)
     ),
-    axis=st.one_of(st.integers(min_value=-6, max_value=6)),
+    axis=st.integers(min_value=-6, max_value=6),
     alpha=st.floats(min_value=0.0, max_value=1.0, exclude_min=True),
 )
-@settings(deadline=500)
+@no_deadline
 def test_moving_exp_bigger_arrays_have_same_beginning(
     numbagg_func,
     array,
@@ -106,9 +122,13 @@ def test_moving_exp_bigger_arrays_have_same_beginning(
 
     kwargs = dict(alpha=alpha, axis=axis)
 
-    result = COMPARISONS[numbagg_func]["numbagg"](array, **kwargs)()
-    sliced_array = np.take(array, indices=range(array.shape[axis] - 1), axis=axis)
-    sliced_result = COMPARISONS[numbagg_func]["numbagg"](sliced_array, **kwargs)()
+    # Very large values overflow the accumulators; that's acceptable here, since both
+    # sides of the comparison overflow identically and we're only asserting that the
+    # shorter array's result is a prefix of the longer one's.
+    with np.errstate(over="ignore", invalid="ignore"):
+        result = COMPARISONS[numbagg_func]["numbagg"](array, **kwargs)()
+        sliced_array = np.take(array, indices=range(array.shape[axis] - 1), axis=axis)
+        sliced_result = COMPARISONS[numbagg_func]["numbagg"](sliced_array, **kwargs)()
 
     result_sliced = np.take(result, indices=range(result.shape[axis] - 1), axis=axis)
 
@@ -116,14 +136,14 @@ def test_moving_exp_bigger_arrays_have_same_beginning(
 
 
 @given(
-    numbagg_func=st.sampled_from(numbagg.MOVE_FUNCS),
+    numbagg_func=st.sampled_from(MOVE_FUNCS_NON_MATRIX),
     array=hnp.arrays(
         dtype=hnp.floating_dtypes(), shape=hnp.array_shapes(min_dims=1, max_dims=6)
     ),
-    axis=st.one_of(st.integers(min_value=-6, max_value=6)),
+    axis=st.integers(min_value=-6, max_value=6),
     window=st.integers(min_value=1),
 )
-@settings(deadline=500)
+@no_deadline
 def test_moving_bigger_arrays_have_same_beginning(
     numbagg_func,
     array,
@@ -141,9 +161,11 @@ def test_moving_bigger_arrays_have_same_beginning(
 
     kwargs = dict(window=window, axis=axis)
 
-    result = COMPARISONS[numbagg_func]["numbagg"](array, **kwargs)()
-    sliced_array = np.take(array, indices=range(array.shape[axis] - 1), axis=axis)
-    sliced_result = COMPARISONS[numbagg_func]["numbagg"](sliced_array, **kwargs)()
+    # See the note on overflow in the test above.
+    with np.errstate(over="ignore", invalid="ignore"):
+        result = COMPARISONS[numbagg_func]["numbagg"](array, **kwargs)()
+        sliced_array = np.take(array, indices=range(array.shape[axis] - 1), axis=axis)
+        sliced_result = COMPARISONS[numbagg_func]["numbagg"](sliced_array, **kwargs)()
 
     result_sliced = np.take(result, indices=range(result.shape[axis] - 1), axis=axis)
 
