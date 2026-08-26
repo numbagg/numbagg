@@ -6,8 +6,8 @@ pattern have similar performance after optimization, regardless of:
 2. How the axes are specified (0,1) vs (1,0)
 
 Key insight: C(1500,2500) and F(2500,1500) have the same memory access pattern!
-- C(1500,2500): 1500 blocks of 2500 contiguous elements
-- F(2500,1500): 2500 blocks of 1500 contiguous elements (same pattern!)
+- C(1500,2500): 1500 rows of 2500 contiguous elements
+- F(2500,1500): 1500 columns of 2500 contiguous elements (same pattern!)
 
 Run this benchmark:
     uv run pytest numbagg/test/test_axis_ordering_benchmark.py -m slow --benchmark-enable --benchmark-only --benchmark-group-by=group --benchmark-columns=mean -q
