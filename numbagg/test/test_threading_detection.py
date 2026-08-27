@@ -125,19 +125,14 @@ class TestThreadingDetection:
     @pytest.mark.parametrize("threadsafe,expected", [(True, False), (False, True)])
     def test_is_in_unsafe_thread_pool_backend_branches(self, threadsafe, expected):
         """Both in-pool branches, independent of the runner's actual backend."""
-        result: dict[str, bool] = {}
-
-        def check_in_pool():
-            result["in_pool"] = _is_in_unsafe_thread_pool()
-
         with patch(
             "numbagg.decorators._is_threading_layer_threadsafe",
             return_value=threadsafe,
         ):
             with ThreadPoolExecutor(max_workers=1) as executor:
-                executor.submit(check_in_pool).result()
+                in_pool = executor.submit(_is_in_unsafe_thread_pool).result()
 
-        assert result["in_pool"] is expected
+        assert in_pool is expected
 
     def test_is_in_unsafe_thread_pool_executor(self):
         """Test detection inside ThreadPoolExecutor."""
