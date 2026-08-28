@@ -64,13 +64,14 @@ __all__ = [
 # window whether or not it is still inside one. That reference only becomes worse
 # than no offset at all once a scanned value dwarfs the series' own level by about
 # `min(window, min_count) / sqrt(eps)` — ~1e9 at `window = 10`, and well past the
-# point where the dilution stops paying. On a series at ~10 with `window = 10`, a
-# 1e9 spike in the leading rows still beats no offset (error 2.5 against 10.1) and
-# a 1e10 one no longer does (1005 against 232); by 1e12 the covariance at the first
-# step whose window excludes the spike comes back ~7e6 against an exact 9.2. That
-# input is past either offset's reach — the unoffset kernel is wrong there too, in
-# its own way — but it is the one class where the first observation would be the
-# better reference.
+# point where the dilution stops paying. On a series at ~10 with `window = 10`, the
+# off-diagonal covariance under a 3e9 spike in the leading rows still beats no offset
+# (error 303 against 478) and under a 1e10 one no longer does (2009 against 478); the
+# diagonal clamp below rounds that element to 0.0, so only the off-diagonal shows the
+# crossover. By 1e12 that covariance at the first step whose window excludes the spike
+# comes back ~1.4e7 against an exact 18.3. That input is past either offset's reach —
+# the unoffset kernel is wrong there too, in its own way — but it is the one class
+# where the first observation would be the better reference.
 #
 # The exponential functions have no window to average over, so they take each
 # variable's first non-NaN observation.
