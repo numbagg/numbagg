@@ -61,10 +61,12 @@ __all__ = [
 # the rows it reads, by their count — but it also widens the set of rows one can
 # come from, from 1 to `min(window, min_count)`, and the shift is a single constant
 # for the whole run, so a scanned outlier sets the rounding floor for every later
-# window whether or not it is still inside one. Once a scanned value exceeds the
-# series' own level by more than the number of rows averaged, the average it
-# produces is a worse reference than no offset at all; on a series at ~10 with
-# `window = 10` and a 1e12 spike in the leading rows, the covariance at the first
+# window whether or not it is still inside one. That reference only becomes worse
+# than no offset at all once a scanned value dwarfs the series' own level by about
+# `min(window, min_count) / sqrt(eps)` — ~1e9 at `window = 10`, and well past the
+# point where the dilution stops paying. On a series at ~10 with `window = 10`, a
+# 1e9 spike in the leading rows still beats no offset (error 2.5 against 10.1) and
+# a 1e10 one no longer does (1005 against 232); by 1e12 the covariance at the first
 # step whose window excludes the spike comes back ~7e6 against an exact 9.2. That
 # input is past either offset's reach — the unoffset kernel is wrong there too, in
 # its own way — but it is the one class where the first observation would be the
