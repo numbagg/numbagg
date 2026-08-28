@@ -724,6 +724,107 @@ class TestExponentialMatrices:
         assert corr_3d.shape == (2, 20, 3, 3)
 
 
+MOVING_MATRIX_FUNCS = [
+    move_corrmatrix,
+    move_covmatrix,
+    move_exp_nancorrmatrix,
+    move_exp_nancovmatrix,
+]
+CORR_MATRIX_FUNCS = [move_corrmatrix, move_exp_nancorrmatrix]
+COV_MATRIX_FUNCS = [move_covmatrix, move_exp_nancovmatrix]
+
+_WINDOW = 10
+_ALPHA = 0.2
+
+
+def _call(func, data):
+    """Call a moving matrix function with parameters appropriate to its kind."""
+    if func in (move_corrmatrix, move_covmatrix):
+        return func(data, window=_WINDOW, min_count=_WINDOW)
+    return func(data, alpha=_ALPHA)
+
+
+class TestMovingMatrixNumericalStability:
+    """The accumulators in `numbagg/moving_matrix.py` are one-pass.
+
+    Each forms `sum(x*y)/n - mean_x*mean_y`, where both terms scale with the square
+    of the values, so data far from zero loses the answer to cancellation. The
+    kernels offset each variable and accumulate in float64 to keep it; these tests
+    pin the outputs that were wrong before they did.
+    """
+
+    @pytest.mark.parametrize("func", MOVING_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("offset", [1e6, 1e8])
+    def test_numerical_issues_large_offset(self, func, offset):
+        """Both statistics are offset-invariant, so the results must be too."""
+        base = np.random.default_rng(0).standard_normal((40, 3))
+
+        expected = _call(func, base)
+        result = _call(func, base + offset)
+
+        assert np.array_equal(np.isnan(result), np.isnan(expected)), (
+            "the offset changed which entries are defined"
+        )
+        assert_allclose(result, expected, atol=1e-6, equal_nan=True)
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("func", COV_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    def test_numerical_issues_constant_series_covariance(self, func, dtype):
+        """A constant series has zero variance and zero covariance, at any scale."""
+        data = np.full((20, 2), 1e8, dtype=dtype)
+
+        result = _call(func, data)
+
+        assert_allclose(result[_WINDOW:], 0.0, atol=1e-6)
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("func", CORR_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    def test_numerical_issues_constant_series_correlation(self, func, dtype):
+        """A constant series has no correlation to report, at any scale."""
+        data = np.full((20, 2), 1e8, dtype=dtype)
+
+        assert np.all(np.isnan(_call(func, data)))
+
+    @pytest.mark.parametrize("func", COV_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("offset", [1e6, 1e8])
+    def test_numerical_issues_covariance_diagonal_non_negative(self, func, offset):
+        """The diagonal of a covariance matrix is a variance, so never negative."""
+        data = np.random.default_rng(1).standard_normal((60, 3)) + offset
+
+        result = _call(func, data)
+        diagonal = result[..., np.arange(3), np.arange(3)]
+
+        assert not np.any(diagonal < 0), f"minimum diagonal {np.nanmin(diagonal)}"
+
+    @pytest.mark.parametrize("func", CORR_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("offset", [0.0, 1e6, 1e8])
+    def test_numerical_issues_correlation_bounds(self, func, offset):
+        """A correlation is in [-1, 1] whatever the offset of the input."""
+        data = np.random.default_rng(2).standard_normal((60, 3)) + offset
+
+        result = _call(func, data)
+        finite = result[np.isfinite(result)]
+
+        assert np.all(np.abs(finite) <= 1.0), f"maximum |corr| {np.max(np.abs(finite))}"
+
+    @pytest.mark.parametrize("func", MOVING_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    def test_appending_doesnt_change_earlier_results(self, func):
+        """The offset can't be a function of data a shorter input hasn't seen.
+
+        This is what rules out offsetting by the mean of the whole series, which
+        would be more accurate but would make `f(a)[:n]` depend on `a[n:]`.
+        Bit-exact rather than approximate: a tolerance would let a future
+        look-ahead offset through.
+        """
+        data = np.random.default_rng(3).standard_normal((40, 3)) + 1e8
+        n = 25
+
+        prefix = _call(func, data[:n])
+        full = _call(func, data)[:n]
+
+        np.testing.assert_array_equal(prefix, full)
+
+
 class TestMatrixDtypePreservation:
     """Test dtype preservation across all matrix function types."""
 
