@@ -32,33 +32,55 @@ __all__ = [
 #
 # Correlation and covariance are both invariant to a per-variable offset, so
 # subtracting one changes nothing in exact arithmetic; float64 accumulators fix the
-# first loss and the offset fixes the second. The same remedy is proposed for the
-# non-matrix moving functions in #758 and for the static `nancovmatrix` /
-# `nancorrmatrix` in #759; neither is merged, so this file stands alone for now.
+# first loss and the offset fixes the second. #758 applies the same remedy to the
+# non-matrix moving functions and #759 to the static `nancovmatrix` /
+# `nancorrmatrix`; the three share this rationale and the offset choice below.
 #
 # Which constant to subtract is a real choice, because the accumulators run for the
 # whole series and every term carries `(value - offset)**2` — the offset sets the
 # rounding floor everywhere, not only where it fits well. The mean of the whole
 # series is the most accurate on most inputs but is ruled out: it depends on values
-# not yet seen, which would break the guarantee that appending to a series doesn't
-# change results already emitted. For the windowed functions we average the first
-# `window` observations, which keeps that guarantee (a shorter prefix can't be
-# evaluated at all, since `window <= n_obs` is enforced) while diluting an outlier
-# by the window. The exponential functions have no window to average over, so they
-# take each variable's first non-NaN observation.
+# not yet seen, so `f(a)[:n]` would depend on `a[n:]` and appending to a series
+# would change results already emitted.
+#
+# The windowed functions instead average the first `min(window, min_count)`
+# observations, which dilutes an outlier while reading only rows the accumulators
+# have already reached. Both bounds are load-bearing. `min_count` is what keeps the
+# offset from looking ahead: output at time `t` is emitted as soon as a pair has
+# `min_count` observations, so with `min_count < window` averaging the whole first
+# window would make the value at `t` a function of `a[t + 1 : window]` — and when
+# that tail holds a much larger value than the partial window's own, the offset is
+# orders of magnitude off and cancellation gets worse than with no offset at all.
+# A non-NaN output at `t` already requires `t >= min_count - 1`, so those rows are
+# always in hand. `window` bounds it in turn because `min_count` may exceed the
+# window only nominally; `window <= n_obs` is enforced, so a prefix short enough to
+# change the average can't be evaluated at all.
+#
+# The exponential functions have no window to average over, so they take each
+# variable's first non-NaN observation.
 
 
 # Cached alongside the gufuncs that call them: numba can't cache a compiled
 # function whose callees aren't cacheable themselves.
 @njit(cache=_ENABLE_CACHE)
-def _first_window_shift(a, window):
-    """Per-variable mean of the non-NaN values among the first `window` rows of `a`."""
+def _first_observation(a, k):
+    """First non-NaN observation of variable `k` in `a`, or 0.0 if it has none."""
+    for t in range(a.shape[0]):
+        v = np.float64(a[t, k])
+        if not np.isnan(v):
+            return v
+    return 0.0
+
+
+@njit(cache=_ENABLE_CACHE)
+def _leading_rows_shift(a, n_rows):
+    """Per-variable mean of the non-NaN values among the first `n_rows` rows of `a`."""
     n_obs, n_vars = a.shape
     shift = np.zeros(n_vars, dtype=np.float64)
     for k in range(n_vars):
         total = 0.0
         count = 0
-        for t in range(min(window, n_obs)):
+        for t in range(min(n_rows, n_obs)):
             v = np.float64(a[t, k])
             if not np.isnan(v):
                 total += v
@@ -66,31 +88,22 @@ def _first_window_shift(a, window):
         if count > 0:
             shift[k] = total / count
         else:
-            # The first window is entirely NaN for this variable, so fall back to
-            # its first non-NaN value anywhere — better than 0.0 for a variable
-            # that starts with a gap. Still safe for the appending guarantee: if
-            # this scan finds a different value for a prefix of `a`, that prefix
-            # has no non-NaN values for this variable at all, and every pair it
-            # takes part in emits NaN either way.
-            for t in range(n_obs):
-                v = np.float64(a[t, k])
-                if not np.isnan(v):
-                    shift[k] = v
-                    break
+            # Those rows are entirely NaN for this variable, so fall back to its
+            # first non-NaN value anywhere — better than 0.0 for a variable that
+            # starts with a gap, and still look-ahead-free: any output involving
+            # this variable needs a non-NaN value of it at or before that time
+            # step, so the first one anywhere is the first one already seen.
+            shift[k] = _first_observation(a, k)
     return shift
 
 
 @njit(cache=_ENABLE_CACHE)
 def _first_observation_shift(a):
     """Per-variable first non-NaN observation of `a`, or 0.0 for an all-NaN variable."""
-    n_obs, n_vars = a.shape
+    n_vars = a.shape[1]
     shift = np.zeros(n_vars, dtype=np.float64)
     for k in range(n_vars):
-        for t in range(n_obs):
-            v = np.float64(a[t, k])
-            if not np.isnan(v):
-                shift[k] = v
-                break
+        shift[k] = _first_observation(a, k)
     return shift
 
 
@@ -124,13 +137,13 @@ def move_corrmatrix(a, window, min_count, out):
     n_vars = a.shape[1]
     min_count = max(min_count, 1)
 
-    # Each variable is offset by the mean of its first `window` observations, and
-    # the accumulators run in float64. Correlation is invariant to a per-variable
-    # offset, so this changes nothing in exact arithmetic, but it keeps the
-    # significant digits: the sums below scale with the square of the values, so
-    # on data sitting far from zero the final subtraction is nearly all
-    # cancellation. See `_first_window_shift` for why this particular offset.
-    shift = _first_window_shift(a, window)
+    # Each variable is offset by the mean of its first `min(window, min_count)`
+    # observations, and the accumulators run in float64. Correlation is invariant
+    # to a per-variable offset, so this changes nothing in exact arithmetic, but it
+    # keeps the significant digits: the sums below scale with the square of the
+    # values, so on data sitting far from zero the final subtraction is nearly all
+    # cancellation. See the module comment for why this particular offset.
+    shift = _leading_rows_shift(a, min(window, min_count))
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # to ensure all moments are computed over the same set of observations
@@ -205,11 +218,15 @@ def move_corrmatrix(a, window, min_count, out):
                     if var_i > 0 and var_j > 0:
                         corr = cov / np.sqrt(var_i * var_j)
                         # A window of exactly two observations is perfectly
-                        # correlated, and rounding can put the quotient an ulp
-                        # outside [-1, 1]. `np.corrcoef` clips for the same
-                        # reason; this runs after the variance clamp above, so a
-                        # degenerate window still yields NaN rather than a
-                        # clipped value.
+                        # correlated, and rounding can put the quotient a few
+                        # ulps outside [-1, 1] — `test_correlation_bounds`
+                        # catches it without this. `np.corrcoef`, the documented
+                        # counterpart of these matrix functions, clips for the
+                        # same reason; this runs after the variance clamp above,
+                        # so a degenerate window still yields NaN rather than a
+                        # clipped value. Deliberately unlike `move_corr`, which
+                        # #758 leaves unclipped so that a badly-conditioned
+                        # result stays visible as an out-of-range number.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
@@ -248,7 +265,7 @@ def move_covmatrix(a, window, min_count, out):
     min_count = max(min_count, 1)
 
     # See `move_corrmatrix` — covariance is invariant to a per-variable offset too.
-    shift = _first_window_shift(a, window)
+    shift = _leading_rows_shift(a, min(window, min_count))
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # to ensure all moments are computed over the same set of observations
@@ -448,11 +465,15 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                     if var_i > 0 and var_j > 0:
                         corr = cov / np.sqrt(var_i * var_j)
                         # A window of exactly two observations is perfectly
-                        # correlated, and rounding can put the quotient an ulp
-                        # outside [-1, 1]. `np.corrcoef` clips for the same
-                        # reason; this runs after the variance clamp above, so a
-                        # degenerate window still yields NaN rather than a
-                        # clipped value.
+                        # correlated, and rounding can put the quotient a few
+                        # ulps outside [-1, 1] — `test_correlation_bounds`
+                        # catches it without this. `np.corrcoef`, the documented
+                        # counterpart of these matrix functions, clips for the
+                        # same reason; this runs after the variance clamp above,
+                        # so a degenerate window still yields NaN rather than a
+                        # clipped value. Deliberately unlike `move_corr`, which
+                        # #758 leaves unclipped so that a badly-conditioned
+                        # result stays visible as an out-of-range number.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
