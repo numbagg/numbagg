@@ -44,17 +44,31 @@ __all__ = [
 # would change results already emitted.
 #
 # The windowed functions instead average the first `min(window, min_count)`
-# observations, which dilutes an outlier while reading only rows the accumulators
-# have already reached. Both bounds are load-bearing. `min_count` is what keeps the
-# offset from looking ahead: output at time `t` is emitted as soon as a pair has
-# `min_count` observations, so with `min_count < window` averaging the whole first
-# window would make the value at `t` a function of `a[t + 1 : window]` — and when
-# that tail holds a much larger value than the partial window's own, the offset is
-# orders of magnitude off and cancellation gets worse than with no offset at all.
-# A non-NaN output at `t` already requires `t >= min_count - 1`, so those rows are
-# always in hand. `window` bounds it in turn because `min_count` may exceed the
-# window only nominally; `window <= n_obs` is enforced, so a prefix short enough to
-# change the average can't be evaluated at all.
+# observations, reading only rows the accumulators have already reached. Both
+# bounds are load-bearing. `min_count` is what keeps the offset from looking ahead:
+# output at time `t` is emitted as soon as a pair has `min_count` observations, so
+# with `min_count < window` averaging the whole first window would make the value
+# at `t` a function of `a[t + 1 : window]` — and when that tail holds a much larger
+# value than the partial window's own, the offset is orders of magnitude off and
+# cancellation gets worse than with no offset at all. A non-NaN output at `t`
+# already requires `t >= min_count - 1`, so those rows are always in hand. `window`
+# bounds it in turn because `min_count` may exceed the window only nominally;
+# `window <= n_obs` is enforced, so a prefix short enough to change the average
+# can't be evaluated at all.
+#
+# Averaging rather than taking the first observation cuts both ways, and the limit
+# is worth knowing because #758 makes the same choice. It dilutes an outlier among
+# the rows it reads, by their count — but it also widens the set of rows one can
+# come from, from 1 to `min(window, min_count)`, and the shift is a single constant
+# for the whole run, so a scanned outlier sets the rounding floor for every later
+# window whether or not it is still inside one. Once a scanned value exceeds the
+# series' own level by more than the number of rows averaged, the average it
+# produces is a worse reference than no offset at all; on a series at ~10 with
+# `window = 10` and a 1e12 spike in the leading rows, the covariance at the first
+# step whose window excludes the spike comes back ~7e6 against an exact 9.2. That
+# input is past either offset's reach — the unoffset kernel is wrong there too, in
+# its own way — but it is the one class where the first observation would be the
+# better reference.
 #
 # The exponential functions have no window to average over, so they take each
 # variable's first non-NaN observation.

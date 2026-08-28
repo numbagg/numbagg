@@ -744,9 +744,30 @@ def _call(func, data, min_count=_WINDOW):
     `min_count` applies to the windowed pair only; the exponential functions have
     no equivalent, so they ignore it.
     """
-    if func in (move_corrmatrix, move_covmatrix):
+    if func in WINDOWED_MATRIX_FUNCS:
         return func(data, window=_WINDOW, min_count=min_count)
     return func(data, alpha=_ALPHA)
+
+
+def _min_count_params(funcs):
+    """Pair each function with the `min_count` values that reach its kernel.
+
+    `_call` passes `min_count` to the windowed pair only, so parametrising the
+    exponential functions over it would run each of their cases twice under IDs
+    claiming the two differed.
+    """
+    params = []
+    for func in funcs:
+        if func in WINDOWED_MATRIX_FUNCS:
+            params += [
+                pytest.param(
+                    func, min_count, id=f"{func.__name__}-min_count{min_count}"
+                )
+                for min_count in (_WINDOW, 2)
+            ]
+        else:
+            params.append(pytest.param(func, _WINDOW, id=func.__name__))
+    return params
 
 
 class TestMovingMatrixNumericalStability:
@@ -758,9 +779,8 @@ class TestMovingMatrixNumericalStability:
     pin the outputs that were wrong before they did.
     """
 
-    @pytest.mark.parametrize("func", MOVING_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("func, min_count", _min_count_params(MOVING_MATRIX_FUNCS))
     @pytest.mark.parametrize("offset", [1e6, 1e8])
-    @pytest.mark.parametrize("min_count", [_WINDOW, 2])
     def test_numerical_issues_large_offset(self, func, offset, min_count):
         """Both statistics are offset-invariant, so the results must be too."""
         base = np.random.default_rng(0).standard_normal((40, 3))
@@ -791,9 +811,8 @@ class TestMovingMatrixNumericalStability:
 
         assert np.all(np.isnan(_call(func, data)))
 
-    @pytest.mark.parametrize("func", COV_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("func, min_count", _min_count_params(COV_MATRIX_FUNCS))
     @pytest.mark.parametrize("offset", [1e6, 1e8])
-    @pytest.mark.parametrize("min_count", [_WINDOW, 2])
     def test_numerical_issues_covariance_diagonal_non_negative(
         self, func, offset, min_count
     ):
@@ -805,9 +824,8 @@ class TestMovingMatrixNumericalStability:
 
         assert not np.any(diagonal < 0), f"minimum diagonal {np.nanmin(diagonal)}"
 
-    @pytest.mark.parametrize("func", CORR_MATRIX_FUNCS, ids=lambda f: f.__name__)
+    @pytest.mark.parametrize("func, min_count", _min_count_params(CORR_MATRIX_FUNCS))
     @pytest.mark.parametrize("offset", [0.0, 1e6, 1e8])
-    @pytest.mark.parametrize("min_count", [_WINDOW, 2])
     def test_numerical_issues_correlation_bounds(self, func, offset, min_count):
         """A correlation is in [-1, 1] whatever the offset of the input."""
         data = np.random.default_rng(2).standard_normal((60, 3)) + offset
@@ -817,8 +835,7 @@ class TestMovingMatrixNumericalStability:
 
         assert np.all(np.abs(finite) <= 1.0), f"maximum |corr| {np.max(np.abs(finite))}"
 
-    @pytest.mark.parametrize("func", MOVING_MATRIX_FUNCS, ids=lambda f: f.__name__)
-    @pytest.mark.parametrize("min_count", [_WINDOW, 2])
+    @pytest.mark.parametrize("func, min_count", _min_count_params(MOVING_MATRIX_FUNCS))
     def test_appending_doesnt_change_earlier_results(self, func, min_count):
         """The offset can't be a function of data a shorter input hasn't seen.
 
