@@ -13,6 +13,18 @@ The library provides aggregation functions (like `nansum`, `nanmean`), moving wi
 
 Public functions in `funcs.py`, `moving.py`, and `moving_exp.py` — including the matrix functions `moving.py` re-exports — are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub.
 
+## Numerical Algorithms
+
+When changing variance, covariance, or correlation algorithms:
+
+- Preserve causality, pairwise-NaN semantics, and dtype/output contracts. Variances and covariance diagonals must not be meaningfully negative. Correlations must remain within `[-1, 1]`; clipping is a final guard, not an accuracy fix.
+- Optimize dense and NaN-heavy, zero-centered float32 and float64 workloads. Target at most 5% median regression, and investigate any individual regression above 10%. Treat differences within benchmark noise as ties.
+- Let ill-conditioned inputs pay for stability. Measure large offsets, long series, expired outliers, regime changes, and nearly constant data separately, including fallback or reanchor frequency.
+- Prefer one stable algorithm when its ordinary-case performance is competitive. Add a fast path only for a material win, and use a conservative trigger that scales with the observation count.
+- Share one statistical state across variance and covariance and derive standard deviation and correlation from it. Avoid duplicate implementations and forwarding-only helpers.
+- Compare accuracy with exact arithmetic or a high-precision or two-pass reference. Normalize covariance error by the variables' spread when true covariance is near zero.
+- Report steady-state runtime, cold compilation, scratch memory, dtype promotion, and fallback or reanchor frequency. Matrix implementations preserve upper-triangle iteration.
+
 ## Running Commands
 
 Prefix commands with `uv run` to ensure that the correct virtual environment is used. For example:

@@ -4,10 +4,14 @@ import pytest
 from .. import (
     bfill,
     ffill,
+    move_corr,
     move_corrmatrix,
+    move_cov,
     move_covmatrix,
     move_exp_nancorrmatrix,
     move_exp_nancovmatrix,
+    move_std,
+    move_var,
     nancorrmatrix,
     nancovmatrix,
 )
@@ -93,6 +97,70 @@ def test_benchmark_f_bfill(benchmark, func_callable):
         rounds=100,
         iterations=10,
     )
+
+
+@pytest.fixture(
+    params=[
+        "dense-float64",
+        "dense-float32",
+        "nan-heavy-float64",
+        "offset-float64",
+        "expired-outlier-float64",
+        "repeated-outliers-float32",
+        "level-change-float64",
+        "slow-drift-float64",
+        "near-constant-float64",
+    ],
+    scope="module",
+)
+def rolling_moment_workload(request):
+    """Inputs that separate ordinary throughput from stability-path costs."""
+    rng = np.random.default_rng(0)
+    dtype = (
+        np.float32
+        if request.param in ("dense-float32", "repeated-outliers-float32")
+        else np.float64
+    )
+    a = rng.standard_normal(100_000).astype(dtype)
+    b = (0.4 * a + rng.standard_normal(len(a))).astype(dtype)
+
+    if request.param == "nan-heavy-float64":
+        a[::2] = np.nan
+        b[1::4] = np.nan
+    elif request.param == "offset-float64":
+        a += 1e8
+        b += 1e8
+    elif request.param == "expired-outlier-float64":
+        # Removing this first value forces the shifted recovery state to reanchor.
+        a[0] = 1e12
+        b[0] = -1e12
+    elif request.param == "repeated-outliers-float32":
+        a[::2_000] = 1e6
+        b[::2_000] = -1e6
+    elif request.param == "level-change-float64":
+        a[len(a) // 2 :] += 1e8
+        b[len(b) // 2 :] += 1e8
+    elif request.param == "slow-drift-float64":
+        drift = np.linspace(0.0, 1e8, len(a))
+        a += drift
+        b += drift
+    elif request.param == "near-constant-float64":
+        a = 1e8 + np.resize(np.arange(5) * 1e-7, len(a))
+        b = 1e8 + np.resize(np.arange(5)[::-1] * 1e-7, len(b))
+
+    return request.param, a, b
+
+
+@pytest.mark.parametrize(
+    "func", [move_var, move_std, move_cov, move_corr], ids=lambda x: x.__name__
+)
+@pytest.mark.benchmark(warmup=True, warmup_iterations=1)
+def test_benchmark_rolling_moment_stability(benchmark, func, rolling_moment_workload):
+    """Track ordinary and difficult rolling-moment costs independently."""
+    workload, a, b = rolling_moment_workload
+    args = (a,) if func in (move_var, move_std) else (a, b)
+    benchmark.group = f"rolling-moments|{workload}"
+    benchmark(func, *args, window=100, min_count=20)
 
 
 # Because this clears the cache, it really slows down running the tests. So we only run
