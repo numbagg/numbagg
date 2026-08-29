@@ -757,3 +757,22 @@ class TestMatrixDtypePreservation:
             data64 = np.random.randn(3, 10).astype(np.float64)
             result64 = func(data64)
         assert result64.dtype == np.float64
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize(
+        "func,kwargs",
+        [
+            (move_corrmatrix, {"window": 7, "min_count": 2}),
+            (move_covmatrix, {"window": 7, "min_count": 2}),
+            (move_exp_nancorrmatrix, {"alpha": 0.3}),
+            (move_exp_nancovmatrix, {"alpha": 0.3}),
+        ],
+    )
+    def test_moving_matrices_are_exactly_symmetric(self, func, kwargs, dtype):
+        data = np.random.default_rng(0).standard_normal((31, 4)).astype(dtype)
+        data[::7, 0] = np.nan
+        data[3::11, 2] = np.nan
+
+        result = func(data, **kwargs)
+
+        np.testing.assert_array_equal(result, result.swapaxes(-1, -2))

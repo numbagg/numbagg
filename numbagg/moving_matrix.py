@@ -59,7 +59,7 @@ def move_corrmatrix(a, window, min_count, out):
                 old_val_i = a[t - window, i]
                 if np.isnan(old_val_i):
                     continue
-                for j in range(n_vars):
+                for j in range(i, n_vars):
                     old_val_j = a[t - window, j]
                     if np.isnan(old_val_j):
                         continue
@@ -76,7 +76,7 @@ def move_corrmatrix(a, window, min_count, out):
             new_val_i = a[t, i]
             if np.isnan(new_val_i):
                 continue
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 new_val_j = a[t, j]
                 if np.isnan(new_val_j):
                     continue
@@ -90,7 +90,7 @@ def move_corrmatrix(a, window, min_count, out):
 
         # Compute correlation matrix for current window
         for i in range(n_vars):
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 n = pair_counts[i, j]
                 # Need at least 2 observations for correlation (to compute variance)
                 if n >= max(min_count, 2):
@@ -108,10 +108,13 @@ def move_corrmatrix(a, window, min_count, out):
                     if var_i > 0 and var_j > 0:
                         corr = cov / np.sqrt(var_i * var_j)
                         out[t, i, j] = corr
+                        out[t, j, i] = corr
                     else:
                         out[t, i, j] = np.nan
+                        out[t, j, i] = np.nan
                 else:
                     out[t, i, j] = np.nan
+                    out[t, j, i] = np.nan
 
 
 @ndmovematrix.wrap(
@@ -158,7 +161,7 @@ def move_covmatrix(a, window, min_count, out):
                 old_val_i = a[t - window, i]
                 if np.isnan(old_val_i):
                     continue
-                for j in range(n_vars):
+                for j in range(i, n_vars):
                     old_val_j = a[t - window, j]
                     if np.isnan(old_val_j):
                         continue
@@ -173,7 +176,7 @@ def move_covmatrix(a, window, min_count, out):
             new_val_i = a[t, i]
             if np.isnan(new_val_i):
                 continue
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 new_val_j = a[t, j]
                 if np.isnan(new_val_j):
                     continue
@@ -185,7 +188,7 @@ def move_covmatrix(a, window, min_count, out):
 
         # Compute covariance matrix for current window
         for i in range(n_vars):
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 n = pair_counts[i, j]
                 if n >= min_count:
                     if n > 1:
@@ -194,11 +197,14 @@ def move_covmatrix(a, window, min_count, out):
                         mean_j = sums_j[i, j] / n
                         cov = (prods[i, j] / n - mean_i * mean_j) * n / (n - 1)
                         out[t, i, j] = cov
+                        out[t, j, i] = cov
                     else:
                         # n == 1, covariance is undefined (requires at least 2 points)
                         out[t, i, j] = np.nan
+                        out[t, j, i] = np.nan
                 else:
                     out[t, i, j] = np.nan
+                    out[t, j, i] = np.nan
 
 
 @ndmoveexpmatrix.wrap(
@@ -275,7 +281,7 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
             if np.isnan(new_val_i):
                 continue
 
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 new_val_j = a[t, j]
                 if np.isnan(new_val_j):
                     continue
@@ -292,7 +298,7 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
 
         # Compute correlation matrix for current time step
         for i in range(n_vars):
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 # Use pairwise statistics for each (i,j) combination
                 bias = (
                     1 - pair_sum_weights_sq[i, j] / (pair_sum_weights[i, j] ** 2)
@@ -322,10 +328,13 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                     if var_i > 0 and var_j > 0:
                         corr = cov / np.sqrt(var_i * var_j)
                         out[t, i, j] = corr
+                        out[t, j, i] = corr
                     else:
                         out[t, i, j] = np.nan
+                        out[t, j, i] = np.nan
                 else:
                     out[t, i, j] = np.nan
+                    out[t, j, i] = np.nan
 
 
 @ndmoveexpmatrix.wrap(
@@ -394,7 +403,7 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
             if np.isnan(new_val_i):
                 continue
 
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 new_val_j = a[t, j]
                 if np.isnan(new_val_j):
                     continue
@@ -409,7 +418,7 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
 
         # Compute covariance matrix for current time step
         for i in range(n_vars):
-            for j in range(n_vars):
+            for j in range(i, n_vars):
                 # Check if we have sufficient weight for a meaningful covariance calculation
                 bias = (
                     1 - pair_sum_weights_sq[i, j] / (pair_sum_weights[i, j] ** 2)
@@ -427,6 +436,9 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
                     cov_biased = (prods[i, j] / n) - mean_i * mean_j
 
                     # Apply bias correction
-                    out[t, i, j] = cov_biased / bias
+                    cov = cov_biased / bias
+                    out[t, i, j] = cov
+                    out[t, j, i] = cov
                 else:
                     out[t, i, j] = np.nan
+                    out[t, j, i] = np.nan
