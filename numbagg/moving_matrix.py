@@ -293,6 +293,10 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                     denominator = np.sqrt(moments_i[i, j] * moments_j[i, j])
                     if denominator > 0:
                         corr = co_moments[i, j] / denominator
+                        if corr > 1.0:
+                            corr = 1.0
+                        elif corr < -1.0:
+                            corr = -1.0
                         out[t, i, j] = corr
                         out[t, j, i] = corr
                     else:
@@ -378,15 +382,8 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
         for i in range(n_vars):
             for j in range(i, n_vars):
                 total_weight = sum_weights[i, j]
-                if (
-                    pair_weights[i, j] >= min_weight
-                    and weight_products[i, j] > 0
-                ):
-                    cov = (
-                        co_moments[i, j]
-                        * total_weight
-                        / weight_products[i, j]
-                    )
+                if pair_weights[i, j] >= min_weight and weight_products[i, j] > 0:
+                    cov = co_moments[i, j] * total_weight / weight_products[i, j]
                     out[t, i, j] = cov
                     out[t, j, i] = cov
                 else:

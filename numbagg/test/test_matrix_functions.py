@@ -63,6 +63,36 @@ def _weighted_matrix_reference(data, alpha, correlation, min_weight=0.0):
     return out
 
 
+def _matrix_reference(data, correlation):
+    """Pairwise matrix evaluated after centering each input in float64."""
+    n_vars = data.shape[1]
+    out = np.full((n_vars, n_vars), np.nan)
+    for i in range(n_vars):
+        for j in range(i, n_vars):
+            valid = ~np.isnan(data[:, i]) & ~np.isnan(data[:, j])
+            values_i = data[valid, i].astype(np.float64)
+            values_j = data[valid, j].astype(np.float64)
+            if len(values_i) < 2:
+                continue
+            values_i -= values_i[0]
+            values_j -= values_j[0]
+            deviations_i = values_i - values_i.mean()
+            deviations_j = values_j - values_j.mean()
+            co_moment = np.sum(deviations_i * deviations_j)
+            if correlation:
+                denominator = np.sqrt(
+                    np.sum(np.square(deviations_i)) * np.sum(np.square(deviations_j))
+                )
+                if denominator <= 0.0:
+                    continue
+                value = co_moment / denominator
+            else:
+                value = co_moment / (len(values_i) - 1)
+            out[i, j] = value
+            out[j, i] = value
+    return out
+
+
 class TestCorrelationCovarianceMatrices:
     """Test correlation and covariance matrix functions (nancorrmatrix, nancovmatrix)."""
 
@@ -233,6 +263,96 @@ class TestCorrelationCovarianceMatrices:
 
         assert corr_3d.shape == (2, 3, 3)
         assert cov_3d.shape == (2, 3, 3)
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [(nancorrmatrix, True), (nancovmatrix, False)],
+    )
+    @pytest.mark.parametrize(
+        "dtype,offset,rtol,atol",
+        [
+            (np.float32, 1e3, 1e-5, 1e-5),
+            (np.float64, 1e8, 1e-7, 5e-8),
+        ],
+    )
+    def test_static_numerical_stability(
+        self, func, correlation, dtype, offset, rtol, atol
+    ):
+        data = np.random.default_rng(0).standard_normal((4, 300)).astype(dtype)
+        data[0, :50] = np.nan
+        data[1, 100:160] = np.nan
+        data[2, ::7] = np.nan
+        values = data + dtype(offset)
+
+        expected = _matrix_reference(values.T, correlation)
+        result = func(values)
+
+        assert_allclose(result, expected, rtol=rtol, atol=atol)
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    def test_static_large_constant_variable(self, dtype):
+        data = np.random.default_rng(1).standard_normal((3, 100)).astype(dtype)
+        data[1] = dtype(1e8)
+
+        covariance = nancovmatrix(data)
+        correlation = nancorrmatrix(data)
+
+        assert_allclose(covariance[1], 0.0, atol=1e-6)
+        assert np.isnan(correlation[1]).all()
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [(nancorrmatrix, True), (nancovmatrix, False)],
+    )
+    @pytest.mark.parametrize(
+        "dtype,offset,scale,rtol",
+        [
+            (np.float32, 1e4, 40.0, 1e-5),
+            (np.float64, 1e12, 0.02, 1e-8),
+        ],
+    )
+    def test_static_moderate_cancellation_uses_accuracy_fallback(
+        self, func, correlation, dtype, offset, scale, rtol
+    ):
+        values = (
+            np.random.default_rng(53).standard_normal((4, 300)) * scale + offset
+        ).astype(dtype)
+        expected = _matrix_reference(values.T, correlation)
+
+        assert_allclose(func(values), expected, rtol=rtol, atol=rtol)
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [(nancorrmatrix, True), (nancovmatrix, False)],
+    )
+    def test_static_large_float32_uses_stable_accumulation(self, func, correlation):
+        rng = np.random.default_rng(123)
+        values = rng.standard_normal((2, 6_000)).astype(np.float32)
+        values[1] = 0.7 * values[0] + 0.3 * values[1]
+        expected = _matrix_reference(values.T, correlation)
+
+        assert_allclose(func(values), expected, rtol=1e-6, atol=1e-6)
+
+    def test_static_float32_repeated_mantissa_uses_stable_accumulation(self):
+        values = np.empty((2, 10_000), dtype=np.float32)
+        values[0, ::2] = 0.3
+        values[0, 1::2] = -0.3
+        values[1] = values[0]
+        expected = _matrix_reference(values.T, correlation=False)
+
+        assert_allclose(nancovmatrix(values), expected, rtol=1e-6, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [(nancorrmatrix, True), (nancovmatrix, False)],
+    )
+    def test_static_fallback_shift_is_pairwise(self, func, correlation):
+        values = np.empty((2, 300))
+        values[:, 2:] = 1e12 + np.random.default_rng(9).standard_normal((2, 298))
+        values[:, :2] = [[1e16, np.nan], [np.nan, -1e16]]
+        expected = _matrix_reference(values.T, correlation)
+
+        assert_allclose(func(values), expected, rtol=1e-8, atol=1e-8)
 
 
 class TestMovingMatrices:
