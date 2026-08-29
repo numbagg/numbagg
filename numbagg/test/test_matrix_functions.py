@@ -17,6 +17,52 @@ from numbagg import (
 )
 
 
+def _weighted_matrix_reference(data, alpha, correlation, min_weight=0.0):
+    """Final pairwise weighted matrix, evaluated directly from effective weights."""
+    n_obs, n_vars = data.shape
+    weights = np.ones(n_obs, dtype=np.float64)
+    weight = 1.0
+    for t in range(n_obs - 1, -1, -1):
+        weights[t] = weight
+        weight *= 1.0 - alpha[t]
+
+    out = np.full((n_vars, n_vars), np.nan)
+    for i in range(n_vars):
+        for j in range(i, n_vars):
+            valid = ~np.isnan(data[:, i]) & ~np.isnan(data[:, j])
+            pair_weights = weights[valid]
+            total_weight = pair_weights.sum()
+            if total_weight == 0.0:
+                continue
+            accumulated_weight = np.sum(pair_weights * alpha[valid])
+            squared_weight = np.square(pair_weights).sum()
+            bias = 1.0 - squared_weight / total_weight**2
+            if accumulated_weight < min_weight or bias <= 0.0:
+                continue
+
+            values_i = data[valid, i].astype(np.float64)
+            values_j = data[valid, j].astype(np.float64)
+            mean_i = np.sum(pair_weights * values_i) / total_weight
+            mean_j = np.sum(pair_weights * values_j) / total_weight
+            deviations_i = values_i - mean_i
+            deviations_j = values_j - mean_j
+            co_moment = np.sum(pair_weights * deviations_i * deviations_j)
+
+            if correlation:
+                moment_i = np.sum(pair_weights * np.square(deviations_i))
+                moment_j = np.sum(pair_weights * np.square(deviations_j))
+                denominator = np.sqrt(moment_i * moment_j)
+                if denominator <= 0.0:
+                    continue
+                value = co_moment / denominator
+            else:
+                value = co_moment / total_weight / bias
+
+            out[i, j] = value
+            out[j, i] = value
+    return out
+
+
 class TestCorrelationCovarianceMatrices:
     """Test correlation and covariance matrix functions (nancorrmatrix, nancovmatrix)."""
 
@@ -550,6 +596,58 @@ class TestExponentialMatrices:
         # Should be different from constant alpha
         result_constant = func(data, alpha=0.5)
         assert not np.allclose(result, result_constant)
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [
+            (move_exp_nancorrmatrix, True),
+            (move_exp_nancovmatrix, False),
+        ],
+    )
+    def test_matches_direct_weighted_reference(self, func, correlation):
+        data = np.random.default_rng(0).standard_normal((31, 4))
+        data[::7, 0] = np.nan
+        data[3::11, 2] = np.nan
+        alpha = np.linspace(0.05, 0.9, len(data))
+
+        min_weight = 0.8
+        result = func(data, alpha=alpha, min_weight=min_weight)
+
+        for t in (0, 1, 6, 15, 30):
+            expected = _weighted_matrix_reference(
+                data[: t + 1], alpha[: t + 1], correlation, min_weight
+            )
+            assert_allclose(result[t], expected, rtol=1e-12)
+
+    @pytest.mark.parametrize("func", [move_exp_nancorrmatrix, move_exp_nancovmatrix])
+    def test_alpha_one_reset_requires_two_positive_weights(self, func):
+        data = np.array([[1.0, 2.0], [np.nan, np.nan], [np.nan, np.nan]])
+        alpha = np.array([1.0, 0.2, 0.01])
+
+        assert np.isnan(func(data, alpha=alpha)).all()
+
+    @pytest.mark.parametrize(
+        "func,correlation",
+        [
+            (move_exp_nancorrmatrix, True),
+            (move_exp_nancovmatrix, False),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "dtype,offset,atol",
+        [(np.float32, 1e3, 1e-5), (np.float64, 1e8, 5e-8)],
+    )
+    def test_numerical_stability(self, func, correlation, dtype, offset, atol):
+        data = np.random.default_rng(1).standard_normal((500, 3)).astype(dtype)
+        alpha = np.full(len(data), 0.2)
+        conditioned = data + dtype(offset)
+        expired_outlier = data.copy()
+        expired_outlier[0] = dtype(1e8)
+
+        for values in (conditioned, expired_outlier):
+            expected = _weighted_matrix_reference(values, alpha, correlation)
+            result = func(values, alpha=0.2)[-1]
+            assert_allclose(result, expected, rtol=1e-5, atol=atol)
 
     @pytest.mark.parametrize("func", [move_exp_nancorrmatrix, move_exp_nancovmatrix])
     def test_broadcasting_higher_dims(self, func):

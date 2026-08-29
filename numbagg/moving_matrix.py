@@ -238,95 +238,61 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
     n_obs = a.shape[0]
     n_vars = a.shape[1]
 
-    # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
-    # This is necessary for consistency with non-matrix exponential functions
-    sums_i = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of variable i for pair (i,j)
-    sums_j = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of variable j for pair (i,j)
-    sums_sq_i = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of squares of variable i for pair (i,j)
-    sums_sq_j = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of squares of variable j for pair (i,j)
-    prods = np.zeros((n_vars, n_vars), dtype=a.dtype)  # sum of products for pair (i,j)
-    pair_weights = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # accumulated alpha weights
-    pair_sum_weights = np.zeros((n_vars, n_vars), dtype=a.dtype)  # count of valid pairs
-    pair_sum_weights_sq = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of squared weights
+    # Pairwise moving means and central moments preserve accuracy as old values
+    # decay away. Float64 state avoids compounding float32 rounding over time.
+    means_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    means_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    moments_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    moments_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    co_moments = np.zeros((n_vars, n_vars), dtype=np.float64)
+    pair_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sum_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
+    weight_products = np.zeros((n_vars, n_vars), dtype=np.float64)
 
     for t in range(n_obs):
-        alpha_t = alpha[t]
+        alpha_t = np.float64(alpha[t])
         decay = 1.0 - alpha_t
 
-        # Apply exponential decay to all pairwise statistics
-        sums_i *= decay
-        sums_j *= decay
-        sums_sq_i *= decay
-        sums_sq_j *= decay
-        prods *= decay
+        moments_i *= decay
+        moments_j *= decay
+        co_moments *= decay
         pair_weights *= decay
-        pair_sum_weights *= decay
-        pair_sum_weights_sq *= decay**2
+        sum_weights *= decay
+        weight_products *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            new_val_i = a[t, i]
+            new_val_i = np.float64(a[t, i])
             if np.isnan(new_val_i):
                 continue
 
             for j in range(i, n_vars):
-                new_val_j = a[t, j]
+                new_val_j = np.float64(a[t, j])
                 if np.isnan(new_val_j):
                     continue
 
-                # Only update pairwise statistics if BOTH values are non-NaN (consistent with non-matrix functions)
-                sums_i[i, j] += new_val_i
-                sums_j[i, j] += new_val_j
-                sums_sq_i[i, j] += new_val_i * new_val_i
-                sums_sq_j[i, j] += new_val_j * new_val_j
-                prods[i, j] += new_val_i * new_val_j
+                old_weight = sum_weights[i, j]
+                new_weight = old_weight + 1.0
+                delta_i = new_val_i - means_i[i, j]
+                delta_j = new_val_j - means_j[i, j]
+                adjustment = old_weight / new_weight
+
+                means_i[i, j] += delta_i / new_weight
+                means_j[i, j] += delta_j / new_weight
+                moments_i[i, j] += adjustment * delta_i * delta_i
+                moments_j[i, j] += adjustment * delta_j * delta_j
+                co_moments[i, j] += adjustment * delta_i * delta_j
                 pair_weights[i, j] += alpha_t
-                pair_sum_weights[i, j] += 1.0
-                pair_sum_weights_sq[i, j] += 1.0
+                weight_products[i, j] += 2.0 * old_weight
+                sum_weights[i, j] = new_weight
 
         # Compute correlation matrix for current time step
         for i in range(n_vars):
             for j in range(i, n_vars):
-                # Use pairwise statistics for each (i,j) combination
-                bias = (
-                    1 - pair_sum_weights_sq[i, j] / (pair_sum_weights[i, j] ** 2)
-                    if pair_sum_weights[i, j] > 0
-                    else 0.0
-                )
-
-                if pair_weights[i, j] >= min_weight and bias > 0:
-                    # Compute correlation using pairwise statistics
-                    n = pair_sum_weights[i, j]
-                    mean_i = sums_i[i, j] / n
-                    mean_j = sums_j[i, j] / n
-
-                    # Compute variances (biased)
-                    var_i_biased = (sums_sq_i[i, j] / n) - (mean_i * mean_i)
-                    var_j_biased = (sums_sq_j[i, j] / n) - (mean_j * mean_j)
-
-                    # Compute covariance (biased)
-                    cov_biased = (prods[i, j] / n) - (mean_i * mean_j)
-
-                    # Apply bias correction
-                    var_i = var_i_biased / bias
-                    var_j = var_j_biased / bias
-                    cov = cov_biased / bias
-
-                    # Compute correlation
-                    if var_i > 0 and var_j > 0:
-                        corr = cov / np.sqrt(var_i * var_j)
+                if pair_weights[i, j] >= min_weight and weight_products[i, j] > 0:
+                    denominator = np.sqrt(moments_i[i, j] * moments_j[i, j])
+                    if denominator > 0:
+                        corr = co_moments[i, j] / denominator
                         out[t, i, j] = corr
                         out[t, j, i] = corr
                     else:
@@ -368,75 +334,59 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
     n_obs = a.shape[0]
     n_vars = a.shape[1]
 
-    # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
-    # This is necessary for consistency with non-matrix exponential functions
-    sums_i = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of variable i for pair (i,j)
-    sums_j = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of variable j for pair (i,j)
-    prods = np.zeros((n_vars, n_vars), dtype=a.dtype)  # sum of products for pair (i,j)
-    pair_weights = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # accumulated alpha weights
-    pair_sum_weights = np.zeros((n_vars, n_vars), dtype=a.dtype)  # count of valid pairs
-    pair_sum_weights_sq = np.zeros(
-        (n_vars, n_vars), dtype=a.dtype
-    )  # sum of squared weights
+    means_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    means_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    co_moments = np.zeros((n_vars, n_vars), dtype=np.float64)
+    pair_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sum_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
+    weight_products = np.zeros((n_vars, n_vars), dtype=np.float64)
 
     for t in range(n_obs):
-        alpha_t = alpha[t]
+        alpha_t = np.float64(alpha[t])
         decay = 1.0 - alpha_t
 
-        # Apply exponential decay to all pairwise statistics
-        sums_i *= decay
-        sums_j *= decay
-        prods *= decay
+        co_moments *= decay
         pair_weights *= decay
-        pair_sum_weights *= decay
-        pair_sum_weights_sq *= decay**2
+        sum_weights *= decay
+        weight_products *= decay**2
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            new_val_i = a[t, i]
+            new_val_i = np.float64(a[t, i])
             if np.isnan(new_val_i):
                 continue
 
             for j in range(i, n_vars):
-                new_val_j = a[t, j]
+                new_val_j = np.float64(a[t, j])
                 if np.isnan(new_val_j):
                     continue
 
-                # Only update pairwise statistics if BOTH values are non-NaN (consistent with non-matrix functions)
-                sums_i[i, j] += new_val_i
-                sums_j[i, j] += new_val_j
-                prods[i, j] += new_val_i * new_val_j
+                old_weight = sum_weights[i, j]
+                new_weight = old_weight + 1.0
+                delta_i = new_val_i - means_i[i, j]
+                delta_j = new_val_j - means_j[i, j]
+                adjustment = old_weight / new_weight
+
+                means_i[i, j] += delta_i / new_weight
+                means_j[i, j] += delta_j / new_weight
+                co_moments[i, j] += adjustment * delta_i * delta_j
                 pair_weights[i, j] += alpha_t
-                pair_sum_weights[i, j] += 1.0
-                pair_sum_weights_sq[i, j] += 1.0
+                weight_products[i, j] += 2.0 * old_weight
+                sum_weights[i, j] = new_weight
 
         # Compute covariance matrix for current time step
         for i in range(n_vars):
             for j in range(i, n_vars):
-                # Check if we have sufficient weight for a meaningful covariance calculation
-                bias = (
-                    1 - pair_sum_weights_sq[i, j] / (pair_sum_weights[i, j] ** 2)
-                    if pair_sum_weights[i, j] > 0
-                    else 0.0
-                )
-
-                if pair_weights[i, j] >= min_weight and bias > 0:
-                    # Compute covariance using pairwise statistics
-                    n = pair_sum_weights[i, j]
-                    mean_i = sums_i[i, j] / n
-                    mean_j = sums_j[i, j] / n
-
-                    # Compute biased covariance
-                    cov_biased = (prods[i, j] / n) - mean_i * mean_j
-
-                    # Apply bias correction
-                    cov = cov_biased / bias
+                total_weight = sum_weights[i, j]
+                if (
+                    pair_weights[i, j] >= min_weight
+                    and weight_products[i, j] > 0
+                ):
+                    cov = (
+                        co_moments[i, j]
+                        * total_weight
+                        / weight_products[i, j]
+                    )
                     out[t, i, j] = cov
                     out[t, j, i] = cov
                 else:
