@@ -98,11 +98,14 @@ MOVE_FUNCS = [
     move_corr,
     move_cov,
     move_mean,
-    move_corrmatrix,
-    move_covmatrix,
     move_std,
     move_sum,
     move_var,
+]
+
+MOVE_MATRIX_FUNCS = [
+    move_corrmatrix,
+    move_covmatrix,
 ]
 
 AGGREGATION_FUNCS = [

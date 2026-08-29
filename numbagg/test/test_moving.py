@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 
 from numbagg import (
     MOVE_FUNCS,
+    MOVE_MATRIX_FUNCS,
     move_corrmatrix,
     move_covmatrix,
     move_mean,
@@ -16,20 +17,32 @@ from numbagg import (
 from .conftest import COMPARISONS
 from .util import array_order, arrays
 
-# Matrix functions return `(..., obs, vars, vars)` rather than the input shape, so
-# they're compared against pandas in `test_move_matrix_pandas_comp` instead.
-MOVE_MATRIX_FUNCS = [move_corrmatrix, move_covmatrix]
-
 
 @pytest.fixture(scope="function")
 def rs():
     return np.random.RandomState(0)
 
 
-@pytest.mark.parametrize(
-    "func",
-    [f for f in MOVE_FUNCS if f not in MOVE_MATRIX_FUNCS],
-)
+@pytest.mark.parametrize("func", MOVE_FUNCS, ids=lambda f: f.__name__)
+def test_move_funcs_preserve_shape(func, rs):
+    """Every `MOVE_FUNCS` entry returns an array shaped like its input.
+
+    That's what the tests parametrized over the list assume: `test_move_pandas_comp`
+    below compares elementwise against pandas, and `test_property.py`'s
+    `test_moving_bigger_arrays_have_same_beginning` slices the result along the
+    moving axis. The matrix functions break it, appending a `vars x vars` dimension,
+    which is why they sit in `MOVE_MATRIX_FUNCS` instead. Pinned here so a matrix
+    function added to the wrong list fails once, rather than each consumer having to
+    filter it back out.
+    """
+    array = rs.rand(3, 20)
+
+    result = COMPARISONS[func]["numbagg"](array, window=5)()
+
+    assert result.shape == array.shape
+
+
+@pytest.mark.parametrize("func", MOVE_FUNCS)
 @pytest.mark.parametrize("shape", [(3, 500)], indirect=True)
 @pytest.mark.parametrize("window", [10, 50])
 @pytest.mark.parametrize("min_count", [None, 0, 1, 3, "window"])
