@@ -174,22 +174,16 @@ def move_covmatrix(a, window, min_count, out):
     sums_j = np.zeros((n_vars, n_vars), dtype=np.float64)
     prods = np.zeros((n_vars, n_vars), dtype=np.float64)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
-    # Convert each row once; pairwise reuse otherwise repeats float32-to-float64
-    # conversion for every valid partner, which is measurable on NaN-heavy input.
-    old_obs = np.empty(n_vars, dtype=np.float64)
-    new_obs = np.empty(n_vars, dtype=np.float64)
 
     for t in range(n_obs):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_obs[i] = np.float64(a[t - window, i])
-            for i in range(n_vars):
-                old_val_i = old_obs[i]
+                old_val_i = np.float64(a[t - window, i])
                 if np.isnan(old_val_i):
                     continue
                 for j in range(i, n_vars):
-                    old_val_j = old_obs[j]
+                    old_val_j = np.float64(a[t - window, j])
                     if np.isnan(old_val_j):
                         continue
                     # Only update pairwise statistics for observations where BOTH are valid
@@ -200,13 +194,11 @@ def move_covmatrix(a, window, min_count, out):
 
         # Add new values
         for i in range(n_vars):
-            new_obs[i] = np.float64(a[t, i])
-        for i in range(n_vars):
-            new_val_i = new_obs[i]
+            new_val_i = np.float64(a[t, i])
             if np.isnan(new_val_i):
                 continue
             for j in range(i, n_vars):
-                new_val_j = new_obs[j]
+                new_val_j = np.float64(a[t, j])
                 if np.isnan(new_val_j):
                     continue
                 # Only update pairwise statistics for observations where BOTH are valid
