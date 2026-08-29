@@ -336,11 +336,6 @@ def nanmedian(
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 
 
-# Below this size the raw float32 kernel stays within a 1e-4 relative-error
-# target even for adversarial repeated mantissas. Larger cores use float64.
-_STATIC_FLOAT32_STABLE_THRESHOLD = 6_000
-
-
 @njit(cache=_ENABLE_CACHE, inline="never")
 def _nancorr_pair_stable(a, i, j):
     """Return one pair's shifted float64 correlation."""
@@ -425,8 +420,9 @@ def _nancov_pair_stable(a, i, j):
 
 @njit(cache=_ENABLE_CACHE, inline="never")
 def _nancorrmatrix_stable(a, out):
-    """Float64 accumulation with pairwise fallback for large float32 inputs."""
+    """Packed float64 correlation with shifted fallback for unsafe pairs."""
     n_vars, n_obs = a.shape
+    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
     n_pairs = n_vars * (n_vars + 1) // 2
     sums_i = np.zeros(n_pairs, dtype=np.float64)
     sums_j = np.zeros(n_pairs, dtype=np.float64)
@@ -472,10 +468,12 @@ def _nancorrmatrix_stable(a, out):
                 requires_stable = (
                     not np.isfinite(centered_i)
                     or not np.isfinite(centered_j)
-                    or 64.0 * 2.220446049250313e-16 * scale_i > 1e-4 * abs(centered_i)
-                    or 64.0 * 2.220446049250313e-16 * scale_j > 1e-4 * abs(centered_j)
+                    or 64.0 * 2.220446049250313e-16 * scale_i
+                    > accuracy_tolerance * abs(centered_i)
+                    or 64.0 * 2.220446049250313e-16 * scale_j
+                    > accuracy_tolerance * abs(centered_j)
                     or 64.0 * 2.220446049250313e-16 * scale_ij
-                    > 1e-4 * np.sqrt(abs(centered_i * centered_j))
+                    > accuracy_tolerance * np.sqrt(abs(centered_i * centered_j))
                 )
                 if requires_stable:
                     value = _nancorr_pair_stable(a, i, j)
@@ -500,8 +498,9 @@ def _nancorrmatrix_stable(a, out):
 
 @njit(cache=_ENABLE_CACHE, inline="never")
 def _nancovmatrix_stable(a, out):
-    """Float64 accumulation with pairwise fallback for large float32 inputs."""
+    """Packed float64 covariance with shifted fallback for unsafe pairs."""
     n_vars, n_obs = a.shape
+    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
     n_pairs = n_vars * (n_vars + 1) // 2
     sums_i = np.zeros(n_pairs, dtype=np.float64)
     sums_j = np.zeros(n_pairs, dtype=np.float64)
@@ -537,7 +536,9 @@ def _nancovmatrix_stable(a, out):
                 scale = abs(sums_ij[pair]) + abs(mean_i * mean_j * count)
                 if not np.isfinite(
                     centered
-                ) or 64.0 * 2.220446049250313e-16 * scale > 1e-4 * abs(centered):
+                ) or 64.0 * 2.220446049250313e-16 * scale > accuracy_tolerance * abs(
+                    centered
+                ):
                     value = _nancov_pair_stable(a, i, j)
                 else:
                     value = centered / (count - 1)
@@ -616,95 +617,7 @@ def nancorrmatrix(a: F, out: F) -> None:
     - For other dimension arrangements, transpose your data first
     - axis parameter removed - dimensions are now fixed for consistency
     """
-    n_vars, n_obs = a.shape
-
-    if a.itemsize == 4 and n_obs >= _STATIC_FLOAT32_STABLE_THRESHOLD:
-        _nancorrmatrix_stable(a, out)
-        return
-
-    # Allocate arrays for all pairs - optimized for cache locality
-    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_sq_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_sq_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_ij = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    counts = np.zeros((n_vars, n_vars), dtype=np.int64)
-    epsilon = 1.1920928955078125e-7 if a.itemsize == 4 else 2.220446049250313e-16
-    error_factor = 64.0
-    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
-
-    # Single pass through observations (excellent cache locality)
-    for k in range(n_obs):
-        # Load entire observation into cache once
-        obs = a[:, k]
-
-        # Process all variable pairs for this observation
-        for i in range(n_vars):
-            val_i = obs[i]
-            if not np.isnan(val_i):
-                for j in range(i, n_vars):  # Only upper triangle
-                    val_j = obs[j]
-                    if not np.isnan(val_j):
-                        sums_i[i, j] += val_i
-                        sums_j[i, j] += val_j
-                        sums_sq_i[i, j] += val_i * val_i
-                        sums_sq_j[i, j] += val_j * val_j
-                        sums_ij[i, j] += val_i * val_j
-                        counts[i, j] += 1
-
-    # Compute final correlations from accumulated statistics
-    for i in range(n_vars):
-        for j in range(i, n_vars):
-            count = counts[i, j]
-            if count > 1:  # Need at least 2 observations for correlation
-                mean_i = sums_i[i, j] / count
-                mean_j = sums_j[i, j] / count
-
-                # Variances (sample variance with ddof=1)
-                var_i = (sums_sq_i[i, j] / count) - (mean_i * mean_i)
-                var_j = (sums_sq_j[i, j] / count) - (mean_j * mean_j)
-                var_i_unbiased = var_i * count / (count - 1)
-                var_j_unbiased = var_j * count / (count - 1)
-
-                # Covariance (sample covariance with ddof=1)
-                cov = (sums_ij[i, j] / count) - (mean_i * mean_j)
-                cov_unbiased = cov * count / (count - 1)
-
-                centered_i = var_i * count
-                centered_j = var_j * count
-                scale_i = abs(sums_sq_i[i, j]) + abs(mean_i * mean_i * count)
-                scale_j = abs(sums_sq_j[i, j]) + abs(mean_j * mean_j * count)
-                scale_cov = abs(sums_ij[i, j]) + abs(mean_i * mean_j * count)
-                requires_stable = (
-                    not np.isfinite(centered_i)
-                    or not np.isfinite(centered_j)
-                    or error_factor * epsilon * scale_i
-                    > accuracy_tolerance * abs(centered_i)
-                    or error_factor * epsilon * scale_j
-                    > accuracy_tolerance * abs(centered_j)
-                    or error_factor * epsilon * scale_cov
-                    > accuracy_tolerance * np.sqrt(abs(centered_i * centered_j))
-                )
-
-                # Correlation
-                if requires_stable:
-                    corr = _nancorr_pair_stable(a, i, j)
-                    out[i, j] = corr
-                    out[j, i] = corr
-                elif var_i_unbiased > 0 and var_j_unbiased > 0:
-                    corr = cov_unbiased / np.sqrt(var_i_unbiased * var_j_unbiased)
-                    if corr > 1.0:
-                        corr = 1.0
-                    elif corr < -1.0:
-                        corr = -1.0
-                    out[i, j] = corr
-                    out[j, i] = corr  # Symmetric
-                else:
-                    out[i, j] = np.nan
-                    out[j, i] = np.nan
-            else:
-                out[i, j] = np.nan
-                out[j, i] = np.nan
+    _nancorrmatrix_stable(a, out)
 
 
 @ndmatrix.wrap(
@@ -732,61 +645,4 @@ def nancovmatrix(a: F, out: F) -> None:
     - 3D: (batch=5, vars=3, obs=100) -> (5, 3, 3)
     - 4D: (2, 5, 3, 100) -> (2, 5, 3, 3)
     """
-    n_vars, n_obs = a.shape
-
-    if a.itemsize == 4 and n_obs >= _STATIC_FLOAT32_STABLE_THRESHOLD:
-        _nancovmatrix_stable(a, out)
-        return
-
-    # Allocate arrays for all pairs - optimized for cache locality
-    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_ij = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    counts = np.zeros((n_vars, n_vars), dtype=np.int64)
-    epsilon = 1.1920928955078125e-7 if a.itemsize == 4 else 2.220446049250313e-16
-    error_factor = 64.0
-    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
-
-    # Single pass through observations (excellent cache locality)
-    for k in range(n_obs):
-        # Load entire observation into cache once
-        obs = a[:, k]
-
-        # Process all variable pairs for this observation
-        for i in range(n_vars):
-            val_i = obs[i]
-            if not np.isnan(val_i):
-                for j in range(i, n_vars):  # Only upper triangle
-                    val_j = obs[j]
-                    if not np.isnan(val_j):
-                        sums_i[i, j] += val_i
-                        sums_j[i, j] += val_j
-                        sums_ij[i, j] += val_i * val_j
-                        counts[i, j] += 1
-
-    # Compute final covariances from accumulated statistics
-    for i in range(n_vars):
-        for j in range(i, n_vars):
-            count = counts[i, j]
-            if count > 1:
-                mean_i = sums_i[i, j] / count
-                mean_j = sums_j[i, j] / count
-                # Covariance: E[XY] - E[X]E[Y], scaled to unbiased estimator
-                cov = (sums_ij[i, j] / count) - (mean_i * mean_j)
-                cov_unbiased = cov * count / (count - 1)
-                out[i, j] = cov_unbiased
-                out[j, i] = cov_unbiased  # Symmetric
-
-                centered = cov * count
-                scale = abs(sums_ij[i, j]) + abs(mean_i * mean_j * count)
-                if not np.isfinite(
-                    centered
-                ) or error_factor * epsilon * scale > accuracy_tolerance * abs(
-                    centered
-                ):
-                    cov_unbiased = _nancov_pair_stable(a, i, j)
-                    out[i, j] = cov_unbiased
-                    out[j, i] = cov_unbiased
-            else:
-                out[i, j] = np.nan
-                out[j, i] = np.nan
+    _nancovmatrix_stable(a, out)
