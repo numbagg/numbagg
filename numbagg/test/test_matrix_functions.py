@@ -51,7 +51,7 @@ def _weighted_matrix_reference(data, alpha, correlation, min_weight=0.0):
             if correlation:
                 moment_i = np.sum(pair_weights * np.square(deviations_i))
                 moment_j = np.sum(pair_weights * np.square(deviations_j))
-                denominator = np.sqrt(moment_i * moment_j)
+                denominator = np.sqrt(moment_i) * np.sqrt(moment_j)
                 if denominator <= 0.0:
                     continue
                 value = co_moment / denominator
@@ -414,6 +414,44 @@ class TestMovingMatrices:
             # Compare
             assert_allclose(numbagg_result[t], pandas_matrix, rtol=1e-10)
 
+    def test_rolling_large_float32_constant(self):
+        data = np.full((20, 2), 1e8, dtype=np.float32)
+
+        covariance = move_covmatrix(data, window=10)
+        correlation = move_corrmatrix(data, window=10)
+
+        assert_allclose(covariance[9:], 0.0)
+        assert np.isnan(correlation).all()
+
+    def test_rolling_result_bounds_under_cancellation(self):
+        data = np.random.default_rng(1).standard_normal((60, 3)) + 1e8
+        correlation = move_corrmatrix(data, window=10)
+        covariance = move_covmatrix(data, window=10)
+
+        finite_correlation = correlation[np.isfinite(correlation)]
+        diagonal = covariance[..., np.arange(3), np.arange(3)]
+
+        assert finite_correlation.size > 0
+        assert np.all(np.abs(finite_correlation) <= 1.0)
+        assert np.all(diagonal[np.isfinite(diagonal)] >= 0.0)
+
+    @pytest.mark.parametrize("move_func", [move_corrmatrix, move_covmatrix])
+    @pytest.mark.xfail(
+        reason="raw rolling moments lose accuracy after a large translation",
+        strict=True,
+    )
+    def test_rolling_large_offset_accuracy(self, move_func):
+        data = np.random.default_rng(1).standard_normal((60, 3)) + 1e8
+        window = 10
+
+        result = move_func(data, window=window)[-1]
+        if move_func == move_corrmatrix:
+            expected = np.corrcoef(data[-window:], rowvar=False)
+        else:
+            expected = np.cov(data[-window:], rowvar=False)
+
+        assert_allclose(result, expected, rtol=1e-12, atol=1e-12)
+
     @pytest.mark.parametrize("move_func", [move_corrmatrix, move_covmatrix])
     def test_rolling_1d_array_raises_error(self, move_func):
         """Test that 1D arrays raise an appropriate error for rolling functions."""
@@ -754,20 +792,37 @@ class TestExponentialMatrices:
         ],
     )
     @pytest.mark.parametrize(
-        "dtype,offset,atol",
-        [(np.float32, 1e3, 1e-5), (np.float64, 1e8, 5e-8)],
+        "dtype,offset,conditioned_atol,expired_atol",
+        [
+            (np.float32, 1e3, 1e-5, 1e-5),
+            (np.float64, 1e8, 1e-12, 1e-8),
+        ],
     )
-    def test_numerical_stability(self, func, correlation, dtype, offset, atol):
+    def test_numerical_stability(
+        self, func, correlation, dtype, offset, conditioned_atol, expired_atol
+    ):
         data = np.random.default_rng(1).standard_normal((500, 3)).astype(dtype)
         alpha = np.full(len(data), 0.2)
         conditioned = data + dtype(offset)
         expired_outlier = data.copy()
         expired_outlier[0] = dtype(1e8)
 
-        for values in (conditioned, expired_outlier):
+        for values, atol in (
+            (conditioned, conditioned_atol),
+            (expired_outlier, expired_atol),
+        ):
             expected = _weighted_matrix_reference(values, alpha, correlation)
             result = func(values, alpha=0.2)[-1]
             assert_allclose(result, expected, rtol=1e-5, atol=atol)
+
+    def test_correlation_with_tiny_scale(self):
+        data = np.random.default_rng(2).standard_normal((60, 3)) * 1e-100
+        alpha = np.full(len(data), 0.2)
+        expected = _weighted_matrix_reference(data, alpha, correlation=True)
+
+        result = move_exp_nancorrmatrix(data, alpha=0.2)[-1]
+
+        assert_allclose(result, expected, rtol=1e-12)
 
     @pytest.mark.parametrize("func", [move_exp_nancorrmatrix, move_exp_nancovmatrix])
     def test_broadcasting_higher_dims(self, func):

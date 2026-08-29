@@ -1,9 +1,9 @@
 """Moving window matrix functions using the decorator pattern."""
 
 import numpy as np
-from numba import float32, float64, int64
+from numba import float32, float64, int64, njit
 
-from .decorators import ndmoveexpmatrix, ndmovematrix
+from .decorators import _ENABLE_CACHE, ndmoveexpmatrix, ndmovematrix
 
 __all__ = [
     "move_corrmatrix",
@@ -11,6 +11,20 @@ __all__ = [
     "move_exp_nancorrmatrix",
     "move_exp_nancovmatrix",
 ]
+
+
+@njit(cache=_ENABLE_CACHE)
+def _initial_shift(a):
+    """Return each variable's first finite value as a translation constant."""
+    n_obs, n_vars = a.shape
+    shift = np.zeros(n_vars, dtype=np.float64)
+    for k in range(n_vars):
+        for t in range(n_obs):
+            value = np.float64(a[t, k])
+            if not np.isnan(value):
+                shift[k] = value
+                break
+    return shift
 
 
 @ndmovematrix.wrap(
@@ -45,22 +59,22 @@ def move_corrmatrix(a, window, min_count, out):
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # to ensure all moments are computed over the same set of observations
-    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_sq_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_sq_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    prods = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sums_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sums_sq_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sums_sq_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    prods = np.zeros((n_vars, n_vars), dtype=np.float64)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
 
     for t in range(n_obs):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val_i = a[t - window, i]
+                old_val_i = np.float64(a[t - window, i])
                 if np.isnan(old_val_i):
                     continue
                 for j in range(i, n_vars):
-                    old_val_j = a[t - window, j]
+                    old_val_j = np.float64(a[t - window, j])
                     if np.isnan(old_val_j):
                         continue
                     # Only update pairwise statistics for observations where BOTH are valid
@@ -73,11 +87,11 @@ def move_corrmatrix(a, window, min_count, out):
 
         # Add new values
         for i in range(n_vars):
-            new_val_i = a[t, i]
+            new_val_i = np.float64(a[t, i])
             if np.isnan(new_val_i):
                 continue
             for j in range(i, n_vars):
-                new_val_j = a[t, j]
+                new_val_j = np.float64(a[t, j])
                 if np.isnan(new_val_j):
                     continue
                 # Only update pairwise statistics for observations where BOTH are valid
@@ -106,7 +120,14 @@ def move_corrmatrix(a, window, min_count, out):
 
                     # Compute correlation
                     if var_i > 0 and var_j > 0:
-                        corr = cov / np.sqrt(var_i * var_j)
+                        denominator = np.sqrt(var_i * var_j)
+                        if denominator == 0.0 or not np.isfinite(denominator):
+                            denominator = np.sqrt(var_i) * np.sqrt(var_j)
+                        corr = cov / denominator
+                        if corr > 1.0:
+                            corr = 1.0
+                        elif corr < -1.0:
+                            corr = -1.0
                         out[t, i, j] = corr
                         out[t, j, i] = corr
                     else:
@@ -149,20 +170,24 @@ def move_covmatrix(a, window, min_count, out):
 
     # Initialize pairwise statistics - each (i,j) pair tracks its own statistics
     # to ensure all moments are computed over the same set of observations
-    sums_i = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    sums_j = np.zeros((n_vars, n_vars), dtype=a.dtype)
-    prods = np.zeros((n_vars, n_vars), dtype=a.dtype)
+    sums_i = np.zeros((n_vars, n_vars), dtype=np.float64)
+    sums_j = np.zeros((n_vars, n_vars), dtype=np.float64)
+    prods = np.zeros((n_vars, n_vars), dtype=np.float64)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
+    old_obs = np.empty(n_vars, dtype=np.float64)
+    new_obs = np.empty(n_vars, dtype=np.float64)
 
     for t in range(n_obs):
         # Remove old values when window slides
         if t >= window:
             for i in range(n_vars):
-                old_val_i = a[t - window, i]
+                old_obs[i] = np.float64(a[t - window, i])
+            for i in range(n_vars):
+                old_val_i = old_obs[i]
                 if np.isnan(old_val_i):
                     continue
                 for j in range(i, n_vars):
-                    old_val_j = a[t - window, j]
+                    old_val_j = old_obs[j]
                     if np.isnan(old_val_j):
                         continue
                     # Only update pairwise statistics for observations where BOTH are valid
@@ -173,11 +198,13 @@ def move_covmatrix(a, window, min_count, out):
 
         # Add new values
         for i in range(n_vars):
-            new_val_i = a[t, i]
+            new_obs[i] = np.float64(a[t, i])
+        for i in range(n_vars):
+            new_val_i = new_obs[i]
             if np.isnan(new_val_i):
                 continue
             for j in range(i, n_vars):
-                new_val_j = a[t, j]
+                new_val_j = new_obs[j]
                 if np.isnan(new_val_j):
                     continue
                 # Only update pairwise statistics for observations where BOTH are valid
@@ -205,6 +232,8 @@ def move_covmatrix(a, window, min_count, out):
                 else:
                     out[t, i, j] = np.nan
                     out[t, j, i] = np.nan
+            if out[t, i, i] < 0.0:
+                out[t, i, i] = 0.0
 
 
 @ndmoveexpmatrix.wrap(
@@ -248,6 +277,10 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
     pair_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
     sum_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
     weight_products = np.zeros((n_vars, n_vars), dtype=np.float64)
+    # Correlation is translation invariant. Subtracting an observed value keeps
+    # Welford's evolving means small when the input has a large common offset.
+    shift = _initial_shift(a)
+    obs = np.empty(n_vars, dtype=np.float64)
 
     for t in range(n_obs):
         alpha_t = np.float64(alpha[t])
@@ -262,12 +295,14 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            new_val_i = np.float64(a[t, i])
+            obs[i] = np.float64(a[t, i]) - shift[i]
+        for i in range(n_vars):
+            new_val_i = obs[i]
             if np.isnan(new_val_i):
                 continue
 
             for j in range(i, n_vars):
-                new_val_j = np.float64(a[t, j])
+                new_val_j = obs[j]
                 if np.isnan(new_val_j):
                     continue
 
@@ -291,6 +326,10 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
             for j in range(i, n_vars):
                 if pair_weights[i, j] >= min_weight and weight_products[i, j] > 0:
                     denominator = np.sqrt(moments_i[i, j] * moments_j[i, j])
+                    if denominator == 0.0 or not np.isfinite(denominator):
+                        denominator = np.sqrt(moments_i[i, j]) * np.sqrt(
+                            moments_j[i, j]
+                        )
                     if denominator > 0:
                         corr = co_moments[i, j] / denominator
                         if corr > 1.0:
@@ -344,6 +383,10 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
     pair_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
     sum_weights = np.zeros((n_vars, n_vars), dtype=np.float64)
     weight_products = np.zeros((n_vars, n_vars), dtype=np.float64)
+    # Covariance is translation invariant. Subtracting an observed value keeps
+    # Welford's evolving means small when the input has a large common offset.
+    shift = _initial_shift(a)
+    obs = np.empty(n_vars, dtype=np.float64)
 
     for t in range(n_obs):
         alpha_t = np.float64(alpha[t])
@@ -356,12 +399,14 @@ def move_exp_nancovmatrix(a, alpha, min_weight, out):
 
         # Add new values - track pairwise statistics for consistency
         for i in range(n_vars):
-            new_val_i = np.float64(a[t, i])
+            obs[i] = np.float64(a[t, i]) - shift[i]
+        for i in range(n_vars):
+            new_val_i = obs[i]
             if np.isnan(new_val_i):
                 continue
 
             for j in range(i, n_vars):
-                new_val_j = np.float64(a[t, j])
+                new_val_j = obs[j]
                 if np.isnan(new_val_j):
                     continue
 
