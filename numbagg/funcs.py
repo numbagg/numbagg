@@ -336,7 +336,19 @@ def nanmedian(
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 
 
-@njit(cache=_ENABLE_CACHE, inline="never")
+# The packed matrix kernels accumulate in float64, including for float32 input.
+# Raw moments subtract terms close to `scale`. Use 64 times machine epsilon as
+# an empirical trigger for a shifted rescan, not as a forward-error bound for
+# the accumulated sums.
+_STATIC_MOMENT_FALLBACK_EPSILON = 64.0 * np.finfo(np.float64).eps
+
+# Recompute a pair in shifted coordinates if the roundoff estimate exceeds the
+# accuracy target for the output dtype.
+_STATIC_FLOAT32_ACCURACY = 1e-4
+_STATIC_FLOAT64_ACCURACY = 1e-8
+
+
+@njit(cache=_ENABLE_CACHE)
 def _nancorr_pair_stable(a, i, j):
     """Return one pair's shifted float64 correlation."""
     n_obs = a.shape[1]
@@ -388,7 +400,7 @@ def _nancorr_pair_stable(a, i, j):
     return value
 
 
-@njit(cache=_ENABLE_CACHE, inline="never")
+@njit(cache=_ENABLE_CACHE)
 def _nancov_pair_stable(a, i, j):
     """Return one pair's shifted float64 covariance."""
     n_obs = a.shape[1]
@@ -416,135 +428,6 @@ def _nancov_pair_stable(a, i, j):
     if count > 1:
         return (sum_ij - sum_i * sum_j / count) / (count - 1)
     return np.nan
-
-
-@njit(cache=_ENABLE_CACHE, inline="never")
-def _nancorrmatrix_stable(a, out):
-    """Packed float64 correlation with shifted fallback for unsafe pairs."""
-    n_vars, n_obs = a.shape
-    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
-    n_pairs = n_vars * (n_vars + 1) // 2
-    sums_i = np.zeros(n_pairs, dtype=np.float64)
-    sums_j = np.zeros(n_pairs, dtype=np.float64)
-    sums_sq_i = np.zeros(n_pairs, dtype=np.float64)
-    sums_sq_j = np.zeros(n_pairs, dtype=np.float64)
-    sums_ij = np.zeros(n_pairs, dtype=np.float64)
-    counts = np.zeros(n_pairs, dtype=np.int64)
-
-    for k in range(n_obs):
-        obs = a[:, k]
-        pair = 0
-        for i in range(n_vars):
-            value_i = np.float64(obs[i])
-            if not np.isnan(value_i):
-                for j in range(i, n_vars):
-                    value_j = np.float64(obs[j])
-                    if not np.isnan(value_j):
-                        sums_i[pair] += value_i
-                        sums_j[pair] += value_j
-                        sums_sq_i[pair] += value_i * value_i
-                        sums_sq_j[pair] += value_j * value_j
-                        sums_ij[pair] += value_i * value_j
-                        counts[pair] += 1
-                    pair += 1
-            else:
-                pair += n_vars - i
-
-    pair = 0
-    for i in range(n_vars):
-        for j in range(i, n_vars):
-            value = np.nan
-            count = counts[pair]
-            if count > 1:
-                mean_i = sums_i[pair] / count
-                mean_j = sums_j[pair] / count
-                centered_i = sums_sq_i[pair] - mean_i * mean_i * count
-                centered_j = sums_sq_j[pair] - mean_j * mean_j * count
-                centered_ij = sums_ij[pair] - mean_i * mean_j * count
-                scale_i = abs(sums_sq_i[pair]) + abs(mean_i * mean_i * count)
-                scale_j = abs(sums_sq_j[pair]) + abs(mean_j * mean_j * count)
-                scale_ij = abs(sums_ij[pair]) + abs(mean_i * mean_j * count)
-                denominator = np.sqrt(centered_i) * np.sqrt(centered_j)
-                requires_stable = (
-                    not np.isfinite(centered_i)
-                    or not np.isfinite(centered_j)
-                    or 64.0 * 2.220446049250313e-16 * scale_i
-                    > accuracy_tolerance * abs(centered_i)
-                    or 64.0 * 2.220446049250313e-16 * scale_j
-                    > accuracy_tolerance * abs(centered_j)
-                    or 64.0 * 2.220446049250313e-16 * scale_ij
-                    > accuracy_tolerance * np.sqrt(abs(centered_i * centered_j))
-                )
-                if requires_stable:
-                    value = _nancorr_pair_stable(a, i, j)
-                elif denominator > 0.0:
-                    if i == j:
-                        value = 1.0
-                    elif count == 2:
-                        if centered_ij > 0.0:
-                            value = 1.0
-                        elif centered_ij < 0.0:
-                            value = -1.0
-                    else:
-                        value = centered_ij / denominator
-                        if value > 1.0:
-                            value = 1.0
-                        elif value < -1.0:
-                            value = -1.0
-            out[i, j] = value
-            out[j, i] = value
-            pair += 1
-
-
-@njit(cache=_ENABLE_CACHE, inline="never")
-def _nancovmatrix_stable(a, out):
-    """Packed float64 covariance with shifted fallback for unsafe pairs."""
-    n_vars, n_obs = a.shape
-    accuracy_tolerance = 1e-4 if a.itemsize == 4 else 1e-8
-    n_pairs = n_vars * (n_vars + 1) // 2
-    sums_i = np.zeros(n_pairs, dtype=np.float64)
-    sums_j = np.zeros(n_pairs, dtype=np.float64)
-    sums_ij = np.zeros(n_pairs, dtype=np.float64)
-    counts = np.zeros(n_pairs, dtype=np.int64)
-
-    for k in range(n_obs):
-        obs = a[:, k]
-        pair = 0
-        for i in range(n_vars):
-            value_i = np.float64(obs[i])
-            if not np.isnan(value_i):
-                for j in range(i, n_vars):
-                    value_j = np.float64(obs[j])
-                    if not np.isnan(value_j):
-                        sums_i[pair] += value_i
-                        sums_j[pair] += value_j
-                        sums_ij[pair] += value_i * value_j
-                        counts[pair] += 1
-                    pair += 1
-            else:
-                pair += n_vars - i
-
-    pair = 0
-    for i in range(n_vars):
-        for j in range(i, n_vars):
-            value = np.nan
-            count = counts[pair]
-            if count > 1:
-                mean_i = sums_i[pair] / count
-                mean_j = sums_j[pair] / count
-                centered = sums_ij[pair] - mean_i * mean_j * count
-                scale = abs(sums_ij[pair]) + abs(mean_i * mean_j * count)
-                if not np.isfinite(
-                    centered
-                ) or 64.0 * 2.220446049250313e-16 * scale > accuracy_tolerance * abs(
-                    centered
-                ):
-                    value = _nancov_pair_stable(a, i, j)
-                else:
-                    value = centered / (count - 1)
-            out[i, j] = value
-            out[j, i] = value
-            pair += 1
 
 
 @ndmatrix.wrap(
@@ -617,7 +500,81 @@ def nancorrmatrix(a: F, out: F) -> None:
     - For other dimension arrangements, transpose your data first
     - axis parameter removed - dimensions are now fixed for consistency
     """
-    _nancorrmatrix_stable(a, out)
+    n_vars, n_obs = a.shape
+    accuracy_tolerance = (
+        _STATIC_FLOAT32_ACCURACY if a.itemsize == 4 else _STATIC_FLOAT64_ACCURACY
+    )
+    n_pairs = n_vars * (n_vars + 1) // 2
+    sums_i = np.zeros(n_pairs, dtype=np.float64)
+    sums_j = np.zeros(n_pairs, dtype=np.float64)
+    sums_sq_i = np.zeros(n_pairs, dtype=np.float64)
+    sums_sq_j = np.zeros(n_pairs, dtype=np.float64)
+    sums_ij = np.zeros(n_pairs, dtype=np.float64)
+    counts = np.zeros(n_pairs, dtype=np.int64)
+
+    for k in range(n_obs):
+        obs = a[:, k]
+        pair = 0
+        for i in range(n_vars):
+            value_i = np.float64(obs[i])
+            if not np.isnan(value_i):
+                for j in range(i, n_vars):
+                    value_j = np.float64(obs[j])
+                    if not np.isnan(value_j):
+                        sums_i[pair] += value_i
+                        sums_j[pair] += value_j
+                        sums_sq_i[pair] += value_i * value_i
+                        sums_sq_j[pair] += value_j * value_j
+                        sums_ij[pair] += value_i * value_j
+                        counts[pair] += 1
+                    pair += 1
+            else:
+                pair += n_vars - i
+
+    pair = 0
+    for i in range(n_vars):
+        for j in range(i, n_vars):
+            value = np.nan
+            count = counts[pair]
+            if count > 1:
+                mean_i = sums_i[pair] / count
+                mean_j = sums_j[pair] / count
+                centered_i = sums_sq_i[pair] - mean_i * mean_i * count
+                centered_j = sums_sq_j[pair] - mean_j * mean_j * count
+                centered_ij = sums_ij[pair] - mean_i * mean_j * count
+                scale_i = abs(sums_sq_i[pair]) + abs(mean_i * mean_i * count)
+                scale_j = abs(sums_sq_j[pair]) + abs(mean_j * mean_j * count)
+                scale_ij = abs(sums_ij[pair]) + abs(mean_i * mean_j * count)
+                denominator = np.sqrt(centered_i) * np.sqrt(centered_j)
+                requires_stable = (
+                    not np.isfinite(centered_i)
+                    or not np.isfinite(centered_j)
+                    or _STATIC_MOMENT_FALLBACK_EPSILON * scale_i
+                    > accuracy_tolerance * abs(centered_i)
+                    or _STATIC_MOMENT_FALLBACK_EPSILON * scale_j
+                    > accuracy_tolerance * abs(centered_j)
+                    or _STATIC_MOMENT_FALLBACK_EPSILON * scale_ij
+                    > accuracy_tolerance * np.sqrt(abs(centered_i * centered_j))
+                )
+                if requires_stable:
+                    value = _nancorr_pair_stable(a, i, j)
+                elif denominator > 0.0:
+                    if i == j:
+                        value = 1.0
+                    elif count == 2:
+                        if centered_ij > 0.0:
+                            value = 1.0
+                        elif centered_ij < 0.0:
+                            value = -1.0
+                    else:
+                        value = centered_ij / denominator
+                        if value > 1.0:
+                            value = 1.0
+                        elif value < -1.0:
+                            value = -1.0
+            out[i, j] = value
+            out[j, i] = value
+            pair += 1
 
 
 @ndmatrix.wrap(
@@ -645,4 +602,51 @@ def nancovmatrix(a: F, out: F) -> None:
     - 3D: (batch=5, vars=3, obs=100) -> (5, 3, 3)
     - 4D: (2, 5, 3, 100) -> (2, 5, 3, 3)
     """
-    _nancovmatrix_stable(a, out)
+    n_vars, n_obs = a.shape
+    accuracy_tolerance = (
+        _STATIC_FLOAT32_ACCURACY if a.itemsize == 4 else _STATIC_FLOAT64_ACCURACY
+    )
+    n_pairs = n_vars * (n_vars + 1) // 2
+    sums_i = np.zeros(n_pairs, dtype=np.float64)
+    sums_j = np.zeros(n_pairs, dtype=np.float64)
+    sums_ij = np.zeros(n_pairs, dtype=np.float64)
+    counts = np.zeros(n_pairs, dtype=np.int64)
+
+    for k in range(n_obs):
+        obs = a[:, k]
+        pair = 0
+        for i in range(n_vars):
+            value_i = np.float64(obs[i])
+            if not np.isnan(value_i):
+                for j in range(i, n_vars):
+                    value_j = np.float64(obs[j])
+                    if not np.isnan(value_j):
+                        sums_i[pair] += value_i
+                        sums_j[pair] += value_j
+                        sums_ij[pair] += value_i * value_j
+                        counts[pair] += 1
+                    pair += 1
+            else:
+                pair += n_vars - i
+
+    pair = 0
+    for i in range(n_vars):
+        for j in range(i, n_vars):
+            value = np.nan
+            count = counts[pair]
+            if count > 1:
+                mean_i = sums_i[pair] / count
+                mean_j = sums_j[pair] / count
+                centered = sums_ij[pair] - mean_i * mean_j * count
+                scale = abs(sums_ij[pair]) + abs(mean_i * mean_j * count)
+                if not np.isfinite(
+                    centered
+                ) or _STATIC_MOMENT_FALLBACK_EPSILON * scale > accuracy_tolerance * abs(
+                    centered
+                ):
+                    value = _nancov_pair_stable(a, i, j)
+                else:
+                    value = centered / (count - 1)
+            out[i, j] = value
+            out[j, i] = value
+            pair += 1
