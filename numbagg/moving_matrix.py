@@ -174,6 +174,8 @@ def move_covmatrix(a, window, min_count, out):
     sums_j = np.zeros((n_vars, n_vars), dtype=np.float64)
     prods = np.zeros((n_vars, n_vars), dtype=np.float64)
     pair_counts = np.zeros((n_vars, n_vars), dtype=np.int64)
+    # Convert each row once; pairwise reuse otherwise repeats float32-to-float64
+    # conversion for every valid partner, which is measurable on NaN-heavy input.
     old_obs = np.empty(n_vars, dtype=np.float64)
     new_obs = np.empty(n_vars, dtype=np.float64)
 

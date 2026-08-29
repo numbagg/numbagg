@@ -792,14 +792,14 @@ class TestExponentialMatrices:
         ],
     )
     @pytest.mark.parametrize(
-        "dtype,offset,conditioned_atol,expired_atol",
+        "dtype,offset,conditioned_rtol,expired_rtol",
         [
-            (np.float32, 1e3, 1e-5, 1e-5),
-            (np.float64, 1e8, 1e-12, 1e-8),
+            (np.float32, 1e3, 1e-13, 1e-7),
+            (np.float64, 1e8, 1e-13, 1e-7),
         ],
     )
     def test_numerical_stability(
-        self, func, correlation, dtype, offset, conditioned_atol, expired_atol
+        self, func, correlation, dtype, offset, conditioned_rtol, expired_rtol
     ):
         data = np.random.default_rng(1).standard_normal((500, 3)).astype(dtype)
         alpha = np.full(len(data), 0.2)
@@ -807,13 +807,13 @@ class TestExponentialMatrices:
         expired_outlier = data.copy()
         expired_outlier[0] = dtype(1e8)
 
-        for values, atol in (
-            (conditioned, conditioned_atol),
-            (expired_outlier, expired_atol),
+        for values, rtol in (
+            (conditioned, conditioned_rtol),
+            (expired_outlier, expired_rtol),
         ):
             expected = _weighted_matrix_reference(values, alpha, correlation)
             result = func(values, alpha=0.2)[-1]
-            assert_allclose(result, expected, rtol=1e-5, atol=atol)
+            assert_allclose(result, expected, rtol=rtol)
 
     def test_correlation_with_tiny_scale(self):
         data = np.random.default_rng(2).standard_normal((60, 3)) * 1e-100
