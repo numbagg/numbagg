@@ -312,16 +312,27 @@ class TestAllnanAnynanEdgeCases:
         expected = np.array([False, True, False])
         assert_array_equal(result, expected)
 
-    def test_allnan_empty_along_axis(self):
-        """allnan handles edge case with 2D where entire row is NaN."""
-        arr = np.array([[np.nan, np.nan, np.nan], [1.0, 2.0, 3.0]])
-        result = allnan(arr, axis=1)
-        expected = np.array([True, False])
-        assert_array_equal(result, expected)
+    def test_allnan_zero_length_axis(self):
+        """allnan is vacuously True over a zero-length axis, matching numpy.
 
-    def test_anynan_empty_along_axis(self):
-        """anynan handles edge case with 2D where entire row has no NaN."""
-        arr = np.array([[1.0, 2.0, 3.0], [np.nan, np.nan, np.nan]])
+        The sharpest test of the output initialization this class covers: with no
+        elements to iterate, `out[0] = True` is the only statement the kernel runs,
+        so the result comes entirely from the initialization rather than from the
+        loop. Every other case here has at least one element and can be satisfied
+        by the loop writing `out[0]` itself.
+        """
+        arr = np.empty((3, 0))
+
+        result = allnan(arr, axis=1)
+
+        assert_array_equal(result, np.array([True, True, True]))
+        assert_array_equal(result, np.all(np.isnan(arr), axis=1))
+
+    def test_anynan_zero_length_axis(self):
+        """anynan is vacuously False over a zero-length axis, matching numpy."""
+        arr = np.empty((3, 0))
+
         result = anynan(arr, axis=1)
-        expected = np.array([False, True])
-        assert_array_equal(result, expected)
+
+        assert_array_equal(result, np.array([False, False, False]))
+        assert_array_equal(result, np.any(np.isnan(arr), axis=1))
