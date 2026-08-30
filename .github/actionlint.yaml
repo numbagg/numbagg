@@ -1,0 +1,9 @@
+# actionlint v1.7.12 (the latest release; upstream is unmaintained) predates
+# GitHub's `concurrency.queue` key, which tend's generated workflows set.
+# Scoped to the generated files so a real schema typo elsewhere still fails.
+# Drop this once the generator or actionlint handles it:
+# https://github.com/max-sixty/tend/issues/1094
+paths:
+  .github/workflows/tend-*.yaml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'
