@@ -18,16 +18,6 @@ pytestmark = pytest.mark.nightly
 # No fixed per-example deadline survives it on a cold runner.
 no_deadline = settings(deadline=None)
 
-# The moving matrix functions take `(..., obs, vars)` input and return an extra
-# `vars × vars` dimension, so neither the 1-d arrays generated below nor the
-# "a prefix of the input gives a prefix of the output" property applies to them
-# as written.
-MOVE_FUNCS_NON_MATRIX = [
-    func
-    for func in numbagg.MOVE_FUNCS
-    if func not in (numbagg.move_corrmatrix, numbagg.move_covmatrix)
-]
-
 
 @pytest.mark.skip(
     reason="numbagg and pandas disagree by more than the tolerance under catastrophic "
@@ -136,7 +126,7 @@ def test_moving_exp_bigger_arrays_have_same_beginning(
 
 
 @given(
-    numbagg_func=st.sampled_from(MOVE_FUNCS_NON_MATRIX),
+    numbagg_func=st.sampled_from(numbagg.MOVE_FUNCS),
     array=hnp.arrays(
         dtype=hnp.floating_dtypes(), shape=hnp.array_shapes(min_dims=1, max_dims=6)
     ),

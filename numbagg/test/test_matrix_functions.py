@@ -6,6 +6,8 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numbagg import (
+    MOVE_EXP_MATRIX_FUNCS,
+    MOVE_MATRIX_FUNCS,
     move_corrmatrix,
     move_covmatrix,
     move_exp_nancorr,
@@ -784,13 +786,8 @@ class TestExponentialMatrices:
         assert corr_3d.shape == (2, 20, 3, 3)
 
 
-MOVING_MATRIX_FUNCS = [
-    move_corrmatrix,
-    move_covmatrix,
-    move_exp_nancorrmatrix,
-    move_exp_nancovmatrix,
-]
-WINDOWED_MATRIX_FUNCS = [move_corrmatrix, move_covmatrix]
+MOVING_MATRIX_FUNCS = MOVE_MATRIX_FUNCS + MOVE_EXP_MATRIX_FUNCS
+WINDOWED_MATRIX_FUNCS = MOVE_MATRIX_FUNCS
 CORR_MATRIX_FUNCS = [move_corrmatrix, move_exp_nancorrmatrix]
 COV_MATRIX_FUNCS = [move_covmatrix, move_exp_nancovmatrix]
 
