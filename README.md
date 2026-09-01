@@ -355,16 +355,17 @@ result = nb.move_mean(arr, window=2, axis=1)
 
 Includes: `group_nanmean`, `group_nansum`, `group_nanstd`, `group_nanvar`, `group_nanmin`, `group_nanmax`, and others
 
-- Specify dimension along which groups are defined
-- Single axis only
-- Group consecutive identical labels along the axis
+- Specify the dimensions along which groups are defined
+- Support multiple axes, e.g. `axis=(1, 2)`, with a `labels` array whose shape matches those axes
+- Gather every position sharing a label into one group, whether or not those positions are adjacent
+- Remove the grouped dimensions and append a group dimension to the end of the output shape
 
 ```python
 # Group operations along axis 0
 arr = np.random.rand(4, 3, 5)
-labels = np.array([0, 0, 1, 1])  # Groups for axis 0
+labels = np.array([0, 1, 0, 1])  # Groups for axis 0; equal labels needn't be adjacent
 result = nb.group_nanmean(arr, labels, axis=0)
-# result.shape is (2, 3, 5) - 2 groups along axis 0
+# result.shape is (3, 5, 2) - axis 0 is dropped, and the 2 groups are appended
 ```
 
 Aggregation functions are compatible with NumPy's axis parameter behavior, while moving window and grouped functions provide functionality not available in NumPy.
@@ -390,16 +391,28 @@ For example, here is how we wrote `nansum`:
 
 ```python
 import numpy as np
-from numbagg.decorators import ndreduce
+from numba import float32, float64, int32, int64
+
+from numbagg.decorators import ndaggregate
 
 
-@ndreduce.wrap()
-def nansum(a):
-    asum = 0.0
-    for ai in a.flat:
+@ndaggregate.wrap(
+    signature=[
+        (int32[:], int32[:]),
+        (int64[:], int64[:]),
+        (float32[:], float32[:]),
+        (float64[:], float64[:]),
+    ]
+)
+def nansum(a, out):
+    asum = a.dtype.type(0)
+    for ai in a:
         if not np.isnan(ai):
             asum += ai
-    return asum
+    out[0] = asum
+
+
+nansum(np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0]]), axis=-1)  # array([3., 15.])
 ```
 
 ## Implementation details
