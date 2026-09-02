@@ -229,7 +229,12 @@ def test_numerical_results_identical(func, func0):
             continue
         axes = range(-1, a.ndim)
         for axis in axes:
-            windows = range(1, a.shape[axis])
+            # Inclusive of `a.shape[axis]`: `test_move_mean_window` pins
+            # `shape[axis] + 1` as the first rejected window, so the full-length
+            # window is the largest accepted one and its results need checking
+            # too. It's also the only case where the steady-state part of the
+            # kernel loop — the positions at or past `window` — never runs.
+            windows = range(1, a.shape[axis] + 1)
             for window in windows:
                 min_counts = list(range(1, window + 1)) + [None]
                 for min_count in min_counts:
