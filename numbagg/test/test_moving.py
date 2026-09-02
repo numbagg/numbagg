@@ -86,22 +86,17 @@ def test_move_matrix_pandas_comp(array, func, window, min_count):
     pandas_callable = c["pandas"](array, window=window, min_count=min_count)
     pandas_result = pandas_callable()
 
-    # Convert pandas MultiIndex DataFrame to 3D array for comparison
-    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
+    # Convert pandas MultiIndex DataFrame to 3D array for comparison.
+    # Result shape is (..., obs, vars, vars), so we can infer dimensions from result.
+    # Every observation appears in level 0 of the MultiIndex, and pandas' own
+    # `min_periods` already puts NaN where the window is too short — so take
+    # pandas at its word rather than re-deriving the NaN mask here, which would
+    # only assert the mask against itself.
     n_obs = result.shape[-3]  # obs dimension
     n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
-    expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
-
-    # Only include windows where we have at least min_count observations
-    actual_min_count = min_count if min_count is not None else window
+    expected_pandas = np.empty((n_obs, n_vars, n_vars))
     for t in range(n_obs):
-        # Check if we have enough observations in this window
-        window_size = min(t + 1, window)
-        if (
-            window_size >= actual_min_count
-            and t in pandas_result.index.get_level_values(0)
-        ):
-            expected_pandas[t] = pandas_result.loc[t].values
+        expected_pandas[t] = pandas_result.loc[t].values
 
     assert_allclose(result, expected_pandas)
 
@@ -132,11 +127,9 @@ def test_move_matrix_pandas_min_count_simple(func_name, window, min_count):
     # Result shape is (..., obs, vars, vars), so we can infer dimensions from result
     n_obs = result.shape[-3]  # obs dimension
     n_vars = result.shape[-2]  # vars dimension (should equal result.shape[-1])
-    expected_pandas = np.full((n_obs, n_vars, n_vars), np.nan)
-
+    expected_pandas = np.empty((n_obs, n_vars, n_vars))
     for t in range(n_obs):
-        if t in pandas_result.index.get_level_values(0):
-            expected_pandas[t] = pandas_result.loc[t].values
+        expected_pandas[t] = pandas_result.loc[t].values
 
     assert_allclose(result, expected_pandas)
 
