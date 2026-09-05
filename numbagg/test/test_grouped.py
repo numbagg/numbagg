@@ -96,7 +96,9 @@ def labels(rs):
 @pytest.fixture(scope="module")
 def values(rs, labels, dtype):
     if dtype == np.int32:
-        return rs.randint(-100, 100, size=200)
+        # `randint` returns the platform's default integer — `int64` on 64-bit Linux —
+        # so the cast is what makes this fixture actually exercise the `int32` path.
+        return rs.randint(-100, 100, size=200).astype(dtype)
     elif dtype == np.float64:
         vals = rs.rand(200)
         vals = np.where(vals > 0.1, vals, np.nan)
@@ -106,6 +108,16 @@ def values(rs, labels, dtype):
         return rs.choice([True, False], size=200)
     else:
         raise ValueError(f"dtype {dtype} not supported")
+
+
+def test_values_fixture_dtype(values, dtype):
+    """The `values` fixture delivers the dtype it is parametrized with.
+
+    `np.random.RandomState.randint` returns the platform's default integer rather than
+    a fixed width, so the `int32` parametrization silently ran against `int64` on
+    64-bit Linux and the `int32` kernels went untested by everything using this fixture.
+    """
+    assert values.dtype == dtype
 
 
 @pytest.mark.parametrize("numbagg_func, pandas_func, _", FUNCTIONS)
