@@ -3,11 +3,12 @@ from typing import Any
 
 import numpy as np
 import pytest
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_array_equal
 
 from numbagg import (
     MOVE_FUNCS,
     MOVE_MATRIX_FUNCS,
+    move_corr,
     move_corrmatrix,
     move_covmatrix,
     move_mean,
@@ -181,6 +182,36 @@ def test_move_mean_window(array):
         move_mean(array, window=array.shape[-1] + 1)
     with pytest.raises(ValueError):
         move_mean(array, window=1, min_count=-1)
+
+
+def test_move_axis_tuple():
+    # A length-1 tuple axis is unpacked to the equivalent integer axis, which is what
+    # xarray passes. The `.pyi` stubs have to allow it too, so this also pins the
+    # declared `axis` type — `ty` rejects the call if the stub narrows back to `int`.
+    array = np.arange(12.0).reshape(3, 4)
+    expected = move_mean(array, window=2, axis=1)
+
+    result = move_mean(array, window=2, axis=(1,))
+    assert_allclose(result, expected)
+
+    # Same for the two-array functions, whose axis is unpacked on the same path.
+    assert_allclose(
+        move_corr(array, array, window=2, axis=(1,)),
+        move_corr(array, array, window=2, axis=1),
+    )
+
+    with pytest.raises(ValueError, match="only one axis can be passed"):
+        move_mean(array, window=2, axis=(0, 1))
+
+
+def test_move_axis_empty_tuple():
+    # An empty tuple means no reduction — return the input unchanged.
+    array = np.arange(12.0).reshape(3, 4)
+    result = move_mean(array, window=2, axis=())
+    assert_array_equal(result, array)
+
+    with pytest.raises(ValueError, match="cannot be an empty tuple"):
+        move_corr(array, array, window=2, axis=())
 
 
 def test_numerical_issues_float32_move_mean_1(rs):

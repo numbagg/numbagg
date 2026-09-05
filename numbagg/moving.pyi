@@ -23,7 +23,7 @@ def move_mean(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_sum(
     arr: T,
@@ -31,7 +31,7 @@ def move_sum(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_std(
     arr: T,
@@ -39,7 +39,7 @@ def move_std(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_var(
     arr: T,
@@ -47,7 +47,7 @@ def move_var(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_cov(
     a: T,
@@ -56,7 +56,7 @@ def move_cov(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_corr(
     a: T,
@@ -65,7 +65,7 @@ def move_corr(
     *,
     window: int,
     min_count: int | None = None,
-    axis: int = -1,
+    axis: int | tuple[int, ...] = -1,
 ) -> T: ...
 def move_covmatrix(
     a: np.ndarray,
