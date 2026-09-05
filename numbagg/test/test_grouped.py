@@ -79,7 +79,7 @@ FUNCTIONS_CONSTANT = [
 ]
 
 
-@pytest.fixture(params=[np.float64, np.int32, np.bool_], scope="module")
+@pytest.fixture(params=[np.float64, np.int32, np.int64, np.bool_], scope="module")
 def dtype(request):
     return request.param
 
@@ -95,9 +95,9 @@ def labels(rs):
 
 @pytest.fixture(scope="module")
 def values(rs, labels, dtype):
-    if dtype == np.int32:
+    if dtype in (np.int32, np.int64):
         # `randint` returns the platform's default integer — `int64` on 64-bit Linux —
-        # so the cast is what makes this fixture actually exercise the `int32` path.
+        # so the cast is what makes this fixture deliver the parametrized width.
         return rs.randint(-100, 100, size=200).astype(dtype)
     elif dtype == np.float64:
         vals = rs.rand(200)
