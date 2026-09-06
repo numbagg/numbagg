@@ -52,3 +52,23 @@ the shell.
 
 Dependencies are managed in `pyproject.toml` with `uv`. The tend-weekly
 workflow handles dependency updates.
+
+### Weekly task: re-check upper-bounded dependencies
+
+An upper bound in `pyproject.toml` silences Dependabot for that package —
+it stops proposing versions the bound excludes, so nothing signals when the
+upstream bug is fixed. Each upper-bounded dependency therefore needs a
+weekly check here instead. As part of the tend-weekly run, for every
+`dev` dependency in `pyproject.toml` carrying a `<` bound:
+
+1. Read the comment above it for the upstream issue it cites.
+2. Check whether that issue is closed:
+   `gh api repos/<owner>/<repo>/issues/<n> --jq '{state, closed_at}'`.
+3. If it is closed, or if the bound has been in place for more than three
+   months with the issue still open, run the check the bound exists to
+   protect (for `ty`, `uv run ty check`) against the latest release —
+   `uvx ty@latest check --python .venv` — and open a PR lifting or
+   widening the bound if it now passes.
+
+Currently bounded: `ty<0.0.73`, tracking
+[astral-sh/ty#2585](https://github.com/astral-sh/ty/issues/2585).

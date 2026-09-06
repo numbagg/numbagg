@@ -44,9 +44,11 @@ dev = [
   "ruff",
   "setuptools_scm",
   "tabulate",
-  # Capped at 0.0.72: 0.0.73 mis-checks numba's `GUFunc.__call__` stub, and
-  # 0.0.74+ reject member access through our union-bounded `TypeVar`s
-  # (astral-sh/ty#2585). Lift once that lands upstream.
+  # Capped at 0.0.72: 0.0.73/0.0.74 mis-check numba's `GUFunc.__call__` stub,
+  # and 0.0.74+ reject member access through our union-bounded `TypeVar`s
+  # (astral-sh/ty#2585). The cap stops Dependabot proposing `ty` at all, so
+  # the weekly re-check in `.claude/skills/running-tend/SKILL.md` is what
+  # lifts it once upstream is fixed.
   "ty>=0.0.2,<0.0.73",
 ]
 
