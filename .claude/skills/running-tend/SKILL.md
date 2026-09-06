@@ -55,11 +55,13 @@ workflow handles dependency updates.
 
 ### Weekly task: re-check upper-bounded dependencies
 
-An upper bound in `pyproject.toml` silences Dependabot for that package —
-it stops proposing versions the bound excludes, so nothing signals when the
-upstream bug is fixed. Each upper-bounded dependency therefore needs a
-weekly check here instead. As part of the tend-weekly run, for every
-`dev` dependency in `pyproject.toml` carrying a `<` bound:
+An upper bound in `pyproject.toml` removes the signal that normally lifts
+a pin. Dependabot may stop proposing the package entirely, or — no
+`versioning-strategy` is set in `.github/dependabot.yml` — may instead
+open a PR widening the bound, which is untested and should be closed
+unless the check in step 3 passes on it. Either way, each upper-bounded
+dependency needs a weekly check here instead. As part of the tend-weekly
+run, for every `dev` dependency in `pyproject.toml` carrying a `<` bound:
 
 1. Read the comment above it for the upstream issue it cites.
 2. Check whether that issue is closed:
