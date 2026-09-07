@@ -52,3 +52,32 @@ the shell.
 
 Dependencies are managed in `pyproject.toml` with `uv`. The tend-weekly
 workflow handles dependency updates.
+
+### The red `ty` bumps are a settled maintainer decision — don't propose a pin
+
+Every `ty` release after 0.0.72 fails the `lint` job against unchanged
+numbagg source: a `ty` bug rejects member access through the union-bounded
+`TypeVar`s in `numbagg/utils.py` ([astral-sh/ty#2585](https://github.com/astral-sh/ty/issues/2585),
+open since January). So each Dependabot `ty` bump arrives red, and the
+obvious-looking remedies — a `<0.0.73` cap in `pyproject.toml`, a Dependabot
+`ignore` entry, or widening the `TypeVar` bounds — have already been
+declined here:
+
+- [#755](https://github.com/numbagg/numbagg/pull/755), closed 2026-08-28 with
+  the reasoning stated: "We'll let a later Dependabot update re-propose the
+  upgrade once upstream is fixed, rather than add local suppressions or
+  weaken the annotations."
+- [#785](https://github.com/numbagg/numbagg/pull/785), a bot PR capping
+  `ty>=0.0.2,<0.0.73`, closed without comment on 2026-09-06 — after a bot
+  review had already flagged that the cap removes the Dependabot
+  re-proposal #755 was counting on, and the author-side run kept it anyway.
+
+Handle a red `ty` bump as a review, not as a problem to solve: confirm the
+failure is this upstream bug rather than a real regression in the diff,
+say so, withhold approval, and leave the PR for the maintainer. Recommending
+a cap or an `ignore` entry in a review body is the same declined proposal in
+a different place — report the status and stop there.
+
+This is a record of a decision, not a rule of its own: a maintainer
+instruction supersedes it, and it lapses on its own once #2585 is fixed and
+the next bump goes green.
