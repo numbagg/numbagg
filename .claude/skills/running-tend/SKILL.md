@@ -61,8 +61,10 @@ indexing and member access through a `TypeVar` whose bound is a union —
 `FloatArray`/`NumericArray` are declared in `numbagg/utils.py`, and the
 `TypeVar`s bound to them live in `funcs.py`, `moving.py`, `moving_exp.py`
 and `decorators.py` ([astral-sh/ty#2585](https://github.com/astral-sh/ty/issues/2585),
-open since January). 0.0.73 and 0.0.74 are red for an additional, separate
-bug in numba's `GUFunc.__call__` stub. So each Dependabot `ty` bump arrives
+open since January). 0.0.73 is red for a separate bug in numba's
+`GUFunc.__call__` stub ([astral-sh/ty#4352](https://github.com/astral-sh/ty/issues/4352),
+named in #755's closing comment, closed upstream 2026-08-25 and gone
+from 0.0.75 on), and 0.0.74 hits both. So each Dependabot `ty` bump arrives
 red, and the obvious-looking remedies — a `<0.0.73` cap in `pyproject.toml`,
 a Dependabot `ignore` entry, or widening the `TypeVar` bounds — have already
 been declined here:
