@@ -416,7 +416,9 @@ def test_move_exp_dtype_is_set_by_the_data_not_the_decay_parameters(func, dtype)
     # and `np.float64(...)` all produce float64, and each is an operand for loop
     # selection, so without the cast in `ndmoveexp.__call__` these return float64 for
     # float32 input while the scalar form returns float32.
-    array = np.random.default_rng(0).standard_normal(20).astype(dtype)
+    # 2-D data so that `alpha_nd` is genuinely ND: with 1-D data it would be
+    # identical to `alpha_1d` and the per-element `alpha` path would go untested.
+    array = np.random.default_rng(0).standard_normal((4, 20)).astype(dtype)
     args = [array] * _MOVE_EXP_NARGS.get(func, 1)
     alpha_1d = np.full(20, 0.2)
     alpha_nd = np.full(array.shape, 0.2)
@@ -425,3 +427,21 @@ def test_move_exp_dtype_is_set_by_the_data_not_the_decay_parameters(func, dtype)
     assert func(*args, alpha=alpha_nd).dtype == dtype
     assert func(*args, alpha=0.2, min_weight=np.float64(0.5)).dtype == dtype
     assert func(*args, alpha=alpha_1d.astype(np.float32)).dtype == dtype
+    assert func(*args, alpha=0.2, min_weight=np.full(4, 0.5)).dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_move_exp_min_weight_broadcasts_over_the_leading_dimensions(dtype):
+    # `min_weight` has no core dimension, so an array of it broadcasts over the
+    # leading dimensions — a per-row threshold. Casting it to the data's dtype has to
+    # keep that form working, where converting it to a Python scalar wouldn't.
+    array = np.random.default_rng(0).standard_normal((3, 20)).astype(dtype)
+
+    result = move_exp_nanmean(
+        array,
+        alpha=0.2,
+        min_weight=np.array([0.0, 0.5, 0.99]),  # type: ignore
+    )
+
+    assert result.dtype == dtype
+    assert_array_equal(np.isnan(result).sum(axis=-1), [0, 3, 20])
