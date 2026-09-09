@@ -389,3 +389,20 @@ def test_move_exp_axis_empty_tuple():
     array = np.array([1.0, 2.0, 3.0, 4.0])
     result = move_exp_nansum(array, alpha=0.5, axis=())
     assert_array_equal(result, array)
+
+
+# `move_exp_nancorr` and `move_exp_nancov` take two arrays; everything else takes one.
+_MOVE_EXP_NARGS = {move_exp_nancorr: 2, move_exp_nancov: 2}
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("func", MOVE_EXP_FUNCS, ids=lambda func: func.__name__)
+def test_move_exp_dtype_preservation(func, dtype):
+    # A scalar `alpha` is broadcast into an array before it reaches the gufunc, and
+    # that array is a real operand for loop selection: while it was float64 it
+    # selected the float64 loop and every function here returned float64 for
+    # float32 input, unlike the windowed functions.
+    array = np.random.default_rng(0).standard_normal(20).astype(dtype)
+    n = _MOVE_EXP_NARGS.get(func, 1)
+
+    assert func(*[array] * n, alpha=0.2).dtype == dtype

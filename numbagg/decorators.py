@@ -396,7 +396,15 @@ class ndmoveexp(NumbaBaseSimple):
             (axis,) = axis
 
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
+            # Materialize the scalar in the dtype the inputs themselves promote to.
+            # `np.broadcast_to` on a Python float gives a float64 array, and that is
+            # a real operand as far as gufunc loop selection is concerned — it would
+            # pull float32 inputs up to the float64 loop and hand back float64,
+            # unlike every non-exponential moving function.
+            alpha = np.broadcast_to(
+                np.asarray(alpha, dtype=np.result_type(*arr, np.float32)),
+                arr[0].shape[axis],
+            )
             alpha_axis = -1
         elif alpha.ndim == 1:
             alpha_axis = -1
@@ -1082,7 +1090,12 @@ class ndmoveexpmatrix(NumbaBase):
 
         # Handle alpha parameter - broadcast to observations dimension (second-to-last)
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, a.shape[-2])
+            # See the matching note in `ndmoveexp.__call__`: broadcasting a Python
+            # float gives a float64 operand, which would select the float64 loop
+            # even for float32 input.
+            alpha = np.broadcast_to(
+                np.asarray(alpha, dtype=np.result_type(a, np.float32)), a.shape[-2]
+            )
 
         gufunc = self.gufunc(target=self.target)
         with np.errstate(invalid="ignore", divide="ignore"):
