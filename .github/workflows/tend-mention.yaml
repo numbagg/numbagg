@@ -575,8 +575,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
         if: steps.tend_enabled.outputs.enabled == 'true'
-      - run: uv sync
-        if: steps.tend_enabled.outputs.enabled == 'true'
 
       - name: Compute queue delay
         id: delay
@@ -603,6 +601,8 @@ jobs:
           model: opus
           checkout_mode: mention
           base_branch: ${{ github.event.repository.default_branch }}
+          sandbox_setup: |2
+            uv sync
           prompt: >-
             ${{ steps.delay.outputs.seconds
             && format('This job started {0}s after the triggering event (over ~40s means it was queued). ',
