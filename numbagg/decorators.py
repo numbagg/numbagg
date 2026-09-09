@@ -360,17 +360,6 @@ class ndmoveexp(NumbaBaseSimple):
 
     """
 
-    def __init__(
-        self,
-        func: Callable[..., Any],
-        signature: list[NumbaTypes] = [
-            (numba.float64[:], numba.int64, numba.float64[:]),
-            (numba.float32[:], numba.int32, numba.float32[:]),
-        ],
-        **kwargs: Any,
-    ):
-        super().__init__(func, signature, **kwargs)
-
     def __call__(
         self,
         *arr: FloatArray,
