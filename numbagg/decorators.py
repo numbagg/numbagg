@@ -404,8 +404,9 @@ class ndmoveexp(NumbaBaseSimple):
         # non-exponential moving function. Materialize both in the dtype the input
         # arrays themselves promote to. Promoting the dtypes rather than the arrays
         # keeps a non-array input failing on `arr` itself. `np.asarray` rather than
-        # `float` on `min_weight`: it has no core dimension, so an array of it
-        # broadcasts over the leading dimensions as a per-row threshold.
+        # `float` on `min_weight` because it's the cast we need and nothing more:
+        # `min_weight` has no core dimension, so an array of it broadcasts over the
+        # leading dimensions, and `float` would newly reject that.
         dtype = np.result_type(*(a.dtype for a in arr), np.float32)
         min_weight_arr = np.asarray(min_weight, dtype=dtype)
 
