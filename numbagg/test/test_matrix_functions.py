@@ -981,3 +981,18 @@ class TestMatrixDtypePreservation:
         data = np.random.default_rng(0).standard_normal((10, 3)).astype(dtype)
 
         assert self._call(func, data).dtype == dtype
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize(
+        "func", MOVE_EXP_MATRIX_FUNCS, ids=lambda func: func.__name__
+    )
+    def test_dtype_is_set_by_the_data_not_the_decay_parameters(self, func, dtype):
+        """A float64 `alpha` array or `min_weight` doesn't pull the output to float64.
+
+        Both are operands as far as gufunc loop selection goes, so they would
+        otherwise disagree with the scalar `alpha` form on the output dtype.
+        """
+        data = np.random.default_rng(0).standard_normal((10, 3)).astype(dtype)
+
+        assert func(data, alpha=np.full(10, 0.3)).dtype == dtype
+        assert func(data, alpha=0.3, min_weight=np.float64(0.5)).dtype == dtype
