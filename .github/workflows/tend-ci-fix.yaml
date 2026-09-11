@@ -114,7 +114,7 @@ jobs:
       - run: uv sync
         if: steps.tend_enabled.outputs.enabled == 'true'
 
-      - uses: max-sixty/tend/claude@0.2.0
+      - uses: max-sixty/tend/claude@0.2.5
         if: steps.tend_enabled.outputs.enabled == 'true'
         with:
           github_token: ${{ secrets.TEND_BOT_TOKEN }}
