@@ -395,13 +395,27 @@ class ndmoveexp(NumbaBaseSimple):
                 )
             (axis,) = axis
 
+        # `alpha` and `min_weight` parameterize the decay; like `window` on the
+        # windowed functions they describe the operation rather than the data, so
+        # they shouldn't decide the output dtype. But both reach the gufunc as full
+        # operands, so a float64 one — which is what `np.broadcast_to` on a Python
+        # float, `np.full(n, 0.2)` and `np.float64(0.5)` all are — selects the
+        # float64 loop and returns float64 even for float32 input, unlike every
+        # non-exponential moving function. Materialize both in the dtype the input
+        # arrays themselves promote to. Promoting the dtypes rather than the arrays
+        # keeps a non-array input failing on `arr` itself. `np.asarray` rather than
+        # `float` on `min_weight` because it's the cast we need and nothing more:
+        # `min_weight` has no core dimension, so an array of it broadcasts over the
+        # leading dimensions, and `float` would newly reject that.
+        dtype = np.result_type(*(a.dtype for a in arr), np.float32)
+        min_weight_arr = np.asarray(min_weight, dtype=dtype)
+
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, arr[0].shape[axis])
-            alpha_axis = -1
-        elif alpha.ndim == 1:
+            alpha = np.broadcast_to(np.asarray(alpha, dtype=dtype), arr[0].shape[axis])
             alpha_axis = -1
         else:
-            alpha_axis = axis
+            alpha = alpha.astype(dtype, copy=False)
+            alpha_axis = -1 if alpha.ndim == 1 else axis
 
         # Axes is `axis` for each array (most often just one array), and then either
         # `-1` or `axis` for alphas, depending on whether a full array was passed or not.
@@ -411,7 +425,7 @@ class ndmoveexp(NumbaBaseSimple):
         # their correct handling in our tests.
         with np.errstate(invalid="ignore", divide="ignore"):
             gufunc = self.gufunc(target=self.target)
-            return gufunc(*arr, alpha, min_weight, axes=axes, **kwargs)
+            return gufunc(*arr, alpha, min_weight_arr, axes=axes, **kwargs)
 
 
 class ndfill(NumbaBase):
@@ -1080,13 +1094,20 @@ class ndmoveexpmatrix(NumbaBase):
         # No axis parameter - dimensions are fixed for consistency
         # obs_axis=-2 (preserved as time dimension), vars_axis=-1 (duplicated to matrix dims)
 
-        # Handle alpha parameter - broadcast to observations dimension (second-to-last)
+        # Handle alpha parameter - broadcast to observations dimension (second-to-last).
+        # See the matching note in `ndmoveexp.__call__`: `alpha` and `min_weight` are
+        # operands as far as loop selection is concerned, so a float64 one would
+        # return float64 even for float32 input.
+        dtype = np.result_type(a.dtype, np.float32)
+        min_weight_arr = np.asarray(min_weight, dtype=dtype)
         if not isinstance(alpha, np.ndarray):
-            alpha = np.broadcast_to(alpha, a.shape[-2])
+            alpha = np.broadcast_to(np.asarray(alpha, dtype=dtype), a.shape[-2])
+        else:
+            alpha = alpha.astype(dtype, copy=False)
 
         gufunc = self.gufunc(target=self.target)
         with np.errstate(invalid="ignore", divide="ignore"):
-            return gufunc(a, alpha, min_weight, **kwargs)
+            return gufunc(a, alpha, min_weight_arr, **kwargs)
 
     @cache
     def gufunc(self, *, target):
