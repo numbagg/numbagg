@@ -192,11 +192,11 @@ def test_move_exp_nans_var(func_n, alpha):
 
     array = np.array([1.0, np.nan, 1.0])
     result = np.isnan(func(*[array] * n, alpha=alpha))
-    if func != move_exp_nancorr:
-        expected = np.array([True, True, False])
     if func == move_exp_nancorr:
         # Correlation of values that are all the same is undefined
         expected = np.array([True, True, True])
+    else:
+        expected = np.array([True, True, False])
     assert_allclose(result, expected)
 
     array = np.array([1.0, np.nan])
@@ -314,7 +314,6 @@ def test_move_exp_endian(array):
     expected = move_exp_nanmean(array, alpha=0.25)
 
     array = array.astype(array.dtype.newbyteorder(">"))
-    # with pytest.warns(UserWarning):
     result = move_exp_nanmean(array, alpha=0.25)
 
     assert_allclose(result, expected)
