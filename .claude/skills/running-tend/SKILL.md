@@ -42,9 +42,10 @@ never runs.
 
 ## Nightly rolling survey
 
-`nightly_survey_files.py` outputs no files on 4 of its 28 buckets — this
-repo tracks only ~56 files, so several daily buckets have no files
-assigned. Empty output is expected; treat it as "no survey today" and
+`nightly_survey_files.py` outputs no files on several of its 28
+buckets — this repo tracks only a few dozen files, so some daily
+buckets have no files assigned. Empty output is expected; treat it
+as "no survey today" and
 move on to the next step rather than re-running the script or debugging
 it.
 
