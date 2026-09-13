@@ -15,58 +15,58 @@ __all__ = [
     "move_corrmatrix",
 ]
 
-T = TypeVar("T", bound=FloatArray)
+_T = TypeVar("_T", bound=FloatArray)
 
 def move_mean(
-    arr: T,
+    arr: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_sum(
-    arr: T,
+    arr: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_std(
-    arr: T,
+    arr: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_var(
-    arr: T,
+    arr: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_cov(
-    a: T,
-    b: T,
+    a: _T,
+    b: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_corr(
-    a: T,
-    b: T,
+    a: _T,
+    b: _T,
     /,
     *,
     window: int,
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
-) -> T: ...
+) -> _T: ...
 def move_covmatrix(
     a: np.ndarray,
     window: int,
