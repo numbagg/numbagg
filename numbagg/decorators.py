@@ -21,8 +21,8 @@ from numpy.typing import NDArray
 
 from numbagg.utils import (
     FloatArray,
-    FloatArrayT,
     NumbaTypes,
+    NumericArrayT,
     Targets,
     move_axes,
 )
@@ -464,12 +464,12 @@ class ndfill(NumbaBase):
 
     def __call__(
         self,
-        arr: FloatArrayT,
+        arr: NumericArrayT,
         *,
         limit: None | int = None,
         axis: int = -1,
         **kwargs,
-    ) -> FloatArrayT:
+    ) -> NumericArrayT:
         """Call the dynamically compiled function."""
         if limit is None:
             limit = arr.shape[axis]
