@@ -14,6 +14,20 @@ FloatArray: TypeAlias = NDArray[np.float64] | NDArray[np.float32]
 NumericArray: TypeAlias = IntArray | FloatArray
 GenericArray: TypeAlias = NumericArray | NDArray[np.bool_]
 
+# Implementation-side equivalents of the aliases above, spelled as constrained
+# TypeVars rather than `bound=<union>`: ty reports false positives on any
+# indexing or member access through a TypeVar whose bound is a union
+# (https://github.com/astral-sh/ty/issues/2585). The public `.pyi` stubs keep
+# the `bound=` form, so the types callers see are unchanged.
+FloatArrayT = TypeVar("FloatArrayT", NDArray[np.float64], NDArray[np.float32])
+NumericArrayT = TypeVar(
+    "NumericArrayT",
+    NDArray[np.int64],
+    NDArray[np.int32],
+    NDArray[np.float64],
+    NDArray[np.float32],
+)
+
 T = TypeVar("T", bound=NumericScalar)
 
 

@@ -1,18 +1,14 @@
-from typing import TypeVar
-
 import numpy as np
 from numba import float32, float64, int64
 
 from .decorators import ndmove
-from .utils import FloatArray
-
-T = TypeVar("T", bound=FloatArray)
+from .utils import FloatArrayT
 
 
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_mean(a: T, window: int, min_count: int, out: T) -> None:
+def move_mean(a: FloatArrayT, window: int, min_count: int, out: FloatArrayT) -> None:
     asum = 0.0
     count = 0
     min_count = max(min_count, 1)
@@ -58,7 +54,7 @@ def move_mean(a: T, window: int, min_count: int, out: T) -> None:
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_sum(a: T, window: int, min_count: int, out: T) -> None:
+def move_sum(a: FloatArrayT, window: int, min_count: int, out: FloatArrayT) -> None:
     asum = 0.0
     count = 0
 
@@ -123,7 +119,7 @@ def move_sum(a: T, window: int, min_count: int, out: T) -> None:
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_std(a: T, window: int, min_count: int, out: T) -> None:
+def move_std(a: FloatArrayT, window: int, min_count: int, out: FloatArrayT) -> None:
     asum = 0.0
     asum_sq = 0.0
     count = 0
@@ -154,7 +150,7 @@ def move_std(a: T, window: int, min_count: int, out: T) -> None:
 @ndmove.wrap(
     [(float32[:], int64, int64, float32[:]), (float64[:], int64, int64, float64[:])]
 )
-def move_var(a: T, window: int, min_count: int, out: T) -> None:
+def move_var(a: FloatArrayT, window: int, min_count: int, out: FloatArrayT) -> None:
     asum = 0.0
     asum_sq = 0.0
     count = 0
@@ -187,7 +183,9 @@ def move_var(a: T, window: int, min_count: int, out: T) -> None:
         (float64[:], float64[:], int64, int64, float64[:]),
     ]
 )
-def move_cov(a: T, b: T, window: int, min_count: int, out: T) -> None:
+def move_cov(
+    a: FloatArrayT, b: FloatArrayT, window: int, min_count: int, out: FloatArrayT
+) -> None:
     asum = 0.0
     bsum = 0.0
     prodsum = (
@@ -226,7 +224,9 @@ def move_cov(a: T, b: T, window: int, min_count: int, out: T) -> None:
         (float64[:], float64[:], int64, int64, float64[:]),
     ]
 )
-def move_corr(a: T, b: T, window: int, min_count: int, out: T) -> None:
+def move_corr(
+    a: FloatArrayT, b: FloatArrayT, window: int, min_count: int, out: FloatArrayT
+) -> None:
     asum = 0.0
     bsum = 0.0
     prodsum = 0.0

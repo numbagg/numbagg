@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 
 from numbagg.utils import (
     FloatArray,
+    FloatArrayT,
     NumbaTypes,
     Targets,
     move_axes,
@@ -97,7 +98,6 @@ def gufunc_string_signature(
 
 
 T = TypeVar("T", bound="NumbaBase")
-A = TypeVar("A", bound=FloatArray)
 
 
 class NumbaBase:
@@ -464,12 +464,12 @@ class ndfill(NumbaBase):
 
     def __call__(
         self,
-        arr: A,
+        arr: FloatArrayT,
         *,
         limit: None | int = None,
         axis: int = -1,
         **kwargs,
-    ) -> A:
+    ) -> FloatArrayT:
         """Call the dynamically compiled function."""
         if limit is None:
             limit = arr.shape[axis]
