@@ -10,7 +10,7 @@ Tend-specific CI guidance. Project conventions are in CLAUDE.md.
 ## Filing issues in other repos
 
 Standing exception granted: file directly in agent-equipped targets (per
-**Filing Issues in Other Repos** in the bundled `running-in-ci` skill) without
+**Other Repos** in the bundled `/tend-ci-runner:running-in-ci` skill) without
 asking permission here first. The default rule (open an issue here asking
 permission first) still applies when the target shows no agent signals.
 
@@ -22,7 +22,7 @@ permission first) still applies when the target shows no agent signals.
 ## CI polling takes two passes
 
 The `benchmark` job runs ~17 min, longer than one pass of the bundled
-`running-in-ci` CI Monitoring loop, whose iteration cap is sized to fit
+`/tend-ci-runner:running-in-ci` CI Monitoring loop, whose iteration cap is sized to fit
 the harness's 10-min Bash maximum. That is expected here: run the
 bundled loop as written, and when the first pass reports checks still
 running, simply invoke it again. Two passes normally cover the benchmark.
@@ -42,11 +42,11 @@ never runs.
 
 ## Nightly rolling survey
 
-`nightly-survey-files.sh` outputs empty on roughly 5 of 28 days — this
-repo only tracks ~50 files, so several daily buckets have no files
+`nightly_survey_files.py` outputs no files on 4 of its 28 buckets — this
+repo tracks only ~56 files, so several daily buckets have no files
 assigned. Empty output is expected; treat it as "no survey today" and
 move on to the next step rather than re-running the script or debugging
-the shell.
+it.
 
 ## Dependency management
 
