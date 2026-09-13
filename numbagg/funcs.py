@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TypeVar
-
 import numpy as np
 from numba import bool_, float32, float64, int32, int64, njit
 from numpy.typing import NDArray
@@ -15,10 +13,7 @@ from numbagg.decorators import (
     ndreduce,
 )
 
-from .utils import FloatArray, NumericArray
-
-T = TypeVar("T", bound=NumericArray)
-F = TypeVar("F", bound=FloatArray)
+from .utils import FloatArrayT, NumericArray, NumericArrayT
 
 
 # Why `nancorrmatrix` & `nancovmatrix` offset each variable before accumulating:
@@ -88,7 +83,7 @@ def anynan(a: NumericArray, out: NumericArray) -> None:
         (float64[:], int64[:]),
     ]
 )
-def nancount(a: T, out: T) -> None:
+def nancount(a: NumericArrayT, out: NumericArrayT) -> None:
     non_missing = 0
     for ai in a:
         if not np.isnan(ai):
@@ -138,7 +133,7 @@ def nanmean(a, out):
     ],
     supports_ddof=True,
 )
-def nanvar(a: F, ddof: int, out: F) -> None:
+def nanvar(a: FloatArrayT, ddof: int, out: FloatArrayT) -> None:
     # Running two loops might seem inefficient, but it's 3x faster than a Welford's
     # algorithm. And if we don't compute the mean first, we get numerical instability
     # (which our tests capture so is easy to observe).
@@ -168,7 +163,7 @@ def nanvar(a: F, ddof: int, out: F) -> None:
     ],
     supports_ddof=True,
 )
-def nanstd(a: F, ddof: int, out: F) -> None:
+def nanstd(a: FloatArrayT, ddof: int, out: FloatArrayT) -> None:
     asum = 0
     count = 0
     for ai in a:
@@ -320,7 +315,7 @@ def nanquantile(
 
 
 @ndfill.wrap()
-def bfill(a: T, limit: int, out: T) -> None:
+def bfill(a: NumericArrayT, limit: int, out: NumericArrayT) -> None:
     """Backward fill missing values."""
     lives_remaining = limit
     current = np.nan
@@ -339,7 +334,7 @@ def bfill(a: T, limit: int, out: T) -> None:
 
 
 @ndfill.wrap()
-def ffill(a: T, limit: int, out: T) -> None:
+def ffill(a: NumericArrayT, limit: int, out: NumericArrayT) -> None:
     """Forward fill missing values."""
     lives_remaining = limit
     current = np.nan
@@ -369,7 +364,7 @@ def nanmedian(
         "(n,m)->(n,n)",
     )
 )
-def nancorrmatrix(a: F, out: F) -> None:
+def nancorrmatrix(a: FloatArrayT, out: FloatArrayT) -> None:
     """
     Compute correlation matrix treating NaN as missing values.
 
@@ -506,7 +501,7 @@ def nancorrmatrix(a: F, out: F) -> None:
         "(n,m)->(n,n)",
     )
 )
-def nancovmatrix(a: F, out: F) -> None:
+def nancovmatrix(a: FloatArrayT, out: FloatArrayT) -> None:
     """
     Compute covariance matrix treating NaN as missing values.
 
