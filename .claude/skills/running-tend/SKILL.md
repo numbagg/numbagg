@@ -56,13 +56,35 @@ workflow handles dependency updates.
 
 ### Don't propose a `ty` pin or a Dependabot `ignore` entry
 
-`ty` bumps pass `lint` again as of 0.0.80. The red streak from 0.0.73 to 0.0.78 was the upstream false positive [astral-sh/ty#2585](https://github.com/astral-sh/ty/issues/2585) — `ty` resolves a subscript or member access through a `TypeVar` against a single member of the TypeVar's bound instead of distributing it over the union — and it was cleared on the repo side by [#800](https://github.com/numbagg/numbagg/pull/800), which added the constrained `FloatArrayT`/`NumericArrayT` TypeVars in `numbagg/utils.py` and moved `decorators.py`, `funcs.py`, `moving.py` and `moving_exp.py` onto them. #2585 is still open upstream; numbagg simply no longer writes the annotation that trips it.
+`ty` bumps pass `lint` again as of 0.0.80. The red streak from 0.0.75 to
+0.0.78 was the upstream false positive
+[astral-sh/ty#2585](https://github.com/astral-sh/ty/issues/2585) — `ty`
+resolves a subscript or member access through a `TypeVar` against a
+single member of the TypeVar's bound instead of distributing it over the
+union — and it was cleared on the repo side by
+[#800](https://github.com/numbagg/numbagg/pull/800), which added the
+constrained `FloatArrayT`/`NumericArrayT` TypeVars in `numbagg/utils.py`
+and moved `decorators.py`, `funcs.py`, `moving.py` and `moving_exp.py`
+onto them. 0.0.73 and 0.0.74 were red for a second bug, `ty`
+mis-checking numba's `GUFunc.__call__` stub
+([astral-sh/ty#4352](https://github.com/astral-sh/ty/issues/4352)),
+which upstream closed on 2026-08-25. #2585 is still open upstream;
+numbagg simply no longer writes the annotation that trips it.
 
-So a red `ty` bump is no longer the expected outcome. Review one on its merits: read the diagnostics before attributing them to #2585, and don't wave a real regression through as a known upstream bug.
+So a red `ty` bump is no longer the expected outcome. Review one on its
+merits: read the diagnostics before attributing them to #2585, and don't
+wave a real regression through as a known upstream bug.
 
-Capping `ty` in `pyproject.toml` or adding a Dependabot `ignore` entry stays declined, and that decision outlived the failures that prompted it:
+Capping `ty` in `pyproject.toml` or adding a Dependabot `ignore` entry
+stays declined, and that decision outlived the failures that prompted it:
 
-- [#755](https://github.com/numbagg/numbagg/pull/755), closed 2026-08-28: "We'll let a later Dependabot update re-propose the upgrade once upstream is fixed, rather than add local suppressions or weaken the annotations."
-- [#785](https://github.com/numbagg/numbagg/pull/785), a bot PR capping `ty>=0.0.2,<0.0.73`, closed without comment on 2026-09-06.
+- [#755](https://github.com/numbagg/numbagg/pull/755), closed 2026-08-28:
+  "We'll let a later Dependabot update re-propose the upgrade once
+  upstream is fixed, rather than add local suppressions or weaken the
+  annotations."
+- [#785](https://github.com/numbagg/numbagg/pull/785), a bot PR capping
+  `ty>=0.0.2,<0.0.73`, closed without comment on 2026-09-06.
 
-`pyproject.toml` carries a bare `ty>=0.0.2` and should keep it. Recommending a cap or an `ignore` entry in a review body is the same declined proposal in a different place.
+`pyproject.toml` carries a bare `ty>=0.0.2` and should keep it.
+Recommending a cap or an `ignore` entry in a review body is the same
+declined proposal in a different place.
