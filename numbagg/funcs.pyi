@@ -42,11 +42,12 @@ def ffill(
 ) -> _T: ...
 
 # `(..., vars, obs) -> (..., vars, vars)`: the trailing `obs` axis is replaced by a
-# second `vars` axis, so neither the input's shape nor its dtype carries through. The
-# shape changes outright, and `**kwargs` reaches the gufunc, where `dtype=` and `out=`
-# each override the result dtype. Only "some float array" holds for every call form the
-# runtime accepts; `move_covmatrix` / `move_corrmatrix` declare the looser `np.ndarray`.
-def nancovmatrix(a: FloatArray, **kwargs) -> NDArray[np.floating[Any]]: ...
-def nancorrmatrix(a: FloatArray, **kwargs) -> NDArray[np.floating[Any]]: ...
+# second `vars` axis, so the input's shape does not carry through. Nor does its dtype:
+# `**kwargs` reaches the gufunc, so `dtype=` picks the loop, and `out=` returns the
+# supplied array itself — `nancovmatrix(a_float32, out=<int64 array>, casting="unsafe")`
+# hands back that int64 array. Only "some ndarray" holds for every call form the runtime
+# accepts, which is what `move_covmatrix` / `move_corrmatrix` declare too.
+def nancovmatrix(a: FloatArray, **kwargs) -> np.ndarray: ...
+def nancorrmatrix(a: FloatArray, **kwargs) -> np.ndarray: ...
 
 count = nancount
