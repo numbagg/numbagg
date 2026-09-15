@@ -53,7 +53,8 @@ repos:
         # TODO: replace CLI options with pyproject.toml config when stubtest supports it
         entry:
           uv run python -m mypy.stubtest numbagg.funcs numbagg.moving
-          numbagg.moving_exp --allowlist stubtest_allowlist.txt
+          numbagg.moving_exp numbagg.moving_matrix
+          --allowlist stubtest_allowlist.txt
           --ignore-unused-allowlist --mypy-config-file pyproject.toml
         files: '^(numbagg/|stubtest_allowlist\.txt$|pyproject\.toml$)'
         pass_filenames: false

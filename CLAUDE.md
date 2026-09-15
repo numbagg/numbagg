@@ -11,7 +11,7 @@ Numbagg provides fast N-dimensional aggregation functions using Numba and NumPy'
 ### Core Functions
 The library provides aggregation functions (like `nansum`, `nanmean`), moving window functions (like `move_mean`, `move_std`), exponential moving functions, and grouping operations. All functions work on N-dimensional arrays with arbitrary axes.
 
-Public functions in `funcs.py`, `moving.py`, and `moving_exp.py` — including the matrix functions `moving.py` re-exports — are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub.
+Public functions in `funcs.py`, `moving.py`, `moving_exp.py`, and `moving_matrix.py` are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub, and `numbagg/test/test_stub_coverage.py` holds every other name `numbagg/__init__.py` re-exports to having one.
 
 ## Running Commands
 
