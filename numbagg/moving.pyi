@@ -1,7 +1,6 @@
 from typing import TypeVar
 
-import numpy as np
-
+from numbagg.moving_matrix import move_corrmatrix, move_covmatrix
 from numbagg.utils import FloatArray
 
 __all__ = [
@@ -67,15 +66,3 @@ def move_corr(
     min_count: int | None = None,
     axis: int | tuple[int, ...] = -1,
 ) -> _T: ...
-def move_covmatrix(
-    a: np.ndarray,
-    window: int,
-    min_count: int | None = None,
-    **kwargs,
-) -> np.ndarray: ...
-def move_corrmatrix(
-    a: np.ndarray,
-    window: int,
-    min_count: int | None = None,
-    **kwargs,
-) -> np.ndarray: ...
