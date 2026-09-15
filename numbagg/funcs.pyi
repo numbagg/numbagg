@@ -7,7 +7,6 @@ from numpy.typing import NDArray
 from .utils import FloatArray, NumericArray
 
 _T = TypeVar("_T", bound=NumericArray)
-_F = TypeVar("_F", bound=FloatArray)
 
 def allnan(arrays, /, *, axis: int | tuple[int, ...] | None = None): ...
 def anynan(arrays, /, *, axis: int | tuple[int, ...] | None = None): ...
@@ -42,12 +41,12 @@ def ffill(
     axis: int = -1,
 ) -> _T: ...
 
-# `(..., vars, obs) -> (..., vars, vars)`: the trailing axis is reduced away and a
-# second `vars` axis takes its place, so ndim and dtype both carry through from the
-# input. There is no `axis` parameter, so unlike the aggregations above the result
-# ndim does not depend on how the call is made. `**kwargs` reaches the gufunc, so a
-# `dtype=` or `out=` override still changes the result dtype; `_F` does not model that.
-def nancovmatrix(a: _F, **kwargs) -> _F: ...
-def nancorrmatrix(a: _F, **kwargs) -> _F: ...
+# `(..., vars, obs) -> (..., vars, vars)`: the trailing `obs` axis is replaced by a
+# second `vars` axis, so neither the input's shape nor its dtype carries through. The
+# shape changes outright, and `**kwargs` reaches the gufunc, where `dtype=` and `out=`
+# each override the result dtype. Only "some float array" holds for every call form the
+# runtime accepts, which is what `move_covmatrix` / `move_corrmatrix` already declare.
+def nancovmatrix(a: FloatArray, **kwargs) -> NDArray[np.floating[Any]]: ...
+def nancorrmatrix(a: FloatArray, **kwargs) -> NDArray[np.floating[Any]]: ...
 
 count = nancount
