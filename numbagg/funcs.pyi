@@ -44,8 +44,9 @@ def ffill(
 
 # `(..., vars, obs) -> (..., vars, vars)`: the trailing axis is reduced away and a
 # second `vars` axis takes its place, so ndim and dtype both carry through from the
-# input. There is no `axis` parameter, so unlike the aggregations above the return
-# does not depend on how the call is made.
+# input. There is no `axis` parameter, so unlike the aggregations above the result
+# ndim does not depend on how the call is made. `**kwargs` reaches the gufunc, so a
+# `dtype=` or `out=` override still changes the result dtype; `_F` does not model that.
 def nancovmatrix(a: _F, **kwargs) -> _F: ...
 def nancorrmatrix(a: _F, **kwargs) -> _F: ...
 

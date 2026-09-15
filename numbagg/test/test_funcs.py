@@ -344,7 +344,8 @@ class TestAllnanAnynanEdgeCases:
 # `nansum(a)` reduces to a scalar while `nansum(a, axis=0)` returns an array, and the
 # result dtype is not always the input's (`nanmax` on int32 returns int64). Expressing
 # that needs overloads keyed on both `axis` and the input dtype — an open design
-# question tracked in #811. Until it is settled these declarations stay unannotated.
+# question tracked in #811. Until it is settled these declarations stay unannotated, and
+# the test below asserts this set matches them exactly so it cannot go stale.
 _AGGREGATIONS_PENDING_RETURN_TYPES = {
     "allnan",
     "anynan",
@@ -365,11 +366,13 @@ def test_funcs_stub_declares_return_types():
     # call itself type-checks clean while everything downstream of the result silently
     # stops being checked, because the checker hands the caller back `Unknown`.
     tree = ast.parse((Path(numbagg.__file__).parent / "funcs.pyi").read_text())
-    missing = sorted(
+    unannotated = {
         node.name
         for node in tree.body
-        if isinstance(node, ast.FunctionDef)
-        and node.returns is None
-        and node.name not in _AGGREGATIONS_PENDING_RETURN_TYPES
+        if isinstance(node, ast.FunctionDef) and node.returns is None
+    }
+    assert unannotated == _AGGREGATIONS_PENDING_RETURN_TYPES, (
+        "`funcs.pyi` return-type coverage moved: "
+        f"newly missing {sorted(unannotated - _AGGREGATIONS_PENDING_RETURN_TYPES)}, "
+        f"no longer pending {sorted(_AGGREGATIONS_PENDING_RETURN_TYPES - unannotated)}"
     )
-    assert not missing, f"`funcs.pyi` declarations with no return type: {missing}"
