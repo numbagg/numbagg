@@ -7,7 +7,6 @@ from numpy.typing import NDArray
 from .utils import FloatArray, NumericArray
 
 _T = TypeVar("_T", bound=NumericArray)
-_F = TypeVar("_F", bound=FloatArray)
 
 def allnan(arrays, /, *, axis: int | tuple[int, ...] | None = None): ...
 def anynan(arrays, /, *, axis: int | tuple[int, ...] | None = None): ...
@@ -41,7 +40,14 @@ def ffill(
     limit: int | None = None,
     axis: int = -1,
 ) -> _T: ...
-def nancovmatrix(a: _F, **kwargs): ...
-def nancorrmatrix(a: _F, **kwargs): ...
+
+# `(..., vars, obs) -> (..., vars, vars)`: the trailing `obs` axis is replaced by a
+# second `vars` axis, so the input's shape does not carry through. Nor does its dtype:
+# `**kwargs` reaches the gufunc, so `dtype=` picks the loop, and `out=` returns the
+# supplied array itself — `nancovmatrix(a_float32, out=<int64 array>, casting="unsafe")`
+# hands back that int64 array. Only "some ndarray" holds for every call form the runtime
+# accepts, which is what `move_covmatrix` / `move_corrmatrix` declare too.
+def nancovmatrix(a: FloatArray, **kwargs) -> np.ndarray: ...
+def nancorrmatrix(a: FloatArray, **kwargs) -> np.ndarray: ...
 
 count = nancount
