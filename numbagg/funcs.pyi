@@ -19,15 +19,22 @@ def nanargmax(arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = Non
 def nanargmin(arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None): ...
 def nanmax(arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None): ...
 def nanmin(arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None): ...
+
+# `**kwargs` reaches the gufunc for these two as well, so `out=` fixes the result
+# dtype: `nanmedian(a, axis=-1, out=<int64 array>, casting="unsafe")` gives back int64,
+# and a boolean `out` likewise. The shape doesn't carry through either — the quantile
+# axis is moved to the front, so the return is a reshaped view of `out`, not `out`
+# itself. Only "some ndarray" holds for every call form they accept, which is what the
+# matrix declarations below say too.
 def nanquantile(
     a: NDArray[np.float64],
     quantiles: float | Iterable[float],
     axis: int | tuple[int, ...] | None = None,
     **kwargs,
-) -> NDArray[np.float64]: ...
+) -> np.ndarray: ...
 def nanmedian(
     a: NDArray[np.float64], *, axis: int | tuple[int, ...] | None = None, **kwargs
-) -> NDArray[np.float64]: ...
+) -> np.ndarray: ...
 def bfill(
     arr: _T,
     *,
