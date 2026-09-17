@@ -303,6 +303,14 @@ class ndmove(NumbaBaseSimple):
             min_count = window
         elif min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
+        elif min_count > window:
+            # Unsatisfiable: no window ever holds `min_count` values, so the result
+            # would be all-NaN. pandas and bottleneck both reject it rather than
+            # return that, and callers read an all-NaN array as data, not as an
+            # argument error.
+            raise ValueError(
+                f"min_count ({min_count}) cannot be greater than window ({window})"
+            )
 
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
@@ -772,6 +780,14 @@ class ndmovematrix(NumbaBase):
             min_count = window
         elif min_count < 0:
             raise ValueError(f"min_count must be positive: {min_count}")
+        elif min_count > window:
+            # Unsatisfiable: no window ever holds `min_count` values, so the result
+            # would be all-NaN. pandas and bottleneck both reject it rather than
+            # return that, and callers read an all-NaN array as data, not as an
+            # argument error.
+            raise ValueError(
+                f"min_count ({min_count}) cannot be greater than window ({window})"
+            )
 
         # Moving matrix functions use fixed convention: (..., obs, vars) -> (..., obs, vars, vars)
         # No axis parameter - dimensions are fixed for consistency

@@ -143,6 +143,15 @@ def test_move_matrix_min_count(array, window, min_count):
     # Transpose array for new (obs, vars) convention
     array_T = array.T
 
+    if min_count > window:
+        # Unsatisfiable, and rejected as such — see
+        # `test_move_min_count_greater_than_window`. Kept in the parametrization so
+        # the (window=5, min_count=10) pair still reaches this function.
+        for func in (move_corrmatrix, move_covmatrix):
+            with pytest.raises(ValueError, match="cannot be greater than window"):
+                func(array_T, window=window, min_count=min_count)
+        return
+
     # Test correlation matrix
     result_corr = move_corrmatrix(array_T, window=window, min_count=min_count)
 
@@ -182,6 +191,27 @@ def test_move_mean_window(array):
         move_mean(array, window=array.shape[-1] + 1)
     with pytest.raises(ValueError):
         move_mean(array, window=1, min_count=-1)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda a: move_mean(a[0], window=5, min_count=6),
+        lambda a: move_corr(a[0], a[0], window=5, min_count=6),
+        lambda a: move_corrmatrix(a.T, window=5, min_count=6),
+        lambda a: move_covmatrix(a.T, window=5, min_count=6),
+    ],
+    ids=["move_mean", "move_corr", "move_corrmatrix", "move_covmatrix"],
+)
+@pytest.mark.parametrize("shape", [(3, 20)], indirect=True)
+def test_move_min_count_greater_than_window(array, call):
+    # A `min_count` above `window` can never be satisfied, so every output value is
+    # NaN — silently, before this was rejected. pandas (`min_periods 10 must be <=
+    # window 5`) and bottleneck (`min_count (10) cannot be greater than window (5)`)
+    # both raise, as does `move_func`, this file's own reference implementation, so
+    # the all-NaN array was the odd one out and read as a real result.
+    with pytest.raises(ValueError, match="cannot be greater than window"):
+        call(array)
 
 
 def test_move_axis_tuple():
