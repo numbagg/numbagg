@@ -272,6 +272,25 @@ class ndaggregate(NumbaBaseSimple):
         return vectorize(self.func)
 
 
+def _normalize_min_count(window: int, min_count: int | None) -> int:
+    """Resolve and validate `min_count` against `window` for a moving function.
+
+    A `min_count` above `window` is unsatisfiable — no window ever holds that many
+    values, so every output value would be NaN. pandas and bottleneck both reject it
+    rather than return that array, and a caller reads an all-NaN result as data, not
+    as an argument error.
+    """
+    if min_count is None:
+        return window
+    if min_count < 0:
+        raise ValueError(f"min_count must be positive: {min_count}")
+    if min_count > window:
+        raise ValueError(
+            f"min_count ({min_count}) cannot be greater than window ({window})"
+        )
+    return min_count
+
+
 class ndmove(NumbaBaseSimple):
     """Create an N-dimensional moving window function along one dimension.
 
@@ -299,18 +318,7 @@ class ndmove(NumbaBaseSimple):
         axis: int | tuple[int, ...] = -1,
         **kwargs,
     ) -> FloatArray:
-        if min_count is None:
-            min_count = window
-        elif min_count < 0:
-            raise ValueError(f"min_count must be positive: {min_count}")
-        elif min_count > window:
-            # Unsatisfiable: no window ever holds `min_count` values, so the result
-            # would be all-NaN. pandas and bottleneck both reject it rather than
-            # return that, and callers read an all-NaN array as data, not as an
-            # argument error.
-            raise ValueError(
-                f"min_count ({min_count}) cannot be greater than window ({window})"
-            )
+        min_count = _normalize_min_count(window, min_count)
 
         # If an empty tuple is passed, there's no reduction to do, so we return the
         # original array.
@@ -776,18 +784,7 @@ class ndmovematrix(NumbaBase):
                 f"{func_name} requires at least a 2D array with shape (..., obs, vars)."
             )
 
-        if min_count is None:
-            min_count = window
-        elif min_count < 0:
-            raise ValueError(f"min_count must be positive: {min_count}")
-        elif min_count > window:
-            # Unsatisfiable: no window ever holds `min_count` values, so the result
-            # would be all-NaN. pandas and bottleneck both reject it rather than
-            # return that, and callers read an all-NaN array as data, not as an
-            # argument error.
-            raise ValueError(
-                f"min_count ({min_count}) cannot be greater than window ({window})"
-            )
+        min_count = _normalize_min_count(window, min_count)
 
         # Moving matrix functions use fixed convention: (..., obs, vars) -> (..., obs, vars, vars)
         # No axis parameter - dimensions are fixed for consistency

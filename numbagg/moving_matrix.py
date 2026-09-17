@@ -44,17 +44,18 @@ __all__ = [
 # would change results already emitted.
 #
 # The windowed functions instead average the first `min(window, min_count)`
-# observations, reading only rows the accumulators have already reached. Both
-# bounds are load-bearing. `min_count` is what keeps the offset from looking ahead:
-# output at time `t` is emitted as soon as a pair has `min_count` observations, so
-# with `min_count < window` averaging the whole first window would make the value
-# at `t` a function of `a[t + 1 : window]` — and when that tail holds a much larger
-# value than the partial window's own, the offset is orders of magnitude off and
-# cancellation gets worse than with no offset at all. A non-NaN output at `t`
-# already requires `t >= min_count - 1`, so those rows are always in hand. `window`
-# bounds it in turn because `min_count` may exceed the window only nominally;
-# `window <= n_obs` is enforced, so a prefix short enough to change the average
-# can't be evaluated at all.
+# observations, reading only rows the accumulators have already reached. `min_count`
+# is the bound that does the work: it keeps the offset from looking ahead — output at
+# time `t` is emitted as soon as a pair has `min_count` observations, so with
+# `min_count < window` averaging the whole first window would make the value at `t` a
+# function of `a[t + 1 : window]` — and when that tail holds a much larger value than
+# the partial window's own, the offset is orders of magnitude off and cancellation
+# gets worse than with no offset at all. A non-NaN output at `t` already requires
+# `t >= min_count - 1`, so those rows are always in hand. The `window` term is a
+# defensive no-op: `min_count > window` is rejected in `ndmovematrix.__call__`, so
+# `min(window, min_count)` is `min_count` in every call that reaches here, and
+# `window <= n_obs` is enforced in turn, which is what keeps the prefix inside the
+# array.
 #
 # Averaging rather than taking the first observation cuts both ways, and the limit
 # is worth knowing because #758 makes the same choice. It dilutes an outlier among
