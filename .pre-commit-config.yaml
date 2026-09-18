@@ -55,6 +55,6 @@ repos:
           uv run python -m mypy.stubtest numbagg.funcs numbagg.moving
           numbagg.moving_exp numbagg.moving_matrix
           --allowlist stubtest_allowlist.txt
-          --ignore-unused-allowlist --mypy-config-file pyproject.toml
+          --mypy-config-file pyproject.toml
         files: '^(numbagg/|stubtest_allowlist\.txt$|pyproject\.toml$)'
         pass_filenames: false

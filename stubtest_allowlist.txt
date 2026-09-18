@@ -1,6 +1,11 @@
 # Stubtest allowlist for "is not a function" errors
 # These are callable class instances, not functions, which is expected.
-# Allowlist generated with: python -m mypy.stubtest numbagg.funcs numbagg.moving numbagg.moving_exp numbagg.moving_matrix --generate-allowlist
+# Allowlist generated with: uv run python -m mypy.stubtest numbagg.funcs numbagg.moving
+# numbagg.moving_exp numbagg.moving_matrix --generate-allowlist
+#
+# Entries are matched against the module that defines each object, so a re-exported
+# name belongs here under its defining module only. An entry that matches nothing
+# fails the hook rather than lingering.
 
 numbagg.funcs.allnan
 numbagg.funcs.anynan
@@ -19,9 +24,7 @@ numbagg.funcs.nanstd
 numbagg.funcs.nansum
 numbagg.funcs.nanvar
 numbagg.moving.move_corr
-numbagg.moving.move_corrmatrix
 numbagg.moving.move_cov
-numbagg.moving.move_covmatrix
 numbagg.moving.move_mean
 numbagg.moving.move_std
 numbagg.moving.move_sum
