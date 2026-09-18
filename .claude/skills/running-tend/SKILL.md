@@ -10,8 +10,8 @@ Tend-specific CI guidance. Project conventions are in CLAUDE.md.
 ## Filing issues in other repos
 
 Standing exception granted: file directly in agent-equipped targets (per
-**Other Repos** in the bundled `/tend-ci-runner:running-in-ci` skill) without
-asking permission here first. The default rule (open an issue here asking
+**Filing issues** in the bundled `/tend-ci-runner:act-in-other-repos` skill)
+without asking permission here first. The default rule (open an issue here asking
 permission first) still applies when the target shows no agent signals.
 
 ## CI workflows
@@ -22,8 +22,8 @@ permission first) still applies when the target shows no agent signals.
 ## CI polling takes two passes
 
 The `benchmark` job runs ~17 min, longer than one pass of the bundled
-`/tend-ci-runner:running-in-ci` CI Monitoring loop, whose iteration cap is sized to fit
-the harness's 10-min Bash maximum. That is expected here: run the
+`/tend-ci-runner:monitor-ci` loop, whose iteration cap is sized to fit the
+harness's 10-min Bash maximum. That is expected here: run the
 bundled loop as written, and when the first pass reports checks still
 running, simply invoke it again. Two passes normally cover the benchmark.
 
