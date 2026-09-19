@@ -250,6 +250,39 @@ class TestCorrelationCovarianceMatrices:
         corr = nancorrmatrix(data)
         assert np.all(np.isnan(corr[1])), corr[1]
 
+    def test_correlation_bounds_two_observations(self):
+        """Two observations are exactly ±1 correlated, so rounding can't exceed 1.
+
+        Found by search over two-point pairs; the moving matrix functions clip for
+        the same reason, as does `np.corrcoef`.
+        """
+        data = np.array(
+            [
+                [0.001257302210933933, -0.0013210486329130189],
+                [1.049001171530397e-07, -5.356693731611109e-07],
+            ]
+        )
+
+        corr = nancorrmatrix(data)
+
+        assert np.all(np.abs(corr) <= 1.0), f"maximum |corr| {np.max(np.abs(corr))!r}"
+
+    def test_correlation_bounds_two_overlapping_observations(self):
+        """Mismatched NaNs leave a pair two complete observations, reaching the same case.
+
+        The pair above embedded in a longer series, so the overlap rather than the
+        array length is what makes the correlation exactly ±1.
+        """
+        data = np.full((2, 6), np.nan)
+        data[0, [1, 4]] = [0.001257302210933933, -0.0013210486329130189]
+        data[1, [1, 4]] = [1.049001171530397e-07, -5.356693731611109e-07]
+        data[0, 2] = 1.0
+        data[1, 5] = 2.0
+
+        corr = nancorrmatrix(data)
+
+        assert np.all(np.abs(corr) <= 1.0), f"maximum |corr| {np.max(np.abs(corr))!r}"
+
 
 class TestMovingMatrices:
     """Test moving window matrix functions (move_corrmatrix, move_covmatrix)."""

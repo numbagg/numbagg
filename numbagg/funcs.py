@@ -485,6 +485,15 @@ def nancorrmatrix(a: FloatArrayT, out: FloatArrayT) -> None:
                 # Correlation
                 if var_i_unbiased > 0 and var_j_unbiased > 0:
                     corr = cov_unbiased / np.sqrt(var_i_unbiased * var_j_unbiased)
+                    # A pair with exactly two complete observations is perfectly
+                    # correlated, and rounding can put the quotient a few ulps
+                    # outside [-1, 1] — `test_correlation_bounds_two_observations`
+                    # catches it without this. `np.corrcoef`, which the docstring
+                    # above names as this function's counterpart, clips for the same
+                    # reason, as do `move_corrmatrix` and `move_exp_nancorrmatrix`.
+                    # This runs after the positive-variance guard, so a degenerate
+                    # pair still yields NaN rather than a clipped value.
+                    corr = min(max(corr, -1.0), 1.0)
                     out[i, j] = corr
                     out[j, i] = corr  # Symmetric
                 else:
