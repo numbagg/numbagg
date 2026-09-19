@@ -219,7 +219,9 @@ class TestCorrelationCovarianceMatrices:
 
         corr = nancorrmatrix(data + offset)
         assert not np.any(np.isnan(corr)), corr
-        assert np.all(np.abs(corr) <= 1 + 1e-6), np.abs(corr).max()
+        # Exact, not slack: `nancorrmatrix` clips, so an offset can no longer push
+        # the result past 1 by any margin, in either dtype.
+        assert np.all(np.abs(corr) <= 1.0), np.abs(corr).max()
 
     def test_pairwise_complete_matches_pandas(self):
         """Ragged NaN holes: each pair is counted over its own overlap."""
