@@ -32,9 +32,31 @@ __all__ = [
 #
 # Correlation and covariance are both invariant to a per-variable offset, so
 # subtracting one changes nothing in exact arithmetic; float64 accumulators fix the
-# first loss and the offset fixes the second. #758 applies the same remedy to the
-# non-matrix moving functions and #759 to the static `nancovmatrix` /
-# `nancorrmatrix`; the three share this rationale and the offset choice below.
+# first loss and the offset fixes the second. #759 applies the same remedy to the
+# static `nancovmatrix` / `nancorrmatrix`, which share this rationale. #758 proposed
+# it for the non-matrix moving functions and was closed unmerged, so `move_var`,
+# `move_std`, `move_cov` and `move_corr` still compute their products in the input
+# dtype and subtract no offset — their scalar accumulators are float64 either way,
+# since numba types `asum = 0.0` as float64. The difference between the two modules
+# is that, not a partial rollout.
+#
+# Read that close before changing the offset here, because its objection was to a
+# fixed prefix anchor as such, which is what this module uses: it "is not correct
+# across the supported rolling semantics", since with `min_count < window` it reads
+# observations that should not affect an early result, and after a level change it
+# stays badly scaled once the original values have left the window. The first half is
+# answered below — the prefix here is bounded by `min_count`, not `window`. The
+# second is not, and the paragraph on scanned outliers does not bound it: that one
+# has the anchor far larger than the series, while a level change leaves it far
+# smaller, so the crossover quoted there never applies — though "worse than no
+# offset at all" is reachable by this other route too. On standard-normal data
+# stepped by 1e8 at row 20, `move_covmatrix(a, window=10, min_count=10)[40]` — a
+# window lying entirely past the step — returns `[0, 2.22, 2.22, 6.67]` against an
+# exact `[0.70, -0.39, -0.39, 1.64]`; with the shift forced to zero the same window
+# returns `[0, 0, 0, 6.67]`, nearer the answer on the off-diagonal. Over 30 seeds
+# the offset is the further of the two there in 14, so at this scale it is not
+# carrying information either way. The anchor below is an open design question,
+# not a settled choice.
 #
 # Which constant to subtract is a real choice, because the accumulators run for the
 # whole series and every term carries `(value - offset)**2` — the offset sets the
@@ -57,13 +79,13 @@ __all__ = [
 # `window <= n_obs` is enforced in turn, which is what keeps the prefix inside the
 # array.
 #
-# Averaging rather than taking the first observation cuts both ways, and the limit
-# is worth knowing because #758 makes the same choice. It dilutes an outlier among
-# the rows it reads, by their count — but it also widens the set of rows one can
-# come from, from 1 to `min(window, min_count)`, and the shift is a single constant
-# for the whole run, so a scanned outlier sets the rounding floor for every later
-# window whether or not it is still inside one. That reference only becomes worse
-# than no offset at all once a scanned value dwarfs the series' own level by about
+# Averaging rather than taking the first observation cuts both ways, and the limit is
+# worth knowing. It dilutes an outlier among the rows it reads, by their count — but
+# it also widens the set of rows one can come from, from 1 to
+# `min(window, min_count)`, and the shift is a single constant for the whole run, so a
+# scanned outlier sets the rounding floor for every later window whether or not it is
+# still inside one. That reference only becomes worse than no offset at all once a
+# scanned value dwarfs the series' own level by about
 # `min(window, min_count) / sqrt(eps)` — ~1e9 at `window = 10`, and well past the
 # point where the dilution stops paying. On a series at ~10 with `window = 10`, the
 # off-diagonal covariance under a 3e9 spike in the leading rows still beats no offset
@@ -242,9 +264,10 @@ def move_corrmatrix(a, window, min_count, out):
                         # counterpart of these matrix functions, clips for the
                         # same reason; this runs after the variance clamp above,
                         # so a degenerate window still yields NaN rather than a
-                        # clipped value. Deliberately unlike `move_corr`, which
-                        # #758 leaves unclipped so that a badly-conditioned
-                        # result stays visible as an out-of-range number.
+                        # clipped value. `move_corr` in `moving.py` is unclipped,
+                        # but not as a deliberate counterpart to this: #758 left
+                        # bounding it as a separate design call and was then
+                        # closed, so whether it should be bounded is still open.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
@@ -489,9 +512,10 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                         # counterpart of these matrix functions, clips for the
                         # same reason; this runs after the variance clamp above,
                         # so a degenerate window still yields NaN rather than a
-                        # clipped value. Deliberately unlike `move_corr`, which
-                        # #758 leaves unclipped so that a badly-conditioned
-                        # result stays visible as an out-of-range number.
+                        # clipped value. `move_corr` in `moving.py` is unclipped,
+                        # but not as a deliberate counterpart to this: #758 left
+                        # bounding it as a separate design call and was then
+                        # closed, so whether it should be bounded is still open.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
