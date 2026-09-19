@@ -262,9 +262,9 @@ def move_corrmatrix(a, window, min_count, out):
                         # same reason; this runs after the variance clamp above,
                         # so a degenerate window still yields NaN rather than a
                         # clipped value. `move_corr` in `moving.py` is unclipped,
-                        # but not as a deliberate counterpart to this: #758
-                        # proposed bounding it and was closed, so whether it
-                        # should be bounded is still open.
+                        # but not as a deliberate counterpart to this: #758 left
+                        # bounding it as a separate design call and was then
+                        # closed, so whether it should be bounded is still open.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
@@ -510,9 +510,9 @@ def move_exp_nancorrmatrix(a, alpha, min_weight, out):
                         # same reason; this runs after the variance clamp above,
                         # so a degenerate window still yields NaN rather than a
                         # clipped value. `move_corr` in `moving.py` is unclipped,
-                        # but not as a deliberate counterpart to this: #758
-                        # proposed bounding it and was closed, so whether it
-                        # should be bounded is still open.
+                        # but not as a deliberate counterpart to this: #758 left
+                        # bounding it as a separate design call and was then
+                        # closed, so whether it should be bounded is still open.
                         out[t, i, j] = min(max(corr, -1.0), 1.0)
                     else:
                         out[t, i, j] = np.nan
