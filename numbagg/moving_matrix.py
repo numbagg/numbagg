@@ -48,12 +48,15 @@ __all__ = [
 # answered below — the prefix here is bounded by `min_count`, not `window`. The
 # second is not, and the paragraph on scanned outliers does not bound it: that one
 # has the anchor far larger than the series, while a level change leaves it far
-# smaller, so the crossover quoted there never applies. On standard-normal data
+# smaller, so the crossover quoted there never applies — though "worse than no
+# offset at all" is reachable by this other route too. On standard-normal data
 # stepped by 1e8 at row 20, `move_covmatrix(a, window=10, min_count=10)[40]` — a
 # window lying entirely past the step — returns `[0, 2.22, 2.22, 6.67]` against an
-# exact `[0.70, -0.39, -0.39, 1.64]`, the near-zero anchor leaving the offset with
-# nothing to do. So the anchor below is an open design question, not a settled
-# choice.
+# exact `[0.70, -0.39, -0.39, 1.64]`; with the shift forced to zero the same window
+# returns `[0, 0, 0, 6.67]`, nearer the answer on the off-diagonal. Over 30 seeds
+# the offset is the further of the two there in 14, so at this scale it is not
+# carrying information either way. The anchor below is an open design question,
+# not a settled choice.
 #
 # Which constant to subtract is a real choice, because the accumulators run for the
 # whole series and every term carries `(value - offset)**2` — the offset sets the
