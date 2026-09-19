@@ -388,3 +388,41 @@ def test_move_exp_axis_empty_tuple():
     array = np.array([1.0, 2.0, 3.0, 4.0])
     result = move_exp_nansum(array, alpha=0.5, axis=())
     assert_array_equal(result, array)
+
+
+# `move_exp_nancorr` and `move_exp_nancov` take two arrays; everything else takes one.
+_MOVE_EXP_NARGS = {move_exp_nancorr: 2, move_exp_nancov: 2}
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("func", MOVE_EXP_FUNCS, ids=lambda func: func.__name__)
+def test_move_exp_dtype_preservation(func, dtype):
+    # A scalar `alpha` is broadcast into an array before it reaches the gufunc, and
+    # that array is a real operand for loop selection: while it was float64 it
+    # selected the float64 loop and every function here returned float64 for
+    # float32 input, unlike the windowed functions.
+    array = np.random.default_rng(0).standard_normal(20).astype(dtype)
+    n = _MOVE_EXP_NARGS.get(func, 1)
+
+    assert func(*[array] * n, alpha=0.2).dtype == dtype
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("func", MOVE_EXP_FUNCS, ids=lambda func: func.__name__)
+def test_move_exp_dtype_is_set_by_the_data_not_the_decay_parameters(func, dtype):
+    # The docstring presents a scalar `alpha` and a per-observation `alpha` as the
+    # same operation, so they must agree on the output dtype. `np.full`, `np.linspace`
+    # and `np.float64(...)` all produce float64, and each is an operand for loop
+    # selection, so without the cast in `ndmoveexp.__call__` these return float64 for
+    # float32 input while the scalar form returns float32.
+    # 2-D data so that `alpha_nd` is genuinely ND: with 1-D data it would be
+    # identical to `alpha_1d` and the per-element `alpha` path would go untested.
+    array = np.random.default_rng(0).standard_normal((4, 20)).astype(dtype)
+    args = [array] * _MOVE_EXP_NARGS.get(func, 1)
+    alpha_1d = np.full(20, 0.2)
+    alpha_nd = np.full(array.shape, 0.2)
+
+    assert func(*args, alpha=alpha_1d).dtype == dtype
+    assert func(*args, alpha=alpha_nd).dtype == dtype
+    assert func(*args, alpha=0.2, min_weight=np.float64(0.5)).dtype == dtype
+    assert func(*args, alpha=alpha_1d.astype(np.float32)).dtype == dtype
