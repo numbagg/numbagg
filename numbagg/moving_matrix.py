@@ -35,8 +35,10 @@ __all__ = [
 # first loss and the offset fixes the second. #759 applies the same remedy to the
 # static `nancovmatrix` / `nancorrmatrix`, which share this rationale. #758 proposed
 # it for the non-matrix moving functions and was closed unmerged, so `move_var`,
-# `move_std`, `move_cov` and `move_corr` still accumulate in the input dtype with no
-# offset — the difference between the two modules is that, not a partial rollout.
+# `move_std`, `move_cov` and `move_corr` still compute their products in the input
+# dtype and subtract no offset — their scalar accumulators are float64 either way,
+# since numba types `asum = 0.0` as float64. The difference between the two modules
+# is that, not a partial rollout.
 #
 # Read that close before changing the offset here, because its objection was to a
 # fixed prefix anchor as such, which is what this module uses: it "is not correct
@@ -44,8 +46,14 @@ __all__ = [
 # observations that should not affect an early result, and after a level change it
 # stays badly scaled once the original values have left the window. The first half is
 # answered below — the prefix here is bounded by `min_count`, not `window`. The
-# second is not; it is the cost the paragraph on scanned outliers accepts. So the
-# anchor below is an open design question, not a settled choice.
+# second is not, and the paragraph on scanned outliers does not bound it: that one
+# has the anchor far larger than the series, while a level change leaves it far
+# smaller, so the crossover quoted there never applies. On standard-normal data
+# stepped by 1e8 at row 20, `move_covmatrix(a, window=10, min_count=10)[40]` — a
+# window lying entirely past the step — returns `[0, 2.22, 2.22, 6.67]` against an
+# exact `[0.70, -0.39, -0.39, 1.64]`, the near-zero anchor leaving the offset with
+# nothing to do. So the anchor below is an open design question, not a settled
+# choice.
 #
 # Which constant to subtract is a real choice, because the accumulators run for the
 # whole series and every term carries `(value - offset)**2` — the offset sets the
