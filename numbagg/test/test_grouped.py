@@ -231,7 +231,19 @@ def groupby_mean_pandas(values, group):
 )
 def test_groupby_mean_types(dtype):
     rs = np.random.RandomState(0)
-    values = rs.rand(2000).astype(dtype)
+    if dtype == np.bool_:
+        values = rs.choice([True, False], size=2000)
+    elif np.issubdtype(dtype, np.integer):
+        # `rand` returns values in `[0, 1)`, which truncate to all-zero on the
+        # way to an integer dtype.
+        values = rs.randint(-100, 100, size=2000).astype(dtype)
+    else:
+        values = rs.rand(2000).astype(dtype)
+    assert values.dtype == dtype
+    # Guard against the values degenerating to a single repeated value: every
+    # group's mean would then be that value, and the comparison below would
+    # hold whatever the kernel returned.
+    assert len(np.unique(values)) > 1
     group = rs.choice([np.nan, 1, 2, 3, 4, 5], size=values.shape)
     expected = pd.Series(values).groupby(group).mean()
     result = groupby_mean_pandas(values, group)
@@ -285,7 +297,6 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     assert_almost_equal(result, values)
 
     values2d = np.arange(25.0).reshape(5, 5)
-    labels = np.arange(5)
 
     with pytest.raises(ValueError) as excinfo:
         result = func(values2d, labels)
@@ -406,20 +417,20 @@ def test_numeric_int_nanprod():
     assert_almost_equal(result, np.array([-6, 20, 6]))
 
 
-@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+@pytest.mark.parametrize("labels_dtype", [np.int8, np.int16, np.int32, np.int64])
 @pytest.mark.parametrize("func", [group_nanmean, group_nansum])
 @pytest.mark.parametrize("n", [127, 128, 255, 256, 1000])
-def test_int8(n, func, dtype):
+def test_int8(n, func, labels_dtype):
     data = np.random.randn(n)
     assert_almost_equal(
         getattr(np, func.__name__.removeprefix("group_nan"))(data),
-        func(data, np.zeros((n,), dtype=dtype))[0],
+        func(data, np.zeros((n,), dtype=labels_dtype))[0],
     )
 
 
-@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+@pytest.mark.parametrize("labels_dtype", [np.int8, np.int16, np.int32, np.int64])
 @pytest.mark.parametrize("func", [group_nanmean, group_nansum])
-def test_int8_again(dtype, func):
+def test_int8_again(labels_dtype, func):
     array = np.array(
         [
             [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
@@ -429,16 +440,17 @@ def test_int8_again(dtype, func):
             [8, 8, 8, 8, 8, 9, 9, 9, 9, 10],
         ],
     )
-    by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=dtype)
+    by = np.array([0, 0, 0, 1, 1, 2, 2, 3, 3, 3], dtype=labels_dtype)
 
     expected = getattr(
         pd.DataFrame(array.T).groupby(by), func.__name__.removeprefix("group_nan")
     )().T
-    if func.supports_ints:
-        expected = expected.astype(dtype)
-
     # https://github.com/numbagg/numbagg/issues/213
-    assert_almost_equal(func(array, by, axis=-1), expected)
+    result = func(array, by, axis=-1)
+    if func.supports_ints:
+        # The result takes the dtype of the values, not of the labels.
+        assert result.dtype == array.dtype
+    assert_almost_equal(result, expected)
     # Amazingly it can also be more incorrect with another run!
     assert_almost_equal(func(array, by, axis=-1), expected)
 
