@@ -297,8 +297,6 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     assert_almost_equal(result, values)
 
     values2d = np.arange(25.0).reshape(5, 5)
-    labels = np.arange(5, dtype=labels_type)
-    assert labels.dtype == labels_type
 
     with pytest.raises(ValueError) as excinfo:
         result = func(values2d, labels)
@@ -447,12 +445,12 @@ def test_int8_again(labels_dtype, func):
     expected = getattr(
         pd.DataFrame(array.T).groupby(by), func.__name__.removeprefix("group_nan")
     )().T
+    # https://github.com/numbagg/numbagg/issues/213
+    result = func(array, by, axis=-1)
     if func.supports_ints:
         # The result takes the dtype of the values, not of the labels.
-        expected = expected.astype(array.dtype)
-
-    # https://github.com/numbagg/numbagg/issues/213
-    assert_almost_equal(func(array, by, axis=-1), expected)
+        assert result.dtype == array.dtype
+    assert_almost_equal(result, expected)
     # Amazingly it can also be more incorrect with another run!
     assert_almost_equal(func(array, by, axis=-1), expected)
 
