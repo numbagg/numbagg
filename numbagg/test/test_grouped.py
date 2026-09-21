@@ -134,16 +134,16 @@ def test_group_pandas_comparison(values, labels, numbagg_func, pandas_func, _, d
             pytest.skip(f"{numbagg_func} doesn't support ints")
         if numbagg_func == group_nanprod:
             pytest.skip("group_nanprod result too large")
-        result = numbagg_func(values, labels)
-        assert_almost_equal(result, expected.values.astype(np.int32))
     elif dtype == np.bool_:
         if not numbagg_func.supports_bool:
             pytest.skip(f"{numbagg_func} doesn't support bools")
-        result = numbagg_func(values, labels)
-        assert_almost_equal(result, expected.values)
-    else:
-        result = numbagg_func(values, labels)
-        assert_almost_equal(result, expected.values)
+
+    result = numbagg_func(values, labels)
+    if dtype in [np.int32, np.int64]:
+        # A function which supports ints carries the values dtype through to the
+        # result, so the `int32` parametrization has to come back as `int32`.
+        assert result.dtype == dtype
+    assert_almost_equal(result, expected.values)
 
 
 @pytest.mark.parametrize(
