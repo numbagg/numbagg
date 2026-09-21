@@ -35,7 +35,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
       - run: uv sync
-        shell: bash
 
       - uses: max-sixty/tend/claude@0.2.14
         with:
