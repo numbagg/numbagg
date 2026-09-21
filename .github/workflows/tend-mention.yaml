@@ -334,7 +334,6 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
       - run: uv sync
-        shell: bash
 
       - name: Compute queue delay
         id: delay
