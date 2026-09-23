@@ -1,4 +1,6 @@
 bot_name: numbagg-bot
+harness: codex
+model: gpt-6-sol
 # The agent runs everything through `uv run` (CLAUDE.md); setup-uv is where it
 # gets uv. The agent now works in the job's own checkout and home, so `uv sync`
 # runs here: it warms the `.venv` the agent's `uv run` reuses, leaving only what
