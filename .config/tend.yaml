@@ -10,6 +10,8 @@ setup:
 - uses: astral-sh/setup-uv@v7
 - run: uv sync
 workflows:
+  codex-auth-refresh:
+    enabled: false
   ci-fix:
     watched_workflows:
     - Test
