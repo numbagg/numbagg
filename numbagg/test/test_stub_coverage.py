@@ -15,7 +15,7 @@ import numbagg
 
 _PACKAGE = Path(numbagg.__file__).parent
 
-# `grouped.py` has no stub; see CLAUDE.md.
+# `grouped.py` has no stub; see AGENTS.md.
 _UNSTUBBED_MODULES = {"grouped"}
 
 

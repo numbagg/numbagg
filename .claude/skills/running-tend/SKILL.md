@@ -5,7 +5,7 @@ description: numbagg-specific guidance for tend CI workflows. Adds a standing ex
 
 # Running Tend — numbagg
 
-Tend-specific CI guidance. Project conventions are in CLAUDE.md.
+Tend-specific CI guidance. Project conventions are in AGENTS.md.
 
 ## Filing issues in other repos
 
