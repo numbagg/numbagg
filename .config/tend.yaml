@@ -1,5 +1,5 @@
 bot_name: numbagg-bot
-# The agent runs everything through `uv run` (CLAUDE.md); setup-uv is where it
+# The agent runs everything through `uv run` (AGENTS.md); setup-uv is where it
 # gets uv. The agent now works in the job's own checkout and home, so `uv sync`
 # runs here: it warms the `.venv` the agent's `uv run` reuses, leaving only what
 # a PR itself changes to sync in-session. `uv sync` needs setup-uv ahead of it,
