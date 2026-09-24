@@ -11,7 +11,7 @@ Numbagg provides fast N-dimensional aggregation functions using Numba and NumPy'
 ### Core Functions
 The library provides aggregation functions (like `nansum`, `nanmean`), moving window functions (like `move_mean`, `move_std`), exponential moving functions, and grouping operations. All functions work on N-dimensional arrays with arbitrary axes.
 
-Public functions in `funcs.py`, `moving.py`, `moving_exp.py`, and `moving_matrix.py` are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub, and `numbagg/test/test_stub_coverage.py` holds every other name `numbagg/__init__.py` re-exports to having one.
+Public functions in `funcs.py`, `moving.py`, `moving_exp.py`, and `moving_matrix.py` are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub, and `numbagg/test/test_stub_coverage.py` holds every other name `numbagg/__init__.py` re-exports to having one, with a return annotation. The aggregations in `funcs.pyi` are the exception: they stay unannotated pending a design decision, and the test's `_PENDING_RETURN_TYPES` set names them. That set has to match the unannotated declarations exactly, so annotating one of them means dropping it from the set in the same change.
 
 ## Running Commands
 
