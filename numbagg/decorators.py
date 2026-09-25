@@ -601,6 +601,18 @@ class groupndreduce(NumbaBase):
         if num_labels is None:
             # `int` so that a label at the dtype's maximum doesn't overflow the add.
             num_labels = int(np.max(labels)) + 1
+        else:
+            # The grouped functions index `out[label]` directly, and numba's nopython
+            # mode adds no bounds check, so a label at or past `num_labels` writes
+            # past the end of the result array. That corrupts unrelated memory and
+            # still returns, so the caller sees a plausible-looking wrong answer
+            # rather than an error. Pay one pass over `labels` to refuse it instead.
+            max_label = int(np.max(labels)) if labels.size else -1
+            if max_label >= num_labels:
+                raise ValueError(
+                    f"num_labels ({num_labels}) must be greater than the largest "
+                    f"label ({max_label})"
+                )
 
         target = self.target
 
