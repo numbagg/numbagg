@@ -11,6 +11,12 @@ updates:
       interval: daily
     commit-message:
       prefix: "chore: "
+    ignore:
+      # The `max-sixty/tend/*` pins live in generated workflow files, and the
+      # generator changes the workflow bodies alongside the action. Bumping the
+      # pin on its own pairs new action code with old bodies, so tend-nightly's
+      # regeneration PR is the only supported upgrade path.
+      - dependency-name: "max-sixty/tend"
   - package-ecosystem: uv
     directory: "/"
     schedule:
