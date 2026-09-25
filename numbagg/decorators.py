@@ -981,12 +981,7 @@ class ndreduce(NumbaBase):
         )
         return vectorize(self.transformed_func)
 
-    def __call__(
-        self,
-        arr: NDArray[Any],
-        *args,
-        axis: AxisLike | None = None,
-    ):
+    def __call__(self, arr: NDArray[Any], *args, axis: AxisLike | None = None):
         # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other

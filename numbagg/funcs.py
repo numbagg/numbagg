@@ -353,10 +353,7 @@ count = nancount
 
 
 def nanmedian(
-    a: NDArray[np.float64],
-    *,
-    axis: AxisLike | None = None,
-    **kwargs,
+    a: NDArray[np.float64], *, axis: AxisLike | None = None, **kwargs
 ) -> np.ndarray:
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 
