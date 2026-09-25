@@ -669,3 +669,18 @@ def test_num_labels_with_only_unlabelled_values(func):
 
     assert func(values, labels, num_labels=0).shape == (0,)
     assert_almost_equal(func(values, labels, num_labels=2), np.zeros(2))
+
+
+@pytest.mark.parametrize("func", GROUPED_FUNCS)
+def test_empty_labels(func):
+    """Empty input observes no group, with or without an explicit `num_labels`.
+
+    The largest label is computed once for both branches, so `num_labels=None` derives
+    zero groups here rather than raising numpy's zero-size reduction error.
+    """
+    values = np.array([])
+    labels = np.array([], dtype=np.int64)
+
+    assert func(values, labels).shape == (0,)
+    assert func(values, labels, num_labels=0).shape == (0,)
+    assert func(values, labels, num_labels=3).shape == (3,)
