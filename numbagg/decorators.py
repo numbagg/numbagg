@@ -899,7 +899,7 @@ class ndreduce(NumbaBase):
     Functions should have signatures of the form output_type(input_type), where
     input_type and output_type are numba dtypes. This decorator rewrites them
     to accept input arrays of arbitrary dimensionality, with an additional
-    optional `axis`, which accepts integers or tuples of integers (defaulting
+    optional `axis`, which accepts any spelling `normalize_axis` does (defaulting
     to `axis=None` for all axes).
 
     For example, to write a simplified version of `np.sum(arr, axis=None)`::
@@ -992,7 +992,7 @@ class ndreduce(NumbaBase):
         return vectorize(self.transformed_func)
 
     def __call__(
-        self, arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None
+        self, arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None
     ):
         # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
@@ -1011,10 +1011,8 @@ class ndreduce(NumbaBase):
                 # see: https://github.com/numba/numba/issues/1087
                 # f = self._jit_func
                 f = self.gufunc(arr.ndim, target=self.target)
-            elif isinstance(axis, int):
-                arr = np.moveaxis(arr, axis, -1)
-                f = self.gufunc(1, target=self.target)
             else:
+                axis = normalize_axis(axis)
                 arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
                 f = self.gufunc(len(axis), target=self.target)
             return f(arr, *args)
