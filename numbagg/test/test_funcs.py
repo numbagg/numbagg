@@ -22,6 +22,7 @@ from numbagg import (
     nancount,
     nanmax,
     nanmean,
+    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
@@ -336,3 +337,47 @@ class TestAllnanAnynanEdgeCases:
 
         assert_array_equal(result, np.array([False, False, False]))
         assert_array_equal(result, np.any(np.isnan(arr), axis=1))
+
+
+@pytest.mark.parametrize(
+    "numbagg_func,comp_func",
+    [
+        (nansum, np.nansum),
+        (nanmean, np.nanmean),
+        (nanmax, np.nanmax),
+        (nanmin, np.nanmin),
+        (nanmedian, np.nanmedian),
+        (nanstd, partial(np.nanstd, ddof=1)),
+        (nanvar, partial(np.nanvar, ddof=1)),
+        (nancount, slow_count),
+    ],
+)
+# The NaN below sits in a length-1 slice, so numpy's reference implementations warn on
+# the degenerate reduction. numbagg returns the same values without warning.
+@pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0 for slice")
+@pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
+@pytest.mark.filterwarnings("ignore:Mean of empty slice")
+def test_aggregation_empty_tuple_axis(numbagg_func, comp_func):
+    """`axis=()` reduces nothing, matching numpy rather than reducing everything.
+
+    The aggregations used to hand an empty `axis` to `move_axes`, which flattened the
+    array instead of adding the length-1 axis numpy reduces over — so `nansum(a,
+    axis=())` returned the grand total rather than an array shaped like `a`. The
+    moving functions have always treated `axis=()` as a no-op (`test_moving.py`),
+    and `nanmax`/`nanmin` take a different code path that was already correct.
+    """
+    arr = np.arange(24).reshape(2, 3, 4).astype(np.float64)
+    arr[0, 1, 2] = np.nan
+
+    assert_allclose(numbagg_func(arr, axis=()), comp_func(arr, axis=()))
+
+
+@pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
+@pytest.mark.filterwarnings("ignore:All-NaN slice encountered")
+def test_nanquantile_empty_tuple_axis(quantiles):
+    arr = np.arange(24).reshape(2, 3, 4).astype(np.float64)
+    arr[0, 1, 2] = np.nan
+
+    assert_allclose(
+        nanquantile(arr, quantiles, axis=()), np.nanquantile(arr, quantiles, axis=())
+    )
