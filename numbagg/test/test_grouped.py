@@ -308,6 +308,12 @@ def test_group_func_axis_1d_labels(func, _, npfunc, labels_type):
     result = func(values2d, labels, axis=(1,))
     assert_almost_equal(result, values2d)
 
+    result = func(values2d, labels, axis=np.int64(1))
+    assert_almost_equal(result, values2d)
+
+    result = func(values2d, labels, axis=[1])
+    assert_almost_equal(result, values2d)
+
     result = func(values2d, labels, axis=0)
     assert_almost_equal(result, values2d.T)
 

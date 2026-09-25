@@ -488,13 +488,14 @@ class groupndreduce(NumbaBase):
     This decorator supports three axis modes that determine how labels are shaped
     relative to values:
 
-    1. ``axis=int``: Labels are 1D with length ``values.shape[axis]``.
+    1. ``axis=int`` (a single axis in any spelling numpy accepts, such as
+       ``np.int64(-1)``): Labels are 1D with length ``values.shape[axis]``.
        The specified axis is reduced, other dimensions are preserved.
        This is the most common case, used by xarray/flox.
 
-    2. ``axis=tuple``: Labels have shape matching the specified axes.
-       E.g., ``axis=(1, 2)`` with values ``(time, lat, lon)`` requires
-       labels of shape ``(lat, lon)``. Multiple axes are reduced together.
+    2. ``axis=tuple`` (or any other sequence of ints): Labels have shape matching
+       the specified axes. E.g., ``axis=(1, 2)`` with values ``(time, lat, lon)``
+       requires labels of shape ``(lat, lon)``. Multiple axes are reduced together.
 
     3. ``axis=None``: Labels must have the same shape as values.
        The entire array is treated as flat for grouping purposes.
@@ -557,7 +558,7 @@ class groupndreduce(NumbaBase):
         *,
         ddof: int = 1,
         num_labels: int | None = None,
-        axis: int | tuple[int, ...] | None = None,
+        axis: int | Sequence[int] | None = None,
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
@@ -625,20 +626,8 @@ class groupndreduce(NumbaBase):
                 labels_dtype=labels.dtype,
                 target=target,
             )
-        elif isinstance(axis, int):
-            if labels.shape != (values.shape[axis],):
-                raise ValueError(
-                    "values must have same shape along axis as labels: "
-                    f"{(values.shape[axis],)} vs {labels.shape}"
-                )
-            values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(
-                core_ndim=1,
-                values_dtype=values_dtype,
-                labels_dtype=labels.dtype,
-                target=target,
-            )
         else:
+            axis = normalize_axis(axis)
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
                 raise ValueError(
