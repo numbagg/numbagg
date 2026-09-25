@@ -236,7 +236,9 @@ class ndaggregate(NumbaBaseSimple):
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
-        elif not isinstance(axis, tuple):
+        elif isinstance(axis, Iterable):
+            axis = tuple(axis)
+        else:
             axis = (axis,)
 
         # Optimize axis order based on memory layout for better performance
@@ -842,7 +844,9 @@ class ndquantile(NumbaBase):
 
         if axis is None:
             axis = tuple(range(a.ndim))
-        elif not isinstance(axis, tuple):
+        elif isinstance(axis, Iterable):
+            axis = tuple(axis)
+        else:
             axis = (axis,)
 
         a = move_axes(a, axis)

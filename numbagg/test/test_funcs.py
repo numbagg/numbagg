@@ -225,7 +225,7 @@ def test_numerical_results_identical(numbagg_func, comp_func, decimal):
                 assert_equal(da, dd, err_msg % (da, dd))
 
 
-@pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2)])
+@pytest.mark.parametrize("axis", [None, -1, 1, (1, 2), (0,), (-1, -2), [1, 2], [0]])
 @pytest.mark.parametrize("quantiles", [0.5, [0.25, 0.75]])
 def test_nanquantile(axis, quantiles):
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
@@ -234,6 +234,15 @@ def test_nanquantile(axis, quantiles):
     expected = np.nanquantile(arr, quantiles, axis=axis)
 
     assert_array_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("func", [nancount, nansum, nanmean, nanvar, nanstd])
+@pytest.mark.parametrize("axis", [[1, 2], [0], [-1, -2]])
+def test_aggregation_list_axis(func, axis):
+    # dask passes `axis` as a list, which numpy also accepts.
+    arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
+
+    assert_array_equal(func(arr, axis=axis), func(arr, axis=tuple(axis)))
 
 
 @pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
