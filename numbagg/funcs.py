@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 from numba import bool_, float32, float64, int32, int64, njit
 from numpy.typing import NDArray
@@ -353,7 +355,7 @@ count = nancount
 
 
 def nanmedian(
-    a: NDArray[np.float64], *, axis: int | tuple[int, ...] | None = None, **kwargs
+    a: NDArray[np.float64], *, axis: int | Sequence[int] | None = None, **kwargs
 ) -> np.ndarray:
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 
