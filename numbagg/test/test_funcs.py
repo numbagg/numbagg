@@ -237,7 +237,10 @@ def test_nanquantile(axis, quantiles):
     assert_array_almost_equal(result, expected)
 
 
-@pytest.mark.parametrize("func", [nancount, nansum, nanmean, nanvar, nanstd])
+@pytest.mark.parametrize(
+    "func",
+    [nancount, nansum, nanmean, nanvar, nanstd, nanmax, nanmin, nanargmax, nanargmin],
+)
 @pytest.mark.parametrize("axis", [[1, 2], [0], [-1, -2]])
 def test_aggregation_list_axis(func, axis):
     # dask passes `axis` as a list, which numpy also accepts.
@@ -246,7 +249,21 @@ def test_aggregation_list_axis(func, axis):
     assert_array_equal(func(arr, axis=axis), func(arr, axis=tuple(axis)))
 
 
-@pytest.mark.parametrize("func", [nancount, nansum, nanmean, nanvar, nanstd, nanmedian])
+@pytest.mark.parametrize(
+    "func",
+    [
+        nancount,
+        nansum,
+        nanmean,
+        nanvar,
+        nanstd,
+        nanmedian,
+        nanmax,
+        nanmin,
+        nanargmax,
+        nanargmin,
+    ],
+)
 @pytest.mark.parametrize(
     ("axis", "equivalent"),
     [

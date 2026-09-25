@@ -1,5 +1,6 @@
 import operator
-from typing import Any, Literal, TypeAlias, TypeVar
+from collections.abc import Sequence
+from typing import Any, Literal, SupportsIndex, TypeAlias, TypeVar
 
 import numpy as np
 from numba.core.types import Type
@@ -14,6 +15,8 @@ IntArray: TypeAlias = NDArray[np.int64] | NDArray[np.int32]
 FloatArray: TypeAlias = NDArray[np.float64] | NDArray[np.float32]
 NumericArray: TypeAlias = IntArray | FloatArray
 GenericArray: TypeAlias = NumericArray | NDArray[np.bool_]
+# numpy's own declaration of `axis`; `normalize_axis` turns any of them into a tuple.
+AxisLike: TypeAlias = SupportsIndex | Sequence[SupportsIndex]
 
 # Implementation-side equivalents of the aliases above, spelled as constrained
 # TypeVars rather than `bound=<union>`: ty reports false positives on any
