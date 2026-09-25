@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import SupportsIndex
-
 import numpy as np
 from numba import bool_, float32, float64, int32, int64, njit
 from numpy.typing import NDArray
@@ -16,7 +13,7 @@ from numbagg.decorators import (
     ndreduce,
 )
 
-from .utils import FloatArrayT, NumericArray, NumericArrayT
+from .utils import AxisLike, FloatArrayT, NumericArray, NumericArrayT
 
 
 # Why `nancorrmatrix` & `nancovmatrix` offset each variable before accumulating:
@@ -358,7 +355,7 @@ count = nancount
 def nanmedian(
     a: NDArray[np.float64],
     *,
-    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+    axis: AxisLike | None = None,
     **kwargs,
 ) -> np.ndarray:
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)

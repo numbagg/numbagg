@@ -9,9 +9,9 @@ import os
 import sys
 import threading
 import warnings
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable
 from functools import cache, cached_property
-from typing import Any, Literal, SupportsIndex, TypeVar, cast
+from typing import Any, Literal, TypeVar, cast
 
 import numba
 import numpy as np
@@ -20,6 +20,7 @@ from numba.np.ufunc.gufunc import GUFunc
 from numpy.typing import NDArray
 
 from numbagg.utils import (
+    AxisLike,
     FloatArray,
     NumbaTypes,
     NumericArrayT,
@@ -233,7 +234,7 @@ class ndaggregate(NumbaBaseSimple):
         self,
         *arrays: FloatArray,
         ddof: int = 1,
-        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+        axis: AxisLike | None = None,
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
@@ -558,7 +559,7 @@ class groupndreduce(NumbaBase):
         *,
         ddof: int = 1,
         num_labels: int | None = None,
-        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+        axis: AxisLike | None = None,
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
@@ -813,7 +814,7 @@ class ndquantile(NumbaBase):
         self,
         a: NDArray[np.float64],
         quantiles: float | Iterable[float],
-        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+        axis: AxisLike | None = None,
         **kwargs,
     ) -> NDArray[np.float64]:
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
@@ -984,7 +985,7 @@ class ndreduce(NumbaBase):
         self,
         arr: NDArray[Any],
         *args,
-        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+        axis: AxisLike | None = None,
     ):
         # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
