@@ -11,7 +11,7 @@ import threading
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from functools import cache, cached_property
-from typing import Any, Literal, TypeVar, cast
+from typing import Any, Literal, SupportsIndex, TypeVar, cast
 
 import numba
 import numpy as np
@@ -233,7 +233,7 @@ class ndaggregate(NumbaBaseSimple):
         self,
         *arrays: FloatArray,
         ddof: int = 1,
-        axis: int | Sequence[int] | None = None,
+        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
@@ -558,7 +558,7 @@ class groupndreduce(NumbaBase):
         *,
         ddof: int = 1,
         num_labels: int | None = None,
-        axis: int | Sequence[int] | None = None,
+        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
@@ -813,7 +813,7 @@ class ndquantile(NumbaBase):
         self,
         a: NDArray[np.float64],
         quantiles: float | Iterable[float],
-        axis: int | Sequence[int] | None = None,
+        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
         **kwargs,
     ) -> NDArray[np.float64]:
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
@@ -981,7 +981,10 @@ class ndreduce(NumbaBase):
         return vectorize(self.transformed_func)
 
     def __call__(
-        self, arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None
+        self,
+        arr: NDArray[Any],
+        *args,
+        axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     ):
         # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it

@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Sequence
-from typing import Any, TypeVar
+from typing import Any, SupportsIndex, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -8,17 +8,55 @@ from .utils import FloatArray, NumericArray
 
 _T = TypeVar("_T", bound=NumericArray)
 
-def allnan(arrays, /, *, axis: int | Sequence[int] | None = None): ...
-def anynan(arrays, /, *, axis: int | Sequence[int] | None = None): ...
-def nancount(arrays, /, *, axis: int | Sequence[int] | None = None): ...
-def nansum(arrays, /, *, axis: int | Sequence[int] | None = None): ...
-def nanmean(arrays, /, *, axis: int | Sequence[int] | None = None): ...
-def nanvar(arrays, /, *, ddof: int = 1, axis: int | Sequence[int] | None = None): ...
-def nanstd(arrays, /, *, ddof: int = 1, axis: int | Sequence[int] | None = None): ...
-def nanargmax(arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None): ...
-def nanargmin(arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None): ...
-def nanmax(arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None): ...
-def nanmin(arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None): ...
+def allnan(
+    arrays, /, *, axis: SupportsIndex | Sequence[SupportsIndex] | None = None
+): ...
+def anynan(
+    arrays, /, *, axis: SupportsIndex | Sequence[SupportsIndex] | None = None
+): ...
+def nancount(
+    arrays, /, *, axis: SupportsIndex | Sequence[SupportsIndex] | None = None
+): ...
+def nansum(
+    arrays, /, *, axis: SupportsIndex | Sequence[SupportsIndex] | None = None
+): ...
+def nanmean(
+    arrays, /, *, axis: SupportsIndex | Sequence[SupportsIndex] | None = None
+): ...
+def nanvar(
+    arrays,
+    /,
+    *,
+    ddof: int = 1,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
+def nanstd(
+    arrays,
+    /,
+    *,
+    ddof: int = 1,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
+def nanargmax(
+    arr: NDArray[Any],
+    *args,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
+def nanargmin(
+    arr: NDArray[Any],
+    *args,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
+def nanmax(
+    arr: NDArray[Any],
+    *args,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
+def nanmin(
+    arr: NDArray[Any],
+    *args,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+): ...
 
 # `**kwargs` reaches the gufunc for these two as well, so `out=` fixes the result
 # dtype: `nanmedian(a, axis=-1, out=<int64 array>, casting="unsafe")` gives back int64,
@@ -29,11 +67,14 @@ def nanmin(arr: NDArray[Any], *args, axis: int | Sequence[int] | None = None): .
 def nanquantile(
     a: NDArray[np.float64],
     quantiles: float | Iterable[float],
-    axis: int | Sequence[int] | None = None,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
     **kwargs,
 ) -> np.ndarray: ...
 def nanmedian(
-    a: NDArray[np.float64], *, axis: int | Sequence[int] | None = None, **kwargs
+    a: NDArray[np.float64],
+    *,
+    axis: SupportsIndex | Sequence[SupportsIndex] | None = None,
+    **kwargs,
 ) -> np.ndarray: ...
 def bfill(
     arr: _T,
