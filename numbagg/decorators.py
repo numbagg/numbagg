@@ -9,7 +9,7 @@ import os
 import sys
 import threading
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from functools import cache, cached_property
 from typing import Any, Literal, TypeVar, cast
 
@@ -25,6 +25,7 @@ from numbagg.utils import (
     NumericArrayT,
     Targets,
     move_axes,
+    normalize_axis,
 )
 
 from .transform import rewrite_ndreduce
@@ -232,14 +233,12 @@ class ndaggregate(NumbaBaseSimple):
         self,
         *arrays: FloatArray,
         ddof: int = 1,
-        axis: int | tuple[int, ...] | None = None,
+        axis: int | Sequence[int] | None = None,
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
-        elif isinstance(axis, Iterable):
-            axis = tuple(axis)
         else:
-            axis = (axis,)
+            axis = normalize_axis(axis)
 
         # Optimize axis order based on memory layout for better performance
         axis = self._optimize_axis_order(arrays[0], axis)
@@ -825,7 +824,7 @@ class ndquantile(NumbaBase):
         self,
         a: NDArray[np.float64],
         quantiles: float | Iterable[float],
-        axis: int | tuple[int, ...] | None = None,
+        axis: int | Sequence[int] | None = None,
         **kwargs,
     ) -> NDArray[np.float64]:
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
@@ -844,10 +843,8 @@ class ndquantile(NumbaBase):
 
         if axis is None:
             axis = tuple(range(a.ndim))
-        elif isinstance(axis, Iterable):
-            axis = tuple(axis)
         else:
-            axis = (axis,)
+            axis = normalize_axis(axis)
 
         a = move_axes(a, axis)
 

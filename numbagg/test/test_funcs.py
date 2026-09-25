@@ -22,6 +22,7 @@ from numbagg import (
     nancount,
     nanmax,
     nanmean,
+    nanmedian,
     nanmin,
     nanquantile,
     nanstd,
@@ -243,6 +244,25 @@ def test_aggregation_list_axis(func, axis):
     arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
 
     assert_array_equal(func(arr, axis=axis), func(arr, axis=tuple(axis)))
+
+
+@pytest.mark.parametrize("func", [nancount, nansum, nanmean, nanvar, nanstd, nanmedian])
+@pytest.mark.parametrize(
+    ("axis", "equivalent"),
+    [
+        (np.int64(1), 1),
+        (np.array(1), 1),
+        (range(1, 3), (1, 2)),
+        (np.array([1, 2]), (1, 2)),
+    ],
+    ids=["np-integer", "0d-array", "range", "1d-array"],
+)
+def test_axis_spellings(func, axis, equivalent):
+    # numpy takes `SupportsIndex | Sequence[SupportsIndex]`, so a numpy integer or a
+    # 0-d array is a single axis, while a range or a 1-d array is a set of them.
+    arr = np.arange(60).reshape(3, 4, 5).astype(np.float64)
+
+    assert_array_equal(func(arr, axis=axis), func(arr, axis=equivalent))
 
 
 @pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
