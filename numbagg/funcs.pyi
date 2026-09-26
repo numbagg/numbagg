@@ -39,13 +39,13 @@ def bfill(
     arr: _T,
     *,
     limit: int | None = None,
-    axis: int = -1,
+    axis: AxisLike = -1,
 ) -> _T: ...
 def ffill(
     arr: _T,
     *,
     limit: int | None = None,
-    axis: int = -1,
+    axis: AxisLike = -1,
 ) -> _T: ...
 
 # `(..., vars, obs) -> (..., vars, vars)`: the trailing `obs` axis is replaced by a
