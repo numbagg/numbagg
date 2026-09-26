@@ -61,10 +61,10 @@ def test_fill_pandas_comp(func, array, limit):
     ids=["np-integer", "0d-array", "tuple", "list", "range", "1d-array"],
 )
 def test_fill_axis_spellings(func, axis):
-    # `ffill`/`bfill` took a bare integer only: every sequence spelling — including
-    # the length-1 tuple the moving functions have accepted since #783 — reached
-    # `arr.shape[axis]` and raised `TypeError: tuple indices must be integers or
-    # slices, not tuple`.
+    # `ffill`/`bfill` unpacked nothing, so a scalar axis worked but every sequence
+    # spelling — including the length-1 tuple the moving functions have accepted
+    # since #783 — reached `arr.shape[axis]` and raised `TypeError: tuple indices
+    # must be integers or slices, not tuple`.
     array = np.arange(12.0).reshape(3, 4)
     array[1, 2] = np.nan
 
