@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import re
+from importlib.metadata import metadata
 from pathlib import Path
 
 import numpy as np
@@ -52,3 +53,17 @@ def test_readme_has_python_blocks():
     # Guards the parametrization above: a regex that stops matching would
     # otherwise turn every block into a silently-skipped test.
     assert len(_blocks()) >= 4
+
+
+def test_readme_python_floor_matches_metadata():
+    # The Installation section states the Python floor in prose, duplicating
+    # `requires-python`. Nothing else ties the two together, so a floor bump
+    # would leave the README — and, via `readme = "README.md"`, the PyPI page —
+    # advertising support for a version the package rejects.
+    stated = re.search(r"supports Python (\d+\.\d+) and later", README.read_text())
+    assert stated, "README no longer states a Python floor"
+    requires = metadata("numbagg")["Requires-Python"]
+    assert f">={stated.group(1)}" in requires, (
+        f"README says Python {stated.group(1)} and later, "
+        f"but requires-python is {requires}"
+    )
