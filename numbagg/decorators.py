@@ -317,26 +317,24 @@ class ndmove(NumbaBaseSimple):
         *arr: FloatArray,
         window: int,
         min_count: int | None = None,
-        axis: int | tuple[int, ...] = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> FloatArray:
         min_count = _normalize_min_count(window, min_count)
 
-        # If an empty tuple is passed, there's no reduction to do, so we return the
-        # original array.
+        # If an empty axis is passed, there's no window to move along, so we return
+        # the original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
-        if isinstance(axis, tuple):
-            if axis == ():
-                if len(arr) > 1:
-                    raise ValueError(
-                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
-                    )
-                return arr[0]
-            elif len(axis) > 1:
+        axis_tuple = normalize_axis(axis)
+        if not axis_tuple:
+            if len(arr) > 1:
                 raise ValueError(
-                    f"only one axis can be passed to {self.func}; got {axis}"
+                    "`axis` cannot be empty when passing more than one array; since we default to returning the input."
                 )
-            (axis,) = axis
+            return arr[0]
+        elif len(axis_tuple) > 1:
+            raise ValueError(f"only one axis can be passed to {self.func}; got {axis}")
+        (axis,) = axis_tuple
         if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         gufunc = self.gufunc(target=self.target)
@@ -372,24 +370,22 @@ class ndmoveexp(NumbaBaseSimple):
         *arr: FloatArray,
         alpha: float | FloatArray,
         min_weight: float = 0,
-        axis: int | tuple[int, ...] = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> FloatArray:
-        # If an empty tuple is passed, there's no reduction to do, so we return the
-        # original array.
+        # If an empty axis is passed, there's no window to move along, so we return
+        # the original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
-        if isinstance(axis, tuple):
-            if axis == ():
-                if len(arr) > 1:
-                    raise ValueError(
-                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
-                    )
-                return arr[0]
-            if len(axis) > 1:
+        axis_tuple = normalize_axis(axis)
+        if not axis_tuple:
+            if len(arr) > 1:
                 raise ValueError(
-                    f"Only one axis can be passed to {self.func}; got {axis}"
+                    "`axis` cannot be empty when passing more than one array; since we default to returning the input."
                 )
-            (axis,) = axis
+            return arr[0]
+        if len(axis_tuple) > 1:
+            raise ValueError(f"Only one axis can be passed to {self.func}; got {axis}")
+        (axis,) = axis_tuple
 
         if not isinstance(alpha, np.ndarray):
             alpha = np.broadcast_to(alpha, arr[0].shape[axis])
@@ -463,10 +459,18 @@ class ndfill(NumbaBase):
         arr: NumericArrayT,
         *,
         limit: None | int = None,
-        axis: int = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> NumericArrayT:
         """Call the dynamically compiled function."""
+        # Filling runs along a single axis, in any spelling `normalize_axis` accepts.
+        axis_tuple = normalize_axis(axis)
+        if len(axis_tuple) != 1:
+            raise ValueError(
+                f"exactly one axis can be passed to {self.func}; got {axis}"
+            )
+        (axis,) = axis_tuple
+
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:

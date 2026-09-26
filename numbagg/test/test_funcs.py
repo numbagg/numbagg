@@ -54,6 +54,34 @@ def test_fill_pandas_comp(func, array, limit):
         assert_allclose(result, expected_bottleneck)
 
 
+@pytest.mark.parametrize("func", [ffill, bfill])
+@pytest.mark.parametrize(
+    "axis",
+    [np.int64(1), np.array(1), (1,), [1], range(1, 2), np.array([1])],
+    ids=["np-integer", "0d-array", "tuple", "list", "range", "1d-array"],
+)
+def test_fill_axis_spellings(func, axis):
+    # `ffill`/`bfill` unpacked nothing, so a scalar axis worked but every sequence
+    # spelling — including the length-1 tuple the moving functions have accepted
+    # since #783 — reached `arr.shape[axis]` and raised `TypeError: tuple indices
+    # must be integers or slices, not tuple`.
+    array = np.arange(12.0).reshape(3, 4)
+    array[1, 2] = np.nan
+
+    assert_array_equal(func(array, axis=axis), func(array, axis=1))
+
+
+@pytest.mark.parametrize("func", [ffill, bfill])
+@pytest.mark.parametrize("axis", [(), (0, 1), [0, 1], range(2)])
+def test_fill_axis_not_exactly_one(func, axis):
+    # Filling is along a single axis, so anything else is an error — a stated one
+    # rather than a `TypeError` from indexing `arr.shape` with a sequence.
+    array = np.arange(12.0).reshape(3, 4)
+
+    with pytest.raises(ValueError, match="exactly one axis can be passed"):
+        func(array, axis=axis)
+
+
 @pytest.mark.parametrize(
     "func",
     AGGREGATION_FUNCS,
