@@ -7,6 +7,30 @@ Fast, flexible N-dimensional array functions written with
 [Numba](https://github.com/numba/numba) and NumPy's [generalized
 ufuncs](http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html).
 
+## Installation
+
+```bash
+pip install numbagg
+```
+
+Or with conda:
+
+```bash
+conda install -c conda-forge numbagg
+```
+
+Numbagg supports Python 3.10 and later, and depends only on NumPy and Numba.
+
+```python
+import numpy as np
+import numbagg as nb
+
+result = nb.nanmean(np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0]]), axis=-1)
+# result.shape is (2,)
+```
+
+The `nb` alias is used by the examples throughout this README.
+
 ## Why use numbagg?
 
 ### Performance
