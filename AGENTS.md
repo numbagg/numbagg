@@ -27,7 +27,7 @@ Prefix commands with `uv run` to ensure that the correct virtual environment is 
 - **Property-based tests**: Uses hypothesis for mathematical property verification (in `test_property.py`)
 - **Benchmark tests**: Performance testing with pytest-benchmark (in `test_benchmark.py`)
 - **Edge case coverage**: Extensive testing with NaN, inf, empty arrays, and various dtypes
-- **README snippets**: `test_readme.py` executes every ```` ```python ```` block in the README and checks each `# result.shape is (...)` comment, so those snippets must stay runnable with only `np` and `nb` predefined
+- **README snippets**: `test_readme.py` executes every ```` ```python ```` block in the README and checks each `# result.shape is (...)` comment, so those snippets must stay runnable with only `np` and `nb` predefined. It also pins the Installation section's "supports Python X.Y and later" sentence to `requires-python` in `pyproject.toml`, so a floor bump has to move both, and rewording that sentence means updating the regex in `test_readme_python_floor_matches_pyproject`
 
 ### Running Tests
 ```bash
