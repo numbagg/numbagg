@@ -640,3 +640,53 @@ def test_group_nanmean_bool():
     result = group_nanmean(values, labels)
     expected = np.array([2 / 3])
     assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("func", GROUPED_FUNCS)
+def test_num_labels_below_max_label_raises(func):
+    """An undersized `num_labels` is refused rather than writing past the result.
+
+    The grouped functions index `out[label]` with no bounds check, so before this was
+    validated a label at or past `num_labels` wrote into unrelated memory and the call
+    returned a silently wrong array. `group_nansum(np.arange(6.), [0, 0, 1, 1, 5, 5],
+    num_labels=2)` returned `[1., 5.]` with label 5's sum written out of bounds.
+    """
+    values = np.arange(6.0)
+    labels = np.array([0, 0, 1, 1, 5, 5])
+
+    with pytest.raises(ValueError, match="num_labels .* must be greater than"):
+        func(values, labels, num_labels=2)
+
+
+@pytest.mark.parametrize("func", [group_nansum, group_nancount])
+def test_num_labels_equal_to_max_label_plus_one_is_accepted(func):
+    """The boundary case — exactly enough room for the largest label — still works."""
+    values = np.arange(6.0)
+    labels = np.array([0, 0, 1, 1, 2, 2])
+
+    assert func(values, labels, num_labels=3).shape == (3,)
+
+
+@pytest.mark.parametrize("func", [group_nansum, group_nancount])
+def test_num_labels_with_only_unlabelled_values(func):
+    """All-negative labels observe no group, so any `num_labels` is wide enough."""
+    values = np.arange(4.0)
+    labels = np.full(4, -1)
+
+    assert func(values, labels, num_labels=0).shape == (0,)
+    assert_almost_equal(func(values, labels, num_labels=2), np.zeros(2))
+
+
+@pytest.mark.parametrize("func", GROUPED_FUNCS)
+def test_empty_labels(func):
+    """Empty input observes no group, with or without an explicit `num_labels`.
+
+    The largest label is computed once for both branches, so `num_labels=None` derives
+    zero groups here rather than raising numpy's zero-size reduction error.
+    """
+    values = np.array([])
+    labels = np.array([], dtype=np.int64)
+
+    assert func(values, labels).shape == (0,)
+    assert func(values, labels, num_labels=0).shape == (0,)
+    assert func(values, labels, num_labels=3).shape == (3,)
