@@ -13,7 +13,7 @@ from numbagg.decorators import (
     ndreduce,
 )
 
-from .utils import FloatArrayT, NumericArray, NumericArrayT
+from .utils import AxisLike, FloatArrayT, NumericArray, NumericArrayT
 
 
 # Why `nancorrmatrix` & `nancovmatrix` offset each variable before accumulating:
@@ -353,7 +353,7 @@ count = nancount
 
 
 def nanmedian(
-    a: NDArray[np.float64], *, axis: int | tuple[int, ...] | None = None, **kwargs
+    a: NDArray[np.float64], *, axis: AxisLike | None = None, **kwargs
 ) -> np.ndarray:
     return nanquantile(a, quantiles=0.5, axis=axis, **kwargs)
 

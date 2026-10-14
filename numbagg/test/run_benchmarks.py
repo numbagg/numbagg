@@ -85,9 +85,11 @@ def markdown_tables(records: list[dict]) -> tuple[str, str]:
             (func, shape, size, length, ndim)
             for (func, shape, size, length, ndim) in df.index
         ],
-        # The third part of this finds the final number in `shape` and puts bigger
-        # numbers first, so we get the biggest final axis (which favors bottleneck over
-        # numbagg but is probably a better example)
+        # `_sort_key` orders ascending on every component: function name first (split
+        # on the final `_`, so `move_exp_*` groups after the plain `move_*`), then
+        # total size, then ndim, then the final axis. So a function's rows run from
+        # its smallest array to its largest, and within one size from fewest
+        # dimensions to most.
         key=_sort_key,
     )
     df = (

@@ -19,6 +19,7 @@ import pytest
 import numbagg as nb
 
 README = Path(__file__).parents[2] / "README.md"
+PYPROJECT = Path(__file__).parents[2] / "pyproject.toml"
 
 PYTHON_BLOCK = re.compile(r"^```python\n(.*?)^```", re.M | re.S)
 SHAPE_COMMENT = re.compile(r"^# result\.shape is (\([^)]*\))", re.M)
@@ -52,3 +53,21 @@ def test_readme_has_python_blocks():
     # Guards the parametrization above: a regex that stops matching would
     # otherwise turn every block into a silently-skipped test.
     assert len(_blocks()) >= 4
+
+
+def test_readme_python_floor_matches_pyproject():
+    # The Installation section states the Python floor in prose, duplicating
+    # `requires-python`. Nothing else ties the two together, so a floor bump
+    # would leave the README — and, via `readme = "README.md"`, the PyPI page —
+    # advertising support for a version the package rejects. Read the floor from
+    # `pyproject.toml` rather than the installed distribution's metadata: that
+    # file is what a bump edits, and `numbagg/__init__.py` treats absent
+    # distribution metadata as a supported state ("Local copy or not installed").
+    stated = re.search(r"supports Python (\d+\.\d+) and later", README.read_text())
+    assert stated, "README no longer states a Python floor"
+    declared = re.search(r'^requires-python = "([^"]+)"', PYPROJECT.read_text(), re.M)
+    assert declared, "pyproject.toml no longer declares requires-python"
+    assert f">={stated.group(1)}" in declared.group(1), (
+        f"README says Python {stated.group(1)} and later, "
+        f"but requires-python is {declared.group(1)}"
+    )

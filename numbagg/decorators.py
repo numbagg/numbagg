@@ -20,11 +20,13 @@ from numba.np.ufunc.gufunc import GUFunc
 from numpy.typing import NDArray
 
 from numbagg.utils import (
+    AxisLike,
     FloatArray,
     NumbaTypes,
     NumericArrayT,
     Targets,
     move_axes,
+    normalize_axis,
 )
 
 from .transform import rewrite_ndreduce
@@ -232,12 +234,12 @@ class ndaggregate(NumbaBaseSimple):
         self,
         *arrays: FloatArray,
         ddof: int = 1,
-        axis: int | tuple[int, ...] | None = None,
+        axis: AxisLike | None = None,
     ):
         if axis is None:
             axis = tuple(range(arrays[0].ndim))
-        elif not isinstance(axis, tuple):
-            axis = (axis,)
+        else:
+            axis = normalize_axis(axis)
 
         # Optimize axis order based on memory layout for better performance
         axis = self._optimize_axis_order(arrays[0], axis)
@@ -315,26 +317,24 @@ class ndmove(NumbaBaseSimple):
         *arr: FloatArray,
         window: int,
         min_count: int | None = None,
-        axis: int | tuple[int, ...] = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> FloatArray:
         min_count = _normalize_min_count(window, min_count)
 
-        # If an empty tuple is passed, there's no reduction to do, so we return the
-        # original array.
+        # If an empty axis is passed, there's no window to move along, so we return
+        # the original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
-        if isinstance(axis, tuple):
-            if axis == ():
-                if len(arr) > 1:
-                    raise ValueError(
-                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
-                    )
-                return arr[0]
-            elif len(axis) > 1:
+        axis_tuple = normalize_axis(axis)
+        if not axis_tuple:
+            if len(arr) > 1:
                 raise ValueError(
-                    f"only one axis can be passed to {self.func}; got {axis}"
+                    "`axis` cannot be empty when passing more than one array; since we default to returning the input."
                 )
-            (axis,) = axis
+            return arr[0]
+        elif len(axis_tuple) > 1:
+            raise ValueError(f"only one axis can be passed to {self.func}; got {axis}")
+        (axis,) = axis_tuple
         if not 0 < window <= arr[0].shape[axis]:
             raise ValueError(f"window not in valid range: {window}")
         gufunc = self.gufunc(target=self.target)
@@ -370,24 +370,22 @@ class ndmoveexp(NumbaBaseSimple):
         *arr: FloatArray,
         alpha: float | FloatArray,
         min_weight: float = 0,
-        axis: int | tuple[int, ...] = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> FloatArray:
-        # If an empty tuple is passed, there's no reduction to do, so we return the
-        # original array.
+        # If an empty axis is passed, there's no window to move along, so we return
+        # the original array.
         # Ref https://github.com/pydata/xarray/pull/5178/files#r616168398
-        if isinstance(axis, tuple):
-            if axis == ():
-                if len(arr) > 1:
-                    raise ValueError(
-                        "`axis` cannot be an empty tuple when passing more than one array; since we default to returning the input."
-                    )
-                return arr[0]
-            if len(axis) > 1:
+        axis_tuple = normalize_axis(axis)
+        if not axis_tuple:
+            if len(arr) > 1:
                 raise ValueError(
-                    f"Only one axis can be passed to {self.func}; got {axis}"
+                    "`axis` cannot be empty when passing more than one array; since we default to returning the input."
                 )
-            (axis,) = axis
+            return arr[0]
+        if len(axis_tuple) > 1:
+            raise ValueError(f"Only one axis can be passed to {self.func}; got {axis}")
+        (axis,) = axis_tuple
 
         if not isinstance(alpha, np.ndarray):
             alpha = np.broadcast_to(alpha, arr[0].shape[axis])
@@ -461,10 +459,18 @@ class ndfill(NumbaBase):
         arr: NumericArrayT,
         *,
         limit: None | int = None,
-        axis: int = -1,
+        axis: AxisLike = -1,
         **kwargs,
     ) -> NumericArrayT:
         """Call the dynamically compiled function."""
+        # Filling runs along a single axis, in any spelling `normalize_axis` accepts.
+        axis_tuple = normalize_axis(axis)
+        if len(axis_tuple) != 1:
+            raise ValueError(
+                f"exactly one axis can be passed to {self.func}; got {axis}"
+            )
+        (axis,) = axis_tuple
+
         if limit is None:
             limit = arr.shape[axis]
         if limit < 0:
@@ -487,13 +493,14 @@ class groupndreduce(NumbaBase):
     This decorator supports three axis modes that determine how labels are shaped
     relative to values:
 
-    1. ``axis=int``: Labels are 1D with length ``values.shape[axis]``.
+    1. ``axis=int`` (a single axis in any spelling numpy accepts, such as
+       ``np.int64(-1)``): Labels are 1D with length ``values.shape[axis]``.
        The specified axis is reduced, other dimensions are preserved.
        This is the most common case, used by xarray/flox.
 
-    2. ``axis=tuple``: Labels have shape matching the specified axes.
-       E.g., ``axis=(1, 2)`` with values ``(time, lat, lon)`` requires
-       labels of shape ``(lat, lon)``. Multiple axes are reduced together.
+    2. ``axis=tuple`` (or any other sequence of ints): Labels have shape matching
+       the specified axes. E.g., ``axis=(1, 2)`` with values ``(time, lat, lon)``
+       requires labels of shape ``(lat, lon)``. Multiple axes are reduced together.
 
     3. ``axis=None``: Labels must have the same shape as values.
        The entire array is treated as flat for grouping purposes.
@@ -556,7 +563,7 @@ class groupndreduce(NumbaBase):
         *,
         ddof: int = 1,
         num_labels: int | None = None,
-        axis: int | tuple[int, ...] | None = None,
+        axis: AxisLike | None = None,
     ):
         values = np.asarray(values)
         labels = np.asarray(labels)
@@ -624,20 +631,8 @@ class groupndreduce(NumbaBase):
                 labels_dtype=labels.dtype,
                 target=target,
             )
-        elif isinstance(axis, int):
-            if labels.shape != (values.shape[axis],):
-                raise ValueError(
-                    "values must have same shape along axis as labels: "
-                    f"{(values.shape[axis],)} vs {labels.shape}"
-                )
-            values = np.moveaxis(values, axis, -1)
-            gufunc = self.gufunc(
-                core_ndim=1,
-                values_dtype=values_dtype,
-                labels_dtype=labels.dtype,
-                target=target,
-            )
         else:
+            axis = normalize_axis(axis)
             values_shape = tuple(values.shape[ax] for ax in axis)
             if labels.shape != values_shape:
                 raise ValueError(
@@ -823,7 +818,7 @@ class ndquantile(NumbaBase):
         self,
         a: NDArray[np.float64],
         quantiles: float | Iterable[float],
-        axis: int | tuple[int, ...] | None = None,
+        axis: AxisLike | None = None,
         **kwargs,
     ) -> NDArray[np.float64]:
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
@@ -842,8 +837,8 @@ class ndquantile(NumbaBase):
 
         if axis is None:
             axis = tuple(range(a.ndim))
-        elif not isinstance(axis, tuple):
-            axis = (axis,)
+        else:
+            axis = normalize_axis(axis)
 
         a = move_axes(a, axis)
 
@@ -898,7 +893,7 @@ class ndreduce(NumbaBase):
     Functions should have signatures of the form output_type(input_type), where
     input_type and output_type are numba dtypes. This decorator rewrites them
     to accept input arrays of arbitrary dimensionality, with an additional
-    optional `axis`, which accepts integers or tuples of integers (defaulting
+    optional `axis`, which accepts any spelling `normalize_axis` does (defaulting
     to `axis=None` for all axes).
 
     For example, to write a simplified version of `np.sum(arr, axis=None)`::
@@ -990,9 +985,7 @@ class ndreduce(NumbaBase):
         )
         return vectorize(self.transformed_func)
 
-    def __call__(
-        self, arr: NDArray[Any], *args, axis: tuple[int, ...] | int | None = None
-    ):
+    def __call__(self, arr: NDArray[Any], *args, axis: AxisLike | None = None):
         # TODO: `nanmin` & `nanmax` raises a warning here for the default test
         # fixture; I can't figure out where it's coming from, and can't reproduce it
         # locally. So I'm ignoring so that we can still raise errors on other
@@ -1010,10 +1003,8 @@ class ndreduce(NumbaBase):
                 # see: https://github.com/numba/numba/issues/1087
                 # f = self._jit_func
                 f = self.gufunc(arr.ndim, target=self.target)
-            elif isinstance(axis, int):
-                arr = np.moveaxis(arr, axis, -1)
-                f = self.gufunc(1, target=self.target)
             else:
+                axis = normalize_axis(axis)
                 arr = np.moveaxis(arr, axis, range(-len(axis), 0, 1))
                 f = self.gufunc(len(axis), target=self.target)
             return f(arr, *args)

@@ -383,8 +383,25 @@ def test_move_exp_axis_tuple():
     assert_allclose(result, expected)
 
 
-def test_move_exp_axis_empty_tuple():
-    # An empty tuple means no reduction — return the input unchanged.
+@pytest.mark.parametrize(
+    "axis",
+    [np.int64(0), np.array(0), [0], range(1), np.array([0])],
+    ids=["np-integer", "0d-array", "list", "range", "1d-array"],
+)
+def test_move_exp_axis_spellings(axis):
+    # As in `test_move_axis_spellings`: every spelling numpy accepts for a single
+    # axis, including the list dask passes.
+    array = np.arange(12.0).reshape(3, 4)
+
+    assert_allclose(
+        move_exp_nansum(array, alpha=0.5, axis=axis),
+        move_exp_nansum(array, alpha=0.5, axis=0),
+    )
+
+
+@pytest.mark.parametrize("axis", [(), [], range(0)])
+def test_move_exp_axis_empty(axis):
+    # An empty axis means no reduction — return the input unchanged.
     array = np.array([1.0, 2.0, 3.0, 4.0])
-    result = move_exp_nansum(array, alpha=0.5, axis=())
+    result = move_exp_nansum(array, alpha=0.5, axis=axis)
     assert_array_equal(result, array)
