@@ -149,12 +149,13 @@ def group_nansum_of_squares(
 def group_nanvar(
     values: FloatArray, labels: IntArray, ddof: int, out: FloatArray
 ) -> None:
-    sums = np.zeros(out.shape, dtype=values.dtype)
+    # Two passes — means first, then squared deviations from them — as in
+    # `funcs.nanvar`. The one-pass `sum(x^2) - sum(x)^2 / n` cancels
+    # catastrophically when values share a large offset, even going negative.
+    means = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
-    out[:] = np.nan
 
-    # Calculate sums, sum of squares, and counts
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
@@ -163,29 +164,42 @@ def group_nanvar(
         value = values[indices]
         if not np.isnan(value):
             counts[label] += 1
-            sums[label] += value
-            sums_of_squares[label] += value**2
+            means[label] += value
 
-    # Calculate for each group
     for label in range(len(out)):
-        count = counts[label]
-        denom = count - ddof
+        # An empty group's sum is 0, so dividing by 1 leaves its mean at 0 without
+        # computing 0 / 0, which raises numpy's invalid-value warning.
+        means[label] /= max(counts[label], 1)
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+
+        value = values[indices]
+        if not np.isnan(value):
+            deviation = value - means[label]
+            sums_of_squares[label] += deviation * deviation
+
+    for label in range(len(out)):
+        denom = counts[label] - ddof
         if denom <= 0:
             out[label] = np.nan
         else:
-            out[label] = (sums_of_squares[label] - (sums[label] ** 2 / count)) / denom
+            out[label] = sums_of_squares[label] / denom
 
 
 @groupndreduce.wrap(supports_bool=False, supports_ints=False, supports_ddof=True)
 def group_nanstd(
     values: FloatArray, labels: IntArray, ddof: int, out: FloatArray
 ) -> None:
-    sums = np.zeros(out.shape, dtype=values.dtype)
+    # Two passes — means first, then squared deviations from them — as in
+    # `funcs.nanvar`. The one-pass `sum(x^2) - sum(x)^2 / n` cancels
+    # catastrophically when values share a large offset, even going negative.
+    means = np.zeros(out.shape, dtype=values.dtype)
     sums_of_squares = np.zeros(out.shape, dtype=values.dtype)
     counts = np.zeros(out.shape, dtype=labels.dtype)
-    out[:] = np.nan
 
-    # Calculate sums, sum of squares, and counts
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
@@ -194,18 +208,29 @@ def group_nanstd(
         value = values[indices]
         if not np.isnan(value):
             counts[label] += 1
-            sums[label] += value
-            sums_of_squares[label] += value**2
+            means[label] += value
 
     for label in range(len(out)):
-        count = counts[label]
-        denom = count - ddof
+        # An empty group's sum is 0, so dividing by 1 leaves its mean at 0 without
+        # computing 0 / 0, which raises numpy's invalid-value warning.
+        means[label] /= max(counts[label], 1)
+
+    for indices in np.ndindex(values.shape):
+        label = labels[indices]
+        if label < 0:
+            continue
+
+        value = values[indices]
+        if not np.isnan(value):
+            deviation = value - means[label]
+            sums_of_squares[label] += deviation * deviation
+
+    for label in range(len(out)):
+        denom = counts[label] - ddof
         if denom <= 0:
             out[label] = np.nan
         else:
-            out[label] = np.sqrt(
-                (sums_of_squares[label] - (sums[label] ** 2 / count)) / denom
-            )
+            out[label] = np.sqrt(sums_of_squares[label] / denom)
 
 
 @groupndreduce.wrap()

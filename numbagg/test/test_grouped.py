@@ -640,3 +640,19 @@ def test_group_nanmean_bool():
     result = group_nanmean(values, labels)
     expected = np.array([2 / 3])
     assert_almost_equal(result, expected)
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize(
+    "func, np_func", [(group_nanvar, np.nanvar), (group_nanstd, np.nanstd)]
+)
+def test_group_var_std_large_offset(func, np_func, dtype, ddof):
+    # A large common offset makes the one-pass `E[x^2] - E[x]^2` formula cancel
+    # catastrophically: float64 returned 0 and float32 a negative variance.
+    offset = 1e9 if dtype == np.float64 else 1e4
+    values = (offset + np.array([1, 2, 3, np.nan, 4, 6, 8])).astype(dtype)
+    labels = np.array([0, 0, 0, 0, 1, 1, 1])
+    result = func(values, labels, ddof=ddof)
+    expected = [np_func(values[:4], ddof=ddof), np_func(values[4:], ddof=ddof)]
+    assert_allclose(result, expected, rtol=1e-5)
