@@ -317,36 +317,40 @@ def nanquantile(
 @ndfill.wrap()
 def bfill(a: NumericArrayT, limit: int, out: NumericArrayT) -> None:
     """Backward fill missing values."""
-    lives_remaining = limit
-    current = np.nan
+    lives_remaining = 0
+    current = a.dtype.type(0)
     # Ugly `range` expression, but can't do 'enumerate(reversed(a))', and adding a
     # `list` will cause a copy.
     for i in range(len(a) - 1, -1, -1):
         val = a[i]
         if np.isnan(val):  # Always False for integers, True for float NaN
-            if lives_remaining <= 0:
-                current = np.nan
-            lives_remaining -= 1
+            if lives_remaining > 0:
+                out[i] = current
+                lives_remaining -= 1
+            else:
+                out[i] = np.nan
         else:
             lives_remaining = limit
             current = val
-        out[i] = current
+            out[i] = val
 
 
 @ndfill.wrap()
 def ffill(a: NumericArrayT, limit: int, out: NumericArrayT) -> None:
     """Forward fill missing values."""
-    lives_remaining = limit
-    current = np.nan
+    lives_remaining = 0
+    current = a.dtype.type(0)
     for i, val in enumerate(a):
         if np.isnan(val):  # Always False for integers, True for float NaN
-            if lives_remaining <= 0:
-                current = np.nan
-            lives_remaining -= 1
+            if lives_remaining > 0:
+                out[i] = current
+                lives_remaining -= 1
+            else:
+                out[i] = np.nan
         else:
             lives_remaining = limit
             current = val
-        out[i] = current
+            out[i] = val
 
 
 count = nancount
