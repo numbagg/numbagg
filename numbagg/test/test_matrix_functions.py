@@ -6,6 +6,7 @@ import pytest
 from numpy.testing import assert_allclose
 
 from numbagg import (
+    MATRIX_FUNCS,
     MOVE_EXP_MATRIX_FUNCS,
     MOVE_MATRIX_FUNCS,
     move_corrmatrix,
@@ -952,33 +953,46 @@ class TestMovingMatrixNumericalStability:
 class TestMatrixDtypePreservation:
     """Test dtype preservation across all matrix function types."""
 
+    @staticmethod
+    def _call(func, data):
+        """Call `func` on `(obs, vars)` data, with the arguments its kind needs.
+
+        The static functions take `(vars, obs)`, so they get the transpose.
+        """
+        if func in MOVE_MATRIX_FUNCS:
+            return func(data, window=5, min_count=3)
+        if func in MOVE_EXP_MATRIX_FUNCS:
+            return func(data, alpha=0.3)
+        return func(data.T)
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize(
         "func",
-        [nancorrmatrix, nancovmatrix, move_corrmatrix, move_covmatrix],
+        MATRIX_FUNCS + MOVE_MATRIX_FUNCS + MOVE_EXP_MATRIX_FUNCS,
+        ids=lambda func: func.__name__,
     )
-    def test_dtype_preservation(self, func):
-        """Test that dtypes are preserved."""
-        # Set up appropriate data and window for rolling vs basic
-        is_rolling = func.__name__.startswith("move_")
+    def test_dtype_preservation(self, func, dtype):
+        """A matrix function returns the dtype it was given.
 
-        # Test float32
-        if is_rolling:
-            # Moving functions expect (obs, vars)
-            data32 = np.random.randn(10, 3).astype(np.float32)
-            result32 = func(data32, window=5, min_count=3)
-        else:
-            # Basic functions expect (vars, obs)
-            data32 = np.random.randn(3, 10).astype(np.float32)
-            result32 = func(data32)
-        assert result32.dtype == np.float32
+        The exponential pair used to return float64 for float32 input: their scalar
+        `alpha` was broadcast into a float64 array, and that array selected the
+        float64 gufunc loop.
+        """
+        data = np.random.default_rng(0).standard_normal((10, 3)).astype(dtype)
 
-        # Test float64
-        if is_rolling:
-            # Moving functions expect (obs, vars)
-            data64 = np.random.randn(10, 3).astype(np.float64)
-            result64 = func(data64, window=5, min_count=3)
-        else:
-            # Basic functions expect (vars, obs)
-            data64 = np.random.randn(3, 10).astype(np.float64)
-            result64 = func(data64)
-        assert result64.dtype == np.float64
+        assert self._call(func, data).dtype == dtype
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize(
+        "func", MOVE_EXP_MATRIX_FUNCS, ids=lambda func: func.__name__
+    )
+    def test_dtype_is_set_by_the_data_not_the_decay_parameters(self, func, dtype):
+        """A float64 `alpha` array or `min_weight` doesn't pull the output to float64.
+
+        Both are operands as far as gufunc loop selection goes, so they would
+        otherwise disagree with the scalar `alpha` form on the output dtype.
+        """
+        data = np.random.default_rng(0).standard_normal((10, 3)).astype(dtype)
+
+        assert func(data, alpha=np.full(10, 0.3)).dtype == dtype
+        assert func(data, alpha=0.3, min_weight=np.float64(0.5)).dtype == dtype
