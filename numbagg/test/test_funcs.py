@@ -323,6 +323,41 @@ def test_nanquantile_no_valid_obs():
     assert np.isnan(result)
 
 
+@pytest.mark.parametrize(
+    "values",
+    [
+        [np.inf, np.nan],
+        [np.inf, np.inf, 1.0],
+        [-np.inf, -np.inf, 3.0],
+        [-np.inf, 5.0],
+        [1.0, np.inf],
+        [-np.inf, np.inf],
+    ],
+)
+# numpy warns computing the `-inf` against `inf` median, which is NaN for both
+@pytest.mark.filterwarnings("ignore:invalid value encountered")
+def test_nanmedian_infinite_values(values):
+    # Interpolating as `floor + p * (ceil - floor)` computes `inf - inf` when an
+    # endpoint is infinite, so a median that is plainly infinite came back NaN.
+    arr = np.array(values)
+
+    assert_array_equal(nanmedian(arr), np.nanmedian(arr))
+
+
+@pytest.mark.parametrize(
+    ("values", "quantile", "expected"),
+    [
+        ([1.0, 2.0, np.inf], 1.0, np.inf),
+        ([-np.inf, 1.0, 2.0], 0.0, -np.inf),
+        ([-np.inf, 1.0, 2.0], 0.25, -np.inf),
+        ([1.0, 2.0, np.inf], 0.75, np.inf),
+        ([np.inf], 0.5, np.inf),
+    ],
+)
+def test_nanquantile_infinite_values(values, quantile, expected):
+    assert nanquantile(np.array(values), quantile) == expected
+
+
 def test_wraps():
     assert move_exp_nanmean.__name__ == "move_exp_nanmean"
     assert move_exp_nanmean.__repr__() == "numbagg.move_exp_nanmean"
