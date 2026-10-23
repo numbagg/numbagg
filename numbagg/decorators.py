@@ -822,15 +822,14 @@ class ndquantile(NumbaBase):
         **kwargs,
     ) -> NDArray[np.float64]:
         # Gufunc doesn't support a 0-len dimension for quantiles, so we need to make and
-        # then remove a dummy axis.
-        if not isinstance(quantiles, Iterable):
-            squeeze = True
-            quantiles = [quantiles]
-        else:
-            squeeze = False
+        # then remove a dummy axis. A 0-d array counts as a scalar, as in numpy.
         quantiles = np.asarray(quantiles)
+        squeeze = quantiles.ndim == 0
+        quantiles = np.atleast_1d(quantiles)
 
-        if any(quantiles < 0) or any(quantiles > 1):
+        # Written so that a NaN quantile fails the check, rather than passing both of
+        # `< 0` and `> 1`.
+        if not np.all((quantiles >= 0) & (quantiles <= 1)):
             raise ValueError(
                 f"quantiles must be in the range [0, 1], inclusive. Got {quantiles}."
             )
