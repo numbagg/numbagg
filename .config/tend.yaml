@@ -8,6 +8,6 @@ setup:
 - uses: astral-sh/setup-uv@v7
 - run: uv sync
 workflows:
-  ci-fix:
+  ci-failures:
     watched_workflows:
     - Test
