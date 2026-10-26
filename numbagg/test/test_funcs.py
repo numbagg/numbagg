@@ -310,11 +310,22 @@ def test_axis_spellings(func, axis, equivalent):
     assert_array_equal(func(arr, axis=axis), func(arr, axis=equivalent))
 
 
-@pytest.mark.parametrize("quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5]])
+@pytest.mark.parametrize(
+    "quantiles", [-0.5, [0.25, -0.75], [1.5], [0.5, 1.5], np.nan, [0.5, np.nan]]
+)
 def test_nanquantile_errors(quantiles):
     array = np.random.rand(10, 10)
     with pytest.raises(ValueError, match="quantiles must be in the range"):
         nanquantile(array, quantiles)
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+def test_nanquantile_0d_array_quantile(axis):
+    # A 0-d array is a scalar quantile, so it drops the quantile axis as a float does
+    arr = np.random.default_rng(0).random((10, 10))
+    result = nanquantile(arr, np.array(0.5), axis=axis)
+    assert_allclose(result, np.nanquantile(arr, np.array(0.5), axis=axis))
+    assert_array_equal(result, nanquantile(arr, 0.5, axis=axis))
 
 
 def test_nanquantile_no_valid_obs():
