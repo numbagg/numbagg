@@ -18,7 +18,8 @@ permission first) still applies when the target shows no agent signals.
 
 - **Test** — the main CI workflow (`test.yaml`). Runs tests, linting,
   benchmarks. tend-ci-failures watches this workflow on `main`, filing
-  a `tend-ci-failure` report issue when it fails and dispatching triage.
+  a `tend-ci-failure` report issue when it fails; opening that issue
+  starts tend-triage.
 
 ## CI polling
 
