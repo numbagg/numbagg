@@ -4,6 +4,11 @@ on:
   push:
     tags: ["*"]
 
+# The publish jobs set their own `permissions:` for trusted publishing; this caps
+# the `build` job, which only checks out the code and uploads an artifact.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
