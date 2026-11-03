@@ -309,7 +309,16 @@ def nanquantile(
 
         floor_val, ceil_val = sorted[indexes[i]]
 
-        result = floor_val + proportion * (ceil_val - floor_val)
+        if floor_val == ceil_val:
+            # Also covers a rank that lands on an infinity, where the difference
+            # below would be `inf - inf`
+            result = floor_val
+        elif np.isinf(floor_val) or np.isinf(ceil_val):
+            # The weighted form keeps an infinite endpoint, and is NaN only for
+            # `-inf` against `inf`
+            result = (1 - proportion) * floor_val + proportion * ceil_val
+        else:
+            result = floor_val + proportion * (ceil_val - floor_val)
 
         out[i] = result
 
