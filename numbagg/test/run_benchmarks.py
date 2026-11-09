@@ -228,7 +228,7 @@ def markdown_tables(records: list[dict]) -> tuple[str, str]:
 
 
 def run(k_filter, run_tests, extra_args):
-    import jq  # ty:ignore[unresolved-import]
+    import jq  # ty:ignore[import-not-found]
 
     json_path = Path(".benchmarks/benchmark.json")
     json_path.parent.mkdir(exist_ok=True, parents=True)
