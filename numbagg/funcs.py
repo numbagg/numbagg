@@ -190,7 +190,8 @@ def nanstd(a: FloatArrayT, ddof: int, out: FloatArrayT) -> None:
 def nanargmax(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
-    amax = -np.inf
+    # A floating sentinel would round large integers and turn adjacent values into ties.
+    amax = a.dtype.type(0)
     idx = -1
     for i, ai in enumerate(a.flat):
         # Much slower, by 3-4x to use this construction:
@@ -211,7 +212,7 @@ def nanargmax(a):
 def nanargmin(a):
     if not a.size:
         raise ValueError("All-NaN slice encountered")
-    amin = np.inf
+    amin = a.dtype.type(0)
     idx = -1
     for i, ai in enumerate(a.flat):
         if ai < amin or (idx == -1 and not np.isnan(ai)):
@@ -232,16 +233,17 @@ def nanmax(a):
         raise ValueError(
             "zero-size array to reduction operation fmax which has no identity"
         )
-    amax = -np.inf
+    amax = a.dtype.type(0)
     all_missing = True
     for ai in a.flat:
         # If we check for `isnan` here, the function becomes much slower (by about 4x!)
-        if ai >= amax:
+        if ai >= amax or (all_missing and not np.isnan(ai)):
             amax = ai
             all_missing = False
     if all_missing:
-        amax = np.nan
-    return amax
+        return np.nan
+    else:
+        return amax
 
 
 @ndreduce.wrap(
@@ -254,15 +256,16 @@ def nanmin(a):
         raise ValueError(
             "zero-size array to reduction operation fmin which has no identity"
         )
-    amin = np.inf
+    amin = a.dtype.type(0)
     all_missing = True
     for ai in a.flat:
-        if ai <= amin:
+        if ai <= amin or (all_missing and not np.isnan(ai)):
             amin = ai
             all_missing = False
     if all_missing:
-        amin = np.nan
-    return amin
+        return np.nan
+    else:
+        return amin
 
 
 @ndquantile.wrap(([(float64[:], float64[:], float64[:])], "(n),(m)->(m)"))
