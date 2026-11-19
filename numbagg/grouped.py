@@ -53,42 +53,40 @@ def group_nancount(values: GenericArray, labels: IntArray, out: GenericArray) ->
 
 @groupndreduce.wrap()
 def group_nanargmax(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
-    max_values = np.full(out.shape, np.nan)
+    max_values = np.empty(out.shape, dtype=values.dtype)
+    have_seen_value = np.zeros(out.shape, dtype=np.bool_)
     flat_idx = 0
     for indices in np.ndindex(values.shape):
         value = values[indices]
         label = labels[indices]
         if label >= 0 and not np.isnan(value):
-            if np.isnan(max_values[label]) or value > max_values[label]:
+            if not have_seen_value[label] or value > max_values[label]:
                 max_values[label] = value
+                have_seen_value[label] = True
                 out[label] = flat_idx
         flat_idx += 1
-    # If the max value for any label is still NaN (no valid data points), set it to NaN
-    # We could instead set the array at the start to be `NaN` — would need to benchmark
-    # which is faster.
-
-    # I'm quite confused why, but this raises a warning, so we do the full_loop instead.
-    #
-    #   out[np.isnan(max_values)] = np.nan
+    # Individual assignment avoids the warnings raised by a masked assignment.
     for idx in np.ndindex(out.shape):
-        if np.isnan(max_values[idx]):
+        if not have_seen_value[idx]:
             out[idx] = np.nan
 
 
 @groupndreduce.wrap()
 def group_nanargmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
-    min_values = np.full(out.shape, np.nan)
+    min_values = np.empty(out.shape, dtype=values.dtype)
+    have_seen_value = np.zeros(out.shape, dtype=np.bool_)
     flat_idx = 0
     for indices in np.ndindex(values.shape):
         value = values[indices]
         label = labels[indices]
         if label >= 0 and not np.isnan(value):
-            if np.isnan(min_values[label]) or value < min_values[label]:
+            if not have_seen_value[label] or value < min_values[label]:
                 min_values[label] = value
+                have_seen_value[label] = True
                 out[label] = flat_idx
         flat_idx += 1
     for idx in np.ndindex(out.shape):
-        if np.isnan(min_values[idx]):
+        if not have_seen_value[idx]:
             out[idx] = np.nan
 
 
@@ -210,38 +208,32 @@ def group_nanstd(
 
 @groupndreduce.wrap()
 def group_nanmin(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
-    # Floats could save an allocation by writing directly to `out`
-    min_values = np.full(out.shape, np.nan)
+    out[:] = np.nan
+    have_seen_value = np.zeros(out.shape, dtype=np.bool_)
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
         value = values[indices]
-        if not np.isnan(value) and (
-            np.isnan(min_values[label]) or value < min_values[label]
-        ):
-            min_values[label] = value
-
-    out[:] = min_values
+        if not np.isnan(value) and (not have_seen_value[label] or value < out[label]):
+            out[label] = value
+            have_seen_value[label] = True
 
 
 @groupndreduce.wrap()
 def group_nanmax(values: GenericArray, labels: IntArray, out: GenericArray) -> None:
-    # Floats could save an allocation by writing directly to `out`
-    max_values = np.full(out.shape, np.nan)
+    out[:] = np.nan
+    have_seen_value = np.zeros(out.shape, dtype=np.bool_)
 
     for indices in np.ndindex(values.shape):
         label = labels[indices]
         if label < 0:
             continue
         value = values[indices]
-        if not np.isnan(value) and (
-            np.isnan(max_values[label]) or value > max_values[label]
-        ):
-            max_values[label] = value
-
-    out[:] = max_values
+        if not np.isnan(value) and (not have_seen_value[label] or value > out[label]):
+            out[label] = value
+            have_seen_value[label] = True
 
 
 @groupndreduce.wrap()
