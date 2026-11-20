@@ -351,7 +351,7 @@ class ndmoveexp(NumbaBaseSimple):
     Exponential moving window function.
 
     `alpha` supports either:
-    - a scalar (similar to pandas)
+    - a scalar (similar to pandas), including a 0-d array
     - a 1D array with the same length as the core dimension on the main array(s)
     - an ND array with the same shape as the main array(s)
 
@@ -387,7 +387,8 @@ class ndmoveexp(NumbaBaseSimple):
             raise ValueError(f"Only one axis can be passed to {self.func}; got {axis}")
         (axis,) = axis_tuple
 
-        if not isinstance(alpha, np.ndarray):
+        # A 0-d array is a scalar, as it is to numpy.
+        if not isinstance(alpha, np.ndarray) or alpha.ndim == 0:
             alpha = np.broadcast_to(alpha, arr[0].shape[axis])
             alpha_axis = -1
         elif alpha.ndim == 1:
@@ -1062,7 +1063,8 @@ class ndmoveexpmatrix(NumbaBase):
         # obs_axis=-2 (preserved as time dimension), vars_axis=-1 (duplicated to matrix dims)
 
         # Handle alpha parameter - broadcast to observations dimension (second-to-last)
-        if not isinstance(alpha, np.ndarray):
+        # A 0-d array is a scalar, as it is to numpy.
+        if not isinstance(alpha, np.ndarray) or alpha.ndim == 0:
             alpha = np.broadcast_to(alpha, a.shape[-2])
 
         gufunc = self.gufunc(target=self.target)
