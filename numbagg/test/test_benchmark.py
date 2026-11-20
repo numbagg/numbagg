@@ -95,8 +95,6 @@ def test_benchmark_f_bfill(benchmark, func_callable):
     )
 
 
-# Because this clears the cache, it really slows down running the tests. So we only run
-# it selectively.
 @pytest.mark.parametrize(
     "func",
     [
@@ -130,6 +128,8 @@ def test_benchmark_matrix(benchmark, func, func_callable, shape):
     benchmark(func_callable)
 
 
+# Because this clears the cache, it really slows down running the tests. So we only run
+# it selectively.
 @pytest.mark.nightly
 @pytest.mark.parametrize("shape", [(1, 20)], indirect=True)
 def test_benchmark_compile(benchmark, clear_numba_cache, func_callable):

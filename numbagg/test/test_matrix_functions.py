@@ -615,6 +615,13 @@ class TestExponentialMatrices:
         assert not np.allclose(result, result_constant)
 
     @pytest.mark.parametrize("func", [move_exp_nancorrmatrix, move_exp_nancovmatrix])
+    def test_0d_array_alpha(self, func):
+        """A 0-d array alpha is a scalar, so it matches the Python float it holds."""
+        data = np.random.RandomState(0).rand(10, 3)
+
+        assert_allclose(func(data, alpha=np.array(0.5)), func(data, alpha=0.5))
+
+    @pytest.mark.parametrize("func", [move_exp_nancorrmatrix, move_exp_nancovmatrix])
     def test_broadcasting_higher_dims(self, func):
         """Test that exponential matrix functions broadcast correctly for higher dimensional arrays."""
         np.random.seed(42)

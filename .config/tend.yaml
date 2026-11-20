@@ -1,11 +1,13 @@
 bot_name: numbagg-bot
-# The agent runs everything through `uv run` (CLAUDE.md); setup-uv is where it
-# gets uv. `uv sync` warms `.venv`, which the sandbox inherits along with the
-# workspace, so `uv run` only syncs what the PR changed.
+# The agent runs everything through `uv run` (AGENTS.md); setup-uv is where it
+# gets uv. The agent now works in the job's own checkout and home, so `uv sync`
+# runs here: it warms the `.venv` the agent's `uv run` reuses, leaving only what
+# a PR itself changes to sync in-session. `uv sync` needs setup-uv ahead of it,
+# since tend puts nothing on a `setup:` step's PATH.
 setup:
 - uses: astral-sh/setup-uv@v7
 - run: uv sync
 workflows:
-  ci-fix:
+  ci-failures:
     watched_workflows:
     - Test

@@ -192,11 +192,11 @@ def test_move_exp_nans_var(func_n, alpha):
 
     array = np.array([1.0, np.nan, 1.0])
     result = np.isnan(func(*[array] * n, alpha=alpha))
-    if func != move_exp_nancorr:
-        expected = np.array([True, True, False])
     if func == move_exp_nancorr:
         # Correlation of values that are all the same is undefined
         expected = np.array([True, True, True])
+    else:
+        expected = np.array([True, True, False])
     assert_allclose(result, expected)
 
     array = np.array([1.0, np.nan])
@@ -314,7 +314,6 @@ def test_move_exp_endian(array):
     expected = move_exp_nanmean(array, alpha=0.25)
 
     array = array.astype(array.dtype.newbyteorder(">"))
-    # with pytest.warns(UserWarning):
     result = move_exp_nanmean(array, alpha=0.25)
 
     assert_allclose(result, expected)
@@ -368,6 +367,21 @@ def test_move_exp_alphas(array, alpha: float, func):
     assert_allclose(result, expected)
 
 
+@pytest.mark.parametrize("func", MOVE_EXP_FUNCS)
+@pytest.mark.parametrize("axis", [-1, 0])
+def test_move_exp_0d_array_alpha(func, axis):
+    # A 0-d array is a scalar, as it is to numpy and to `nanquantile`'s
+    # `quantiles`, so it should behave exactly like the Python float it holds.
+    # Previously it took the full-array branch and failed with a gufunc
+    # "does not have enough dimensions" error.
+    c = COMPARISONS[func]
+    array = np.random.RandomState(0).rand(3, 20)
+
+    expected = c["numbagg"](array, alpha=0.5)(axis=axis)
+    result = c["numbagg"](array, alpha=np.array(0.5))(axis=axis)
+    assert_allclose(result, expected)
+
+
 def test_move_exp_axis_tuple():
     # Tuple axis should be unpacked to a single int and produce the same
     # result as the equivalent integer axis.
@@ -384,10 +398,27 @@ def test_move_exp_axis_tuple():
     assert_allclose(result, expected)
 
 
-def test_move_exp_axis_empty_tuple():
-    # An empty tuple means no reduction — return the input unchanged.
+@pytest.mark.parametrize(
+    "axis",
+    [np.int64(0), np.array(0), [0], range(1), np.array([0])],
+    ids=["np-integer", "0d-array", "list", "range", "1d-array"],
+)
+def test_move_exp_axis_spellings(axis):
+    # As in `test_move_axis_spellings`: every spelling numpy accepts for a single
+    # axis, including the list dask passes.
+    array = np.arange(12.0).reshape(3, 4)
+
+    assert_allclose(
+        move_exp_nansum(array, alpha=0.5, axis=axis),
+        move_exp_nansum(array, alpha=0.5, axis=0),
+    )
+
+
+@pytest.mark.parametrize("axis", [(), [], range(0)])
+def test_move_exp_axis_empty(axis):
+    # An empty axis means no reduction — return the input unchanged.
     array = np.array([1.0, 2.0, 3.0, 4.0])
-    result = move_exp_nansum(array, alpha=0.5, axis=())
+    result = move_exp_nansum(array, alpha=0.5, axis=axis)
     assert_array_equal(result, array)
 
 

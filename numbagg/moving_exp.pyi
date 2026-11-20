@@ -1,64 +1,64 @@
 from typing import TypeVar
 
-from numbagg.utils import FloatArray
+from numbagg.utils import AxisLike, FloatArray
 
-T = TypeVar("T", bound=FloatArray)
+_T = TypeVar("_T", bound=FloatArray)
 
 def move_exp_nancount(
-    arr: T,
+    arr: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nanmean(
-    arr: T,
+    arr: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nansum(
-    arr: T,
+    arr: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nanvar(
-    arr: T,
+    arr: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nanstd(
-    arr: T,
+    arr: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nancov(
-    a1: T,
-    a2: T,
+    a1: _T,
+    a2: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...
 def move_exp_nancorr(
-    a1: T,
-    a2: T,
+    a1: _T,
+    a2: _T,
     /,
     *,
     alpha: float | FloatArray,
     min_weight: float = 0,
-    axis: int | tuple[int, ...] = -1,
-) -> T: ...
+    axis: AxisLike = -1,
+) -> _T: ...

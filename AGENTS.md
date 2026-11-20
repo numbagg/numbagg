@@ -11,7 +11,7 @@ Numbagg provides fast N-dimensional aggregation functions using Numba and NumPy'
 ### Core Functions
 The library provides aggregation functions (like `nansum`, `nanmean`), moving window functions (like `move_mean`, `move_std`), exponential moving functions, and grouping operations. All functions work on N-dimensional arrays with arbitrary axes.
 
-Public functions in `funcs.py`, `moving.py`, and `moving_exp.py` — including the matrix functions `moving.py` re-exports — are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub.
+Public functions in `funcs.py`, `moving.py`, `moving_exp.py`, and `moving_matrix.py` are mirrored in `.pyi` stubs, which the `stubtest` pre-commit hook checks. Add or rename one and update its stub; a decorated gufunc also needs an entry in `stubtest_allowlist.txt`. `grouped.py` has no stub, and `numbagg/test/test_stub_coverage.py` holds every other name `numbagg/__init__.py` re-exports to having one. A second check there requires every function declared in a `.pyi` to carry a return annotation; the exception is the `funcs.pyi` declarations named in the test's `_PENDING_RETURN_TYPES` set, which stay unannotated pending the design decision in #811. That set has to match the unannotated declarations exactly, so annotating one of them means dropping it from the set in the same change.
 
 ## Running Commands
 
@@ -27,7 +27,7 @@ Prefix commands with `uv run` to ensure that the correct virtual environment is 
 - **Property-based tests**: Uses hypothesis for mathematical property verification (in `test_property.py`)
 - **Benchmark tests**: Performance testing with pytest-benchmark (in `test_benchmark.py`)
 - **Edge case coverage**: Extensive testing with NaN, inf, empty arrays, and various dtypes
-- **README snippets**: `test_readme.py` executes every ```` ```python ```` block in the README and checks each `# result.shape is (...)` comment, so those snippets must stay runnable with only `np` and `nb` predefined
+- **README snippets**: `test_readme.py` executes every ```` ```python ```` block in the README and checks each `# result.shape is (...)` comment, so those snippets must stay runnable with only `np` and `nb` predefined. It also pins the Installation section's "supports Python X.Y and later" sentence to `requires-python` in `pyproject.toml`, so a floor bump has to move both, and rewording that sentence means updating the regex in `test_readme_python_floor_matches_pyproject`
 
 ### Running Tests
 ```bash

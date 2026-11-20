@@ -12,7 +12,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.6
+    rev: v0.17.5
     hooks:
       - id: ruff-check
         args: ["--fix"]
@@ -23,14 +23,13 @@ repos:
       - id: velin
         args: ["--write", "--compact"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.50.1
+    rev: v1.52.2
     hooks:
       - id: typos
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
       - id: actionlint
-        exclude: dependabot.yml
   - repo: local
     hooks:
       - id: no-print
@@ -54,7 +53,8 @@ repos:
         # TODO: replace CLI options with pyproject.toml config when stubtest supports it
         entry:
           uv run python -m mypy.stubtest numbagg.funcs numbagg.moving
-          numbagg.moving_exp --allowlist stubtest_allowlist.txt
-          --ignore-unused-allowlist --mypy-config-file pyproject.toml
+          numbagg.moving_exp numbagg.moving_matrix
+          --allowlist stubtest_allowlist.txt
+          --mypy-config-file pyproject.toml
         files: '^(numbagg/|stubtest_allowlist\.txt$|pyproject\.toml$)'
         pass_filenames: false

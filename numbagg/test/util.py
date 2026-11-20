@@ -27,10 +27,7 @@ def array_generator(func_name, dtypes):
     "Iterator that yields arrays to use for unit testing."
 
     # define nan and inf
-    if func_name in ("partition", "argpartition"):
-        nan: float = 0
-    else:
-        nan = np.nan
+    nan = np.nan
     if func_name in ("move_sum", "move_mean", "move_std", "move_var"):
         # these functions can't handle inf
         inf: float = 8
@@ -60,7 +57,6 @@ def array_generator(func_name, dtypes):
     yield np.array([[1.0, 2], [3, 4]], dtype=np.float64)[..., np.newaxis]  # issue #183
 
     # ties
-    yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([0, 0, 0], dtype=np.float64)
     yield np.array([1, 1, 1], dtype=np.float64)
 

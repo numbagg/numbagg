@@ -45,3 +45,17 @@ def test_move_axes():
     # Test 6: Mixed zero and non-zero dimensions specified
     arr6 = np.empty((5, 0, 7, 0))
     assert move_axes(arr6, (1, 3)).shape == (5, 7, 0)
+
+
+def test_move_axes_empty_axes_adds_a_length_1_axis():
+    """`axis=()` reduces nothing, so the reduced axis has to be a fresh length-1 one.
+
+    Previously `shape[:-len(axes)]` degenerated to `shape[:0]` for empty `axes`, so
+    the whole array was flattened into the reduced axis and every aggregation
+    returned a full reduction for `axis=()`.
+    """
+    assert move_axes(np.ones((3, 4, 5)), ()).shape == (3, 4, 5, 1)
+    # A zero-length dimension is preserved rather than collapsed.
+    assert move_axes(np.empty((3, 0, 5)), ()).shape == (3, 0, 5, 1)
+    # 0-d input is how `axis=None` arrives here, since it becomes `tuple(range(0))`.
+    assert move_axes(np.array(1.0), ()).shape == (1,)

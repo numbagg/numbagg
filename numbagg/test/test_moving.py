@@ -143,6 +143,15 @@ def test_move_matrix_min_count(array, window, min_count):
     # Transpose array for new (obs, vars) convention
     array_T = array.T
 
+    if min_count > window:
+        # Unsatisfiable, and rejected as such — see
+        # `test_move_min_count_greater_than_window`. Kept in the parametrization so
+        # the (window=5, min_count=10) pair still reaches this function.
+        for func in (move_corrmatrix, move_covmatrix):
+            with pytest.raises(ValueError, match="cannot be greater than window"):
+                func(array_T, window=window, min_count=min_count)
+        return
+
     # Test correlation matrix
     result_corr = move_corrmatrix(array_T, window=window, min_count=min_count)
 
@@ -184,6 +193,27 @@ def test_move_mean_window(array):
         move_mean(array, window=1, min_count=-1)
 
 
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda a: move_mean(a[0], window=5, min_count=6),
+        lambda a: move_corr(a[0], a[0], window=5, min_count=6),
+        lambda a: move_corrmatrix(a.T, window=5, min_count=6),
+        lambda a: move_covmatrix(a.T, window=5, min_count=6),
+    ],
+    ids=["move_mean", "move_corr", "move_corrmatrix", "move_covmatrix"],
+)
+@pytest.mark.parametrize("shape", [(3, 20)], indirect=True)
+def test_move_min_count_greater_than_window(array, call):
+    # A `min_count` above `window` can never be satisfied, so every output value is
+    # NaN — silently, before this was rejected. pandas (`min_periods 10 must be <=
+    # window 5`) and bottleneck (`min_count (10) cannot be greater than window (5)`)
+    # both raise, as does `move_func`, this file's own reference implementation, so
+    # the all-NaN array was the odd one out and read as a real result.
+    with pytest.raises(ValueError, match="cannot be greater than window"):
+        call(array)
+
+
 def test_move_axis_tuple():
     # A length-1 tuple axis is unpacked to the equivalent integer axis, which is what
     # xarray passes. The `.pyi` stubs have to allow it too, so this also pins the
@@ -204,14 +234,46 @@ def test_move_axis_tuple():
         move_mean(array, window=2, axis=(0, 1))
 
 
-def test_move_axis_empty_tuple():
-    # An empty tuple means no reduction — return the input unchanged.
+@pytest.mark.parametrize(
+    "axis",
+    [np.int64(1), np.array(1), [1], range(1, 2), np.array([1])],
+    ids=["np-integer", "0d-array", "list", "range", "1d-array"],
+)
+def test_move_axis_spellings(axis):
+    # numpy takes `SupportsIndex | Sequence[SupportsIndex]` for `axis`, and the
+    # aggregations accept every one of those spellings. The moving functions used to
+    # unpack tuples only, so a list — which is what dask passes — raised
+    # `TypeError: tuple indices must be integers or slices, not list` from indexing
+    # `arr.shape`.
     array = np.arange(12.0).reshape(3, 4)
-    result = move_mean(array, window=2, axis=())
+
+    assert_allclose(
+        move_mean(array, window=2, axis=axis), move_mean(array, window=2, axis=1)
+    )
+    assert_allclose(
+        move_corr(array, array, window=2, axis=axis),
+        move_corr(array, array, window=2, axis=1),
+    )
+
+
+def test_move_axis_multiple_axes_in_any_sequence():
+    # The one-axis limit applies to every sequence spelling, not just tuples.
+    array = np.arange(12.0).reshape(3, 4)
+
+    for axis in [(0, 1), [0, 1], range(2), np.array([0, 1])]:
+        with pytest.raises(ValueError, match="only one axis can be passed"):
+            move_mean(array, window=2, axis=axis)
+
+
+@pytest.mark.parametrize("axis", [(), [], range(0), np.array([], dtype=np.int64)])
+def test_move_axis_empty(axis):
+    # An empty axis means no reduction — return the input unchanged.
+    array = np.arange(12.0).reshape(3, 4)
+    result = move_mean(array, window=2, axis=axis)
     assert_array_equal(result, array)
 
-    with pytest.raises(ValueError, match="cannot be an empty tuple"):
-        move_corr(array, array, window=2, axis=())
+    with pytest.raises(ValueError, match="cannot be empty"):
+        move_corr(array, array, window=2, axis=axis)
 
 
 def test_numerical_issues_float32_move_mean_1(rs):

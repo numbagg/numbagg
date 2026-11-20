@@ -4,6 +4,11 @@ on:
   push:
     tags: ["*"]
 
+# The publish jobs set their own `permissions:` for trusted publishing; this caps
+# the `build` job, which only checks out the code and uploads an artifact.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -59,7 +64,7 @@ jobs:
           path: dist
 
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -121,4 +126,4 @@ jobs:
           path: dist
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
