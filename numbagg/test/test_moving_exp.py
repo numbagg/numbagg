@@ -367,6 +367,21 @@ def test_move_exp_alphas(array, alpha: float, func):
     assert_allclose(result, expected)
 
 
+@pytest.mark.parametrize("func", MOVE_EXP_FUNCS)
+@pytest.mark.parametrize("axis", [-1, 0])
+def test_move_exp_0d_array_alpha(func, axis):
+    # A 0-d array is a scalar, as it is to numpy and to `nanquantile`'s
+    # `quantiles`, so it should behave exactly like the Python float it holds.
+    # Previously it took the full-array branch and failed with a gufunc
+    # "does not have enough dimensions" error.
+    c = COMPARISONS[func]
+    array = np.random.RandomState(0).rand(3, 20)
+
+    expected = c["numbagg"](array, alpha=0.5)(axis=axis)
+    result = c["numbagg"](array, alpha=np.array(0.5))(axis=axis)
+    assert_allclose(result, expected)
+
+
 def test_move_exp_axis_tuple():
     # Tuple axis should be unpacked to a single int and produce the same
     # result as the equivalent integer axis.
