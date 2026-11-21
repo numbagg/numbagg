@@ -454,9 +454,9 @@ NumPy/Numba:
   to allow writing a traditional function while retaining the multidimensional advantages of
   gufuncs.
 
-Already some of the ideas here have flowed upstream to numba (for example, [an
-axis parameter](https://github.com/numpy/numpy/issues/5197)), and we hope
-that others will follow.
+Already some of the ideas here have flowed upstream to NumPy (for example, [an
+axis parameter for generalized ufuncs](https://github.com/numpy/numpy/issues/5197)),
+and we hope that others will follow.
 
 ## License
 
