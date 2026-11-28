@@ -61,26 +61,6 @@ def test_reexported_names_are_declared_in_stubs():
     assert not missing, f"public names with no stub declaration: {missing}"
 
 
-# `nansum(a)` reduces to a scalar while `nansum(a, axis=0)` returns an array, and the
-# result dtype is not always the input's (`nanmax` on int32 returns int64). Expressing
-# that needs overloads keyed on both `axis` and the input dtype — an open design
-# question tracked in #811. Until it is settled these declarations stay unannotated, and
-# the test below asserts this set matches them exactly so it cannot go stale.
-_PENDING_RETURN_TYPES = {
-    "funcs.allnan",
-    "funcs.anynan",
-    "funcs.nanargmax",
-    "funcs.nanargmin",
-    "funcs.nancount",
-    "funcs.nanmax",
-    "funcs.nanmean",
-    "funcs.nanmin",
-    "funcs.nanstd",
-    "funcs.nansum",
-    "funcs.nanvar",
-}
-
-
 def test_stub_declarations_have_return_types():
     # A stub declaration with no return annotation is worse than no stub at all, for the
     # reason in the module docstring: the call itself type-checks clean while everything
@@ -92,8 +72,6 @@ def test_stub_declarations_have_return_types():
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
         and node.returns is None
     }
-    assert unannotated == _PENDING_RETURN_TYPES, (
-        "stub return-type coverage moved: "
-        f"newly missing {sorted(unannotated - _PENDING_RETURN_TYPES)}, "
-        f"no longer pending {sorted(_PENDING_RETURN_TYPES - unannotated)}"
+    assert not unannotated, (
+        f"stub declarations with no return annotation: {sorted(unannotated)}"
     )
